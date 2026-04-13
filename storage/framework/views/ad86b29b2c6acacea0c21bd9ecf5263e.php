@@ -1,6 +1,3 @@
-
-
-
 <?php $__env->startSection('title', 'New Composite Item'); ?>
 
 <?php $__env->startPush('styles'); ?>

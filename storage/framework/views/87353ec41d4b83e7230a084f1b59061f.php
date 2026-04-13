@@ -21,15 +21,15 @@
         .top-bar-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .btn { padding: 8px 18px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .btn-primary { background: #6366f1; color: #fff; }
-        .btn-primary:hover { background: #4f46e5; }
+        .btn-primary:hover:not(:disabled) { background: #4f46e5; }
         .btn-success { background: #10b981; color: #fff; }
-        .btn-success:hover { background: #059669; }
+        .btn-success:hover:not(:disabled) { background: #059669; }
         .btn-outline { background: #fff; color: #6366f1; border: 1.5px solid #6366f1; }
         .btn-outline:hover { background: #eef2ff; }
         .btn-danger { background: #ef4444; color: #fff; }
         .btn-danger:hover { background: #dc2626; }
         .btn-sm { padding: 6px 14px; font-size: 12px; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
         .center-area { display: flex; flex-direction: column; align-items: center; padding: 16px 0 24px; }
         .level-title { font-size: 26px; font-weight: 700; color: #1e293b; margin-bottom: 6px; text-align: center; text-transform: capitalize; }
         .level-hint  { font-size: 13px; color: #94a3b8; margin-bottom: 24px; text-align: center; }
@@ -107,39 +107,50 @@ async function loadData() {
 
 function currentDepth() { return navPath.length; }
 
+/*
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * THE CORE FIX: depth must match navPath.length
+ *
+ * Bug in old code: only checked parent_value_id,
+ * not depth. So "State" layer at depth=1 leaked
+ * into depth=2, depth=3, etc.
+ *
+ * Fix: always check BOTH depth AND parent_value_id.
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ */
 function getCurrentLayer() {
-    const depth = currentDepth();
+    const depth = navPath.length;
 
-    if (navPath.length === 0) {
-        return layers.find(l => l.depth === 0 && !l.is_global) || null;
+    if (depth === 0) {
+        return layers.find(l => Number(l.depth) === 0 && !l.is_global) || null;
     }
 
-    const parentValueId = navPath[navPath.length - 1].valueId;
+    const parentValueId = Number(navPath[depth - 1].valueId);
 
-    // 1. Specific layer for this exact parent
-    const specificLayer = layers.find(
-        l => !l.is_global && l.depth === depth && l.parent_value_id == parentValueId
+    // MUST match BOTH depth AND parent_value_id
+    const specific = layers.find(
+        l => !l.is_global
+          && Number(l.depth) === depth
+          && Number(l.parent_value_id) === parentValueId
     );
-    if (specificLayer) return specificLayer;
+    if (specific) return specific;
 
-    // 2. Global layer at this depth
-    const globalLayer = layers.find(l => l.is_global && l.depth === depth);
-    if (globalLayer) return globalLayer;
-
-    return null;
+    // Global fallback: same depth only
+    return layers.find(l => l.is_global && Number(l.depth) === depth) || null;
 }
-
 
 function getCurrentValues() {
     const layer = getCurrentLayer();
     if (!layer) return [];
 
     if (navPath.length === 0) {
-        return values.filter(v => v.layer_id == layer.id && v.parent_value_id == null);
+        return values.filter(v => Number(v.layer_id) === Number(layer.id) 
+                                && v.parent_value_id == null);
     }
 
-    const parentValueId = navPath[navPath.length - 1].valueId;
-    return values.filter(v => v.layer_id == layer.id && v.parent_value_id == parentValueId);
+    const parentValueId = Number(navPath[navPath.length - 1].valueId);
+    return values.filter(v => Number(v.layer_id) === Number(layer.id) 
+                            && Number(v.parent_value_id) === parentValueId);
 }
 
 function getParentLayerName() {
@@ -151,16 +162,45 @@ function getParentLayerName() {
 
 function getSiblingValues() {
     if (navPath.length === 0) return [];
+
     if (navPath.length === 1) {
         const rootLayer = layers.find(l => l.depth === 0 && !l.is_global);
         if (!rootLayer) return [];
-        return values.filter(v => v.layer_id == rootLayer.id && v.parent_value_id == null).map(v => v.value);
+        return values
+            .filter(v => v.layer_id == rootLayer.id && v.parent_value_id == null)
+            .map(v => v.value);
     }
+
     const grandParentValueId = navPath[navPath.length - 2].valueId;
     const grandParentLayerId = navPath[navPath.length - 2].layerId;
-    return values.filter(v => v.layer_id == grandParentLayerId && v.parent_value_id == grandParentValueId).map(v => v.value);
+    return values
+        .filter(v => v.layer_id == grandParentLayerId && v.parent_value_id == grandParentValueId)
+        .map(v => v.value);
 }
 
+/*
+ * layerAlreadyExistsHere()
+ * Same depth + parent scoping as getCurrentLayer().
+ * Prevents creating a duplicate layer at the same position.
+ */
+function layerAlreadyExistsHere() {
+    const depth = navPath.length;
+
+    if (depth === 0) {
+        return layers.some(l => Number(l.depth) === 0 && !l.is_global);
+    }
+
+    const parentValueId = Number(navPath[depth - 1].valueId);
+
+    const hasSpecific = layers.some(
+        l => !l.is_global
+          && Number(l.depth) === depth
+          && Number(l.parent_value_id) === parentValueId
+    );
+    if (hasSpecific) return true;
+
+    return layers.some(l => l.is_global && Number(l.depth) === depth);
+}
 function navigateTo(index) {
     navPath = navPath.slice(0, index);
     cancelForms();
@@ -174,8 +214,15 @@ function drillInto(valueId, valueName, layerId) {
 function handleMainAdd() {
     const layer = getCurrentLayer();
     pendingTags = [];
-    if (!layer) { addingLayer = true; addingValue = false; }
-    else         { addingValue = true; addingLayer = false; }
+
+    if (!layer) {
+        addingLayer = true;
+        addingValue = false;
+    } else {
+        addingValue = true;
+        addingLayer = false;
+    }
+
     render();
     setTimeout(() => {
         const el = document.getElementById('layerNameInp') || document.getElementById('tagRealInp');
@@ -192,9 +239,14 @@ async function saveLayer() {
     const val      = (document.getElementById('layerNameInp')?.value || '').trim();
     const chk      = document.getElementById('globalChk');
     const isGlobal = chk ? chk.checked : false;
+
     if (!val) { alert('Please enter a layer name!'); return; }
 
-    // Specific layer — current parent value id pass பண்ணணும்
+    if (!isGlobal && layerAlreadyExistsHere()) {
+        alert('A layer already exists under this item. Delete it first before creating a new one.');
+        return;
+    }
+
     const parentValueId = (!isGlobal && navPath.length > 0)
         ? navPath[navPath.length - 1].valueId
         : null;
@@ -321,6 +373,7 @@ function cancelForms() {
     render();
 }
 
+/* ══ RENDER ══ */
 function render() {
     renderBreadcrumb();
     renderTopButtons();
@@ -339,9 +392,20 @@ function renderBreadcrumb() {
 }
 
 function renderTopButtons() {
-    const layer  = getCurrentLayer();
-    const addBtn = document.getElementById('mainAddBtn');
-    addBtn.textContent = layer ? `+ Add ${cap(layer.name)}` : '+ Add Layer';
+    const layer      = getCurrentLayer();
+    const alreadyHas = layerAlreadyExistsHere();
+    const addBtn     = document.getElementById('mainAddBtn');
+
+    if (layer) {
+        addBtn.textContent = `+ Add ${cap(layer.name)}`;
+        addBtn.disabled    = false;
+    } else if (alreadyHas) {
+        addBtn.textContent = '+ Add Layer';
+        addBtn.disabled    = true;
+    } else {
+        addBtn.textContent = '+ Add Layer';
+        addBtn.disabled    = false;
+    }
 
     const rightBar = document.getElementById('topBarRight');
     const old = document.getElementById('deleteLayerBtn');
@@ -365,7 +429,9 @@ function renderCenter() {
     let title, hint;
     if (navPath.length === 0) {
         title = layer ? cap(layer.name) : 'Assign Location';
-        hint  = layer ? `Click any ${layer.name} to go deeper` : 'Start by adding a layer (e.g. Country)';
+        hint  = layer
+            ? `Click any ${layer.name} to go deeper`
+            : 'Start by adding a layer (e.g. Country)';
     } else {
         title = navPath[navPath.length - 1].valueName;
         hint  = layer
@@ -405,7 +471,9 @@ function renderCenter() {
             ${showGlobal ? `
             <label class="global-check-wrap" for="globalChk">
                 <input type="checkbox" id="globalChk" onchange="toggleGlobalHint(this)">
-                <span class="global-check-label">Apply to all <span>${esc(cap(parentLayerName || 'items'))}</span></span>
+                <span class="global-check-label">
+                    Apply to all <span>${esc(cap(parentLayerName || 'items'))}</span>
+                </span>
             </label>
             <div class="global-hint-box" id="globalHintBox">
                 ✅ This layer will be shared across: <strong>${esc(siblingLabel)}</strong>
@@ -446,12 +514,16 @@ function renderCenter() {
 
     let emptyHtml = '';
     if (!layer && !addingLayer) {
-        emptyHtml = `<div class="empty-state"><div class="icon">🌍</div>
-            <p>No layer defined here yet.<br>Click <strong>"+ Add Layer"</strong> to get started.</p></div>`;
+        emptyHtml = `<div class="empty-state">
+            <div class="icon">🌍</div>
+            <p>No layer defined here yet.<br>Click <strong>"+ Add Layer"</strong> to get started.</p>
+        </div>`;
     } else if (layer && curVals.length === 0 && !addingValue) {
-        emptyHtml = `<div class="empty-state"><div class="icon">📍</div>
+        emptyHtml = `<div class="empty-state">
+            <div class="icon">📍</div>
             <p>No ${esc(layer.name)}s added yet.<br>
-            Click <strong>"+ Add ${esc(cap(layer.name))}"</strong> to add one.</p></div>`;
+            Click <strong>"+ Add ${esc(cap(layer.name))}"</strong> to add one.</p>
+        </div>`;
     }
 
     ca.innerHTML = `

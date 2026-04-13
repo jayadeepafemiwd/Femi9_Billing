@@ -211,6 +211,20 @@
     color: #aaa;
     text-align: center;
   }
+  /* ── LOCATION CASCADE ── */
+.loc-wrap { min-width: 180px; }
+.loc-row  { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.loc-label { font-size: 11px; color: #666; font-weight: 600; min-width: 60px; text-transform: capitalize; }
+.loc-select {
+    flex: 1; padding: 4px 7px; border: 1px solid #d0d0d0;
+    border-radius: 4px; font-size: 12px; color: #333;
+    background: #fff; outline: none; appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 7px center; padding-right: 22px;
+}
+.loc-select:focus { border-color: #3b6cf8; }
+.loc-loading { font-size: 11px; color: #aaa; }
 </style>
 </head>
 <body>
@@ -280,31 +294,69 @@
               <div class="form-label">Customer Type <span class="info-icon">ℹ</span></div>
               <div class="form-control">
                 <div class="radio-group">
-                  <label class="radio-option <?php echo e(old('customer_type','business')=='business'?'selected':''); ?>" id="opt-business" onclick="selectCustomerType('business')">
-                    <input type="radio" name="customer_type" value="business" <?php echo e(old('customer_type','business')=='business'?'checked':''); ?>>
+<label class="radio-option <?php echo e(old('customer_type', $config['default_customer_type'] ?? 'business') == 'business' ? 'selected' : ''); ?>" id="opt-business" onclick="selectCustomerType('business')">                   
+<input type="radio" name="customer_type" value="business" <?php echo e(old('customer_type', $config['default_customer_type'] ?? 'business') == 'business' ? 'checked' : ''); ?>>
                     <span class="radio-dot"></span> Business
                   </label>
-                  <label class="radio-option <?php echo e(old('customer_type')=='individual'?'selected':''); ?>" id="opt-individual" onclick="selectCustomerType('individual')">
-                    <input type="radio" name="customer_type" value="individual" <?php echo e(old('customer_type')=='individual'?'checked':''); ?>>
-                    <span class="radio-dot"></span> Individual
+<label class="radio-option <?php echo e(old('customer_type', $config['default_customer_type'] ?? 'business') == 'individual' ? 'selected' : ''); ?>" id="opt-individual" onclick="selectCustomerType('individual')">                 
+<input type="radio" name="customer_type" value="individual" <?php echo e(old('customer_type', $config['default_customer_type'] ?? 'business') == 'individual' ? 'checked' : ''); ?>>                    <span class="radio-dot"></span> Individual
                   </label>
                 </div>
               </div>
             </div>
 
-            
-            <div class="form-row" id="row-customerCategory" style="<?php echo e(old('customer_type')=='individual'?'display:none':''); ?>">
-              <div class="form-label">Customer Category <span class="info-icon">ℹ</span></div>
-              <div class="form-control" style="max-width:420px;">
-                <div class="category-wrapper">
-                  <select name="customer_category" id="customerCategory">
-                    <option value="">-- Select Category --</option>
-                  </select>
-                  <button type="button" class="manage-cat-btn" onclick="openCategoryModal()">⚙ Manage Categories</button>
-                </div>
-              </div>
-            </div>
+        
+<div class="form-row" id="row-customerCategory" style="<?php echo e(old('customer_type')=='individual'?'display:none':''); ?>">
+  <div class="form-label">Customer Category <span class="info-icon">ℹ</span></div>
+  <div class="form-control" style="max-width:420px;">
 
+    <input type="hidden" name="customer_category" id="customerCategoryValue" 
+           value="<?php echo e(old('customer_category')); ?>">
+
+    
+    <div class="pl-cat-dropdown" id="custCatDropdown">
+      <div class="pl-cat-selected" id="custCatSelected" onclick="toggleCustCatList()"
+           style="display:flex;justify-content:space-between;align-items:center;
+                  padding:7px 10px;border:1px solid #d0d0d0;border-radius:4px;
+                  background:#fff;cursor:pointer;font-size:13px;min-height:36px;">
+        <span id="custCatSelectedText" style="color:#999;">-- Select Category --</span>
+        <span style="font-size:11px;color:#999;">▾</span>
+      </div>
+      <div id="custCatList"
+           style="display:none;position:absolute;background:#fff;border:1px solid #d0d0d0;
+                  border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);z-index:200;
+                  max-height:220px;overflow-y:auto;width:420px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;color:#999;"
+             data-name="" data-layer-id="" data-country-id="" data-loc=""
+             onclick="selectCustCat(this)">
+          <span>-- Select Category --</span>
+        </div>
+        <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;"
+             data-name="<?php echo e($cat->name); ?>"
+             data-layer-id="<?php echo e($cat->assign_fix_location); ?>"
+             data-country-id="<?php echo e($cat->country_id); ?>"
+             data-loc="<?php echo e($cat->location_label); ?>"
+             onclick="selectCustCat(this)"
+             onmouseover="this.style.background='#f0f4ff'"
+             onmouseout="this.style.background='#fff'">
+          <span style="font-weight:500;color:#333;"><?php echo e($cat->name); ?></span>
+          <?php if($cat->location_label): ?>
+            <span style="font-size:11px;color:#fff;background:#3b6cf8;
+                         padding:2px 8px;border-radius:10px;white-space:nowrap;">
+              <?php echo e($cat->location_label); ?>
+
+            </span>
+          <?php endif; ?>
+        </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+      </div>
+    </div>
+
+  </div>
+</div>
             
             <div class="form-row">
               <div class="form-label">Primary Contact <span class="info-icon">ℹ</span></div>
@@ -400,15 +452,17 @@
 
           </div>
 
-          <div class="tabs">
-            <div class="tab active" onclick="showTab('otherDetails',this)">Other Details</div>
-            <div class="tab" onclick="showTab('address',this)">Address</div>
-            <div class="tab" onclick="showTab('contactPersons',this)">Contact Persons</div>
-            <div class="tab" onclick="showTab('remarks',this)">Remarks</div>
-            <div class="tab" onclick="showTab('customFields',this)">Custom Fields</div>
-            <div class="tab" onclick="showTab('reportingTags',this)">Reporting Tags</div>
-          </div>
-        </div>
+         <div class="tabs">
+        <div class="tab active" onclick="showTab('otherDetails',this)">Other Details</div>
+        <div class="tab" onclick="showTab('address',this)">Address</div>
+        <div class="tab" onclick="showTab('contactPersons',this)">Contact Persons</div>
+        <div class="tab" onclick="showTab('assignLocation',this)">Assign Location</div>  
+        <div class="tab" onclick="showTab('remarks',this)">Remarks</div>
+        <div class="tab" onclick="showTab('customFields',this)">Custom Fields</div>
+        <div class="tab" onclick="showTab('reportingTags',this)">Reporting Tags</div>
+      </div>
+        
+        
 
         
         <div id="tab-otherDetails" class="form-body tab-content" style="display:block;">
@@ -558,18 +612,26 @@
           <div class="address-note"><strong>Note:</strong><ul><li>Enter your Billing and Shipping address here.</li></ul></div>
         </div>
 
-        
-        <div id="tab-contactPersons" class="form-body tab-content">
-          <table class="contact-table">
-            <thead>
-              <tr><th>Salutation</th><th>First Name</th><th>Last Name</th><th>Email Address</th><th>Work Phone</th><th>Mobile</th><th></th></tr>
-            </thead>
-            <tbody id="contactPersonsBody"></tbody>
-          </table>
-          <button type="button" class="add-person-btn" onclick="addContactRow()">⊕ Add Contact Person</button>
-        </div>
-
        
+<div id="tab-contactPersons" class="form-body tab-content">
+  <table class="contact-table">
+    <thead>
+      <tr>
+        <th>Salutation</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email Address</th>
+        <th>Work Phone</th>
+        <th>Mobile</th>
+        
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="contactPersonsBody"></tbody>
+  </table>
+  <button type="button" class="add-person-btn" onclick="addContactRow()">⊕ Add Contact Person</button>
+</div>
+
 <div id="tab-customFields" class="form-body tab-content">
   <?php if($customFields->isEmpty()): ?>
     <p style="color:#888;font-size:13px;">
@@ -582,7 +644,7 @@
   <?php else: ?>
     <?php $__currentLoopData = $customFields; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $field): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
       <div class="form-row">
-        
+
         
         <div class="form-label <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>">
           <?php echo e($field->name); ?>
@@ -595,9 +657,9 @@
         
         <div class="form-control">
           <?php
-            $config    = $field->additional_config ?? [];
-            $fieldName = 'custom_fields[' . $field->id . ']';
-            $oldVal    = old('custom_fields.' . $field->id);
+            $fieldConfig = $field->additional_config ?? [];
+            $fieldName   = 'custom_fields[' . $field->id . ']';
+            $oldVal      = old('custom_fields.' . $field->id);
           ?>
 
           <?php switch($field->data_type):
@@ -608,25 +670,25 @@
             <?php case ('phone'): ?>
             <?php case ('url'): ?>
             <?php case ('ip_address'): ?>
-              <input 
+              <input
                 type="<?php echo e($field->data_type == 'email' ? 'email' : ($field->data_type == 'url' ? 'url' : 'text')); ?>"
                 name="<?php echo e($fieldName); ?>"
-                value="<?php echo e($oldVal ?? ($config['default_value'] ?? '')); ?>"
+                value="<?php echo e($oldVal ?? ($fieldConfig['default_value'] ?? '')); ?>"
                 <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>
 
-                <?php if(!empty($config['char_limit'])): ?> maxlength="<?php echo e($config['char_limit']); ?>" <?php endif; ?>
-                placeholder="<?php echo e($config['help_text'] ?? ''); ?>"
+                <?php if(!empty($fieldConfig['char_limit'])): ?> maxlength="<?php echo e($fieldConfig['char_limit']); ?>" <?php endif; ?>
+                placeholder="<?php echo e($fieldConfig['help_text'] ?? ''); ?>"
               >
             <?php break; ?>
 
             <?php case ('text'): ?>
             <?php case ('longtext'): ?>
-              <textarea 
+              <textarea
                 name="<?php echo e($fieldName); ?>"
                 <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>
 
-                placeholder="<?php echo e($config['help_text'] ?? ''); ?>"
-              ><?php echo e($oldVal ?? ($config['default_value'] ?? '')); ?></textarea>
+                placeholder="<?php echo e($fieldConfig['help_text'] ?? ''); ?>"
+              ><?php echo e($oldVal ?? ($fieldConfig['default_value'] ?? '')); ?></textarea>
             <?php break; ?>
 
             <?php case ('integer'): ?>
@@ -638,36 +700,36 @@
             <?php case ('double'): ?>
             <?php case ('currency'): ?>
             <?php case ('percentage'): ?>
-              <input 
+              <input
                 type="number"
                 name="<?php echo e($fieldName); ?>"
-                value="<?php echo e($oldVal ?? ($config['default_value'] ?? '')); ?>"
+                value="<?php echo e($oldVal ?? ($fieldConfig['default_value'] ?? '')); ?>"
                 <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>
 
-                placeholder="<?php echo e($config['help_text'] ?? ''); ?>"
+                placeholder="<?php echo e($fieldConfig['help_text'] ?? ''); ?>"
                 step="<?php echo e(in_array($field->data_type, ['decimal','float','double','currency','percentage']) ? 'any' : '1'); ?>"
               >
             <?php break; ?>
 
             <?php case ('boolean'): ?>
               <label class="portal-check">
-                <input 
-                  type="checkbox" 
-                  name="<?php echo e($fieldName); ?>" 
+                <input
+                  type="checkbox"
+                  name="<?php echo e($fieldName); ?>"
                   value="1"
-                  <?php echo e(($oldVal ?? ($config['default_value'] ?? '')) == '1' ? 'checked' : ''); ?>
+                  <?php echo e(($oldVal ?? ($fieldConfig['default_value'] ?? '')) == '1' ? 'checked' : ''); ?>
 
                 >
-                <?php echo e($config['help_text'] ?? $field->name); ?>
+                <?php echo e($fieldConfig['help_text'] ?? $field->name); ?>
 
               </label>
             <?php break; ?>
 
             <?php case ('date'): ?>
-              <input 
+              <input
                 type="date"
                 name="<?php echo e($fieldName); ?>"
-                value="<?php echo e($oldVal ?? ($config['default_date'] ?? '')); ?>"
+                value="<?php echo e($oldVal ?? ($fieldConfig['default_date'] ?? '')); ?>"
                 <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>
 
                 style="max-width:200px;"
@@ -676,7 +738,7 @@
 
             <?php case ('datetime'): ?>
             <?php case ('timestamp'): ?>
-              <input 
+              <input
                 type="datetime-local"
                 name="<?php echo e($fieldName); ?>"
                 value="<?php echo e($oldVal ?? ''); ?>"
@@ -687,10 +749,10 @@
             <?php break; ?>
 
             <?php case ('time'): ?>
-              <input 
+              <input
                 type="time"
                 name="<?php echo e($fieldName); ?>"
-                value="<?php echo e($oldVal ?? ($config['default_time'] ?? '')); ?>"
+                value="<?php echo e($oldVal ?? ($fieldConfig['default_time'] ?? '')); ?>"
                 <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>
 
                 style="max-width:160px;"
@@ -699,16 +761,16 @@
 
             <?php case ('array'): ?>
               <?php
-                $options = array_filter(array_map('trim', 
-                  explode("\n", $config['options'] ?? '')
+                $options = array_filter(array_map('trim',
+                  explode("\n", $fieldConfig['options'] ?? '')
                 ));
               ?>
               <?php if(count($options)): ?>
                 <select name="<?php echo e($fieldName); ?>" <?php echo e($field->mandatory == 'yes' ? 'required' : ''); ?>>
                   <option value="">-- Select --</option>
                   <?php $__currentLoopData = $options; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $opt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <option value="<?php echo e($opt); ?>" 
-                      <?php echo e(($oldVal ?? ($config['default_value'] ?? '')) == $opt ? 'selected' : ''); ?>>
+                    <option value="<?php echo e($opt); ?>"
+                      <?php echo e(($oldVal ?? ($fieldConfig['default_value'] ?? '')) == $opt ? 'selected' : ''); ?>>
                       <?php echo e($opt); ?>
 
                     </option>
@@ -725,9 +787,9 @@
           <?php endswitch; ?>
 
           
-          <?php if(!empty($config['help_text'])): ?>
+          <?php if(!empty($fieldConfig['help_text'])): ?>
             <div style="font-size:11px;color:#999;margin-top:4px;">
-              <?php echo e($config['help_text']); ?>
+              <?php echo e($fieldConfig['help_text']); ?>
 
             </div>
           <?php endif; ?>
@@ -738,10 +800,17 @@
   <?php endif; ?>
 </div>
 
+
         
         <div id="tab-reportingTags" class="form-body tab-content">
           <p style="color:#888;font-size:13px;">You've not created any Reporting Tags. Start creating by going to <em>More Settings ➡ Reporting Tags</em>.</p>
         </div>
+
+<div id="tab-assignLocation" class="form-body tab-content">
+  <div id="assign-loc-wrap">
+    <span class="loc-loading">Loading...</span>
+  </div>
+</div>
 
         
         <div id="tab-remarks" class="form-body tab-content">
@@ -760,37 +829,14 @@
       </div>
     </div>
   </div>
-
-  <div class="right-icons">
-    <div class="right-icon orange">?</div>
-    <div class="right-icon">📝</div>
-    <div class="right-icon">📺</div>
-    <div class="right-icon">💬</div>
-  </div>
 </div>
-
-
-<div class="modal-overlay" id="categoryModal" onclick="if(event.target===this)closeCategoryModal()">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>⚙ Manage Customer Categories</h3>
-      <button type="button" class="modal-close" onclick="closeCategoryModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="add-cat-row">
-        <input type="text" id="newCatInput" placeholder="Enter category name..."
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addCategory();}">
-        <button type="button" id="btn-add-cat" class="btn-add-cat" onclick="addCategory()">+ Add</button>
-      </div>
-      <div id="cat-error" class="cat-error"></div>
-      <div class="cat-count" id="catCount"></div>
-      <div class="cat-list" id="catList"><div class="cat-empty">Loading...</div></div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-cancel" onclick="closeCategoryModal()">Close</button>
-    </div>
-  </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var defaultType = "<?php echo e($config['default_customer_type'] ?? 'business'); ?>";
+    var savedType   = "<?php echo e(old('customer_type')); ?>";
+    selectCustomerType(savedType || defaultType);
+});
+</script>
 
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -855,6 +901,78 @@ function boldMatch(text, query) {
          + escHtml(text.slice(idx + query.length));
 }
 
+function onCategoryChange() {
+    var sel       = document.getElementById('customerCategory');
+    var opt       = sel.options[sel.selectedIndex];
+    var layerId   = opt ? opt.dataset.layerId   : '';
+    var countryId = opt ? opt.dataset.countryId : '';
+
+    renderAssignLocation(layerId || null, countryId || null);
+}
+
+function toggleCustCatList() {
+  var list = document.getElementById('custCatList');
+  list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Used value ids cache ──
+var _usedValueIds        = [];
+var _currentCatLayerId   = '';  
+var _currentCatCountryId = '';  
+
+function selectCustCat(el) {
+    var name      = el.dataset.name;
+    var layerId   = el.dataset.layerId;
+    var countryId = el.dataset.countryId;
+    var loc       = el.dataset.loc;
+
+    // ✅ Cache store
+    _currentCatLayerId   = layerId   || '';
+    _currentCatCountryId = countryId || '';
+
+    document.getElementById('customerCategoryValue').value = name;
+
+    var txt = document.getElementById('custCatSelectedText');
+    if (name) {
+        txt.style.color = '#333';
+        if (loc) {
+            txt.innerHTML = '<span style="font-weight:500;">' + name + '</span>'
+                + ' <span style="font-size:11px;color:#fff;background:#3b6cf8;'
+                + 'padding:2px 8px;border-radius:10px;margin-left:6px;">' + loc + '</span>';
+        } else {
+            txt.textContent = name;
+        }
+    } else {
+        txt.style.color = '#999';
+        txt.textContent = '-- Select Category --';
+    }
+
+    document.getElementById('custCatList').style.display = 'none';
+
+    if (name && layerId) {
+        fetchUsedLocations(name).then(function() {
+            renderAssignLocation(layerId || null, countryId || null);
+        });
+    } else {
+        _usedValueIds = [];
+        renderAssignLocation(layerId || null, countryId || null);
+    }
+}
+
+// ✅ அந்த category-ல already used value_ids fetch பண்ணு
+async function fetchUsedLocations(categoryName) {
+    try {
+        var res = await fetch(
+            '/customers/used-locations?category=' + encodeURIComponent(categoryName),
+            { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } }
+        );
+        var json = await res.json();
+        _usedValueIds = json.used_value_ids || [];
+    } catch(e) {
+        console.error('fetchUsedLocations failed', e);
+        _usedValueIds = [];
+    }
+}
 // Render dropdown
 function renderDnDropdown(variants, query) {
     var dd = document.getElementById('dnDropdown');
@@ -970,147 +1088,373 @@ document.addEventListener('mousedown', function(e) {
 //  CATEGORY FUNCTIONS
 // ════════════════════════════════════════════════════
 
-async function loadCategoryDropdown() {
-    try {
-        var res  = await fetch('/user-categories', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
-        var json = await res.json();
-        if (!json.success) return;
-        var sel  = document.getElementById('customerCategory');
-        var old  = sel.value;
-        sel.innerHTML = '<option value="">-- Select Category --</option>';
-        json.data.forEach(function(cat) {
-            var o = document.createElement('option');
-            o.value = cat.name; o.textContent = cat.name;
-            if (old === cat.name) o.selected = true;
-            sel.appendChild(o);
-        });
-    } catch(e) { console.error(e); }
-}
-
-async function openCategoryModal() {
-    document.getElementById('categoryModal').classList.add('open');
-    document.getElementById('cat-error').style.display = 'none';
-    document.getElementById('newCatInput').value = '';
-    await renderCatList();
-    setTimeout(function(){ document.getElementById('newCatInput').focus(); }, 100);
-}
-
-function closeCategoryModal() {
-    document.getElementById('categoryModal').classList.remove('open');
-    loadCategoryDropdown();
-}
-
-async function renderCatList() {
-    var list = document.getElementById('catList'), count = document.getElementById('catCount');
-    list.innerHTML = '<div class="cat-empty">Loading...</div>';
-    try {
-        var res  = await fetch('/user-categories', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
-        var json = await res.json();
-        if (!json.success || !json.data.length) {
-            list.innerHTML = '<div class="cat-empty">No categories yet. Add one above ↑</div>';
-            count.textContent = '0 categories'; return;
-        }
-        count.textContent = json.data.length + ' categor' + (json.data.length === 1 ? 'y' : 'ies');
-        list.innerHTML = json.data.map(function(cat) {
-            var sn = escHtml(cat.name).replace(/'/g,"\\'");
-            return '<div class="cat-item" id="cat-item-'+cat.id+'">' +
-                '<span class="cat-name-display" id="cat-name-'+cat.id+'">'+escHtml(cat.name)+'</span>' +
-                '<div class="cat-actions" id="cat-actions-'+cat.id+'">' +
-                    '<button type="button" class="cat-btn edit" onclick="startEdit('+cat.id+',\''+sn+'\')">✏ Edit</button>' +
-                    '<button type="button" class="cat-btn del"  onclick="deleteCategory('+cat.id+',\''+sn+'\')">🗑 Delete</button>' +
-                '</div></div>';
-        }).join('');
-    } catch(e) { list.innerHTML = '<div class="cat-empty" style="color:#e53935;">Failed to load.</div>'; }
-}
-
-async function addCategory() {
-    var input = document.getElementById('newCatInput'), errEl = document.getElementById('cat-error'), btn = document.getElementById('btn-add-cat');
-    var name  = input.value.trim(); errEl.style.display = 'none';
-    if (!name) { input.focus(); return; }
-    btn.disabled = true; btn.textContent = 'Adding...';
-    try {
-        var res  = await fetch('/user-categories', { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({name:name}) });
-        var json = await res.json();
-        if (!json.success) { errEl.textContent = json.message||'Failed.'; errEl.style.display='block'; }
-        else { input.value=''; input.focus(); await renderCatList(); }
-    } catch(e) { errEl.textContent='Network error.'; errEl.style.display='block'; }
-    finally { btn.disabled=false; btn.textContent='+ Add'; }
-}
-
-function startEdit(id, name) {
-    document.getElementById('cat-name-'+id).innerHTML = '<input type="text" class="cat-name-input" id="cat-edit-'+id+'" value="'+escHtml(name)+'" onkeydown="if(event.key===\'Enter\')saveEdit('+id+');if(event.key===\'Escape\')renderCatList();">';
-    document.getElementById('cat-actions-'+id).innerHTML = '<button type="button" class="cat-btn save" onclick="saveEdit('+id+')">✔ Save</button><button type="button" class="cat-btn cancel-edit" onclick="renderCatList()">✕</button>';
-    setTimeout(function(){ var i=document.getElementById('cat-edit-'+id); if(i){i.focus();i.select();} }, 30);
-}
-
-async function saveEdit(id) {
-    var inp=document.getElementById('cat-edit-'+id), errEl=document.getElementById('cat-error');
-    if (!inp) return;
-    var n=inp.value.trim(); errEl.style.display='none';
-    if (!n) { inp.focus(); return; }
-    try {
-        var res=await fetch('/user-categories/'+id,{method:'PUT',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF},body:JSON.stringify({name:n})});
-        var json=await res.json();
-        if (!json.success){errEl.textContent=json.message||'Failed.';errEl.style.display='block';}
-        else await renderCatList();
-    } catch(e){errEl.textContent='Network error.';errEl.style.display='block';}
-}
-
-async function deleteCategory(id, name) {
-    if (!confirm('Delete "' + name + '"?')) return;
-    try {
-        var res=await fetch('/user-categories/'+id,{method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF}});
-        var json=await res.json();
-        if (json.success) await renderCatList(); else alert(json.message||'Failed.');
-    } catch(e){ alert('Network error.'); }
-}
-
 // ════════════════════════════════════════════════════
 //  OTHER HELPERS
 // ════════════════════════════════════════════════════
 
 function selectCustomerType(type) {
-    document.getElementById('opt-business').classList.toggle('selected',   type==='business');
-    document.getElementById('opt-individual').classList.toggle('selected', type==='individual');
-    document.querySelector('input[value="business"]').checked   = type==='business';
-    document.querySelector('input[value="individual"]').checked = type==='individual';
-    var b = type==='business';
-    document.getElementById('row-customerCategory').style.display = b ? 'flex' : 'none';
-    document.getElementById('row-companyName').style.display      = b ? 'flex' : 'none';
-}
+    document.getElementById('opt-business').classList.toggle('selected',   type === 'business');
+    document.getElementById('opt-individual').classList.toggle('selected', type === 'individual');
+    document.querySelector('input[value="business"]').checked   = (type === 'business');
+    document.querySelector('input[value="individual"]').checked = (type === 'individual');
 
+    var isBusiness = (type === 'business');
+    document.getElementById('row-companyName').style.display = isBusiness ? 'flex' : 'none';
+
+  
+}
 function showTab(tabId, el) {
     document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
     document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
     document.getElementById('tab-'+tabId).style.display = 'block';
     el.classList.add('active');
-}
 
+    if (tabId === 'assignLocation') {
+        // ✅ customerCategory select இல்லை — cache use பண்ணு
+        var layerId   = _currentCatLayerId   || '';
+        var countryId = _currentCatCountryId || '';
+
+        if (!_lcLayers.length) {
+            loadLcLayers().then(function() {
+                renderAssignLocation(layerId || null, countryId || null);
+            });
+        } else {
+            renderAssignLocation(layerId || null, countryId || null);
+        }
+    }
+} 
 function toggleMoreDetails() {
     var s=document.getElementById('moreDetailsSection'), b=document.getElementById('addMoreBtn');
     var h=s.style.display==='none'; s.style.display=h?'block':'none';
     b.textContent=h?'－ Show Less':'＋ Add More Details';
 }
 
+
 var contactRowIndex = 0;
-function makeContactRow() {
-    var i=contactRowIndex++, tr=document.createElement('tr');
-    tr.innerHTML='<td><select name="contact_persons['+i+'][salutation]"><option></option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></td>'+
-        '<td><input type="text"  name="contact_persons['+i+'][first_name]"></td>'+
-        '<td><input type="text"  name="contact_persons['+i+'][last_name]"></td>'+
-        '<td><input type="email" name="contact_persons['+i+'][email]"></td>'+
-        '<td><input type="text"  name="contact_persons['+i+'][work_phone]"></td>'+
-        '<td><input type="text"  name="contact_persons['+i+'][mobile]"></td>'+
-        '<td class="action-col"><button type="button" class="remove-row-btn" onclick="removeContactRow(this)">×</button></td>';
-    return tr;
-}
-function addContactRow(){ document.getElementById('contactPersonsBody').appendChild(makeContactRow()); }
-function removeContactRow(btn) {
-    var row=btn.closest('tr'), tbody=document.getElementById('contactPersonsBody');
-    if (tbody.rows.length>1) row.remove();
-    else { row.querySelectorAll('input').forEach(function(i){i.value='';}); row.querySelectorAll('select').forEach(function(s){s.selectedIndex=0;}); }
+// ════════════════════════════════════════════════════
+//  LOCATION CASCADE — load once, cascade in memory
+// ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+//  LOCATION CASCADE — FIXED
+// ════════════════════════════════════════════════════
+var _lcLayers = [];
+var _lcValues = [];
+
+async function loadLcLayers() {
+    try {
+        var res = await fetch('/lc-tree', {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        });
+        var json = await res.json();
+        if (!json.success) return;
+
+        _lcLayers = (json.layers || []).map(function(l) {
+            return {
+                id:              String(l.id),
+                name:            l.name,
+                depth:           parseInt(l.depth),
+                is_global:       !!l.is_global,
+                parent_value_id: l.parent_value_id != null ? String(l.parent_value_id) : null,
+            };
+        });
+
+        _lcValues = (json.values || []).map(function(v) {
+            return {
+                id:              String(v.id),
+                layer_id:        String(v.layer_id),
+                parent_value_id: v.parent_value_id != null ? String(v.parent_value_id) : null,
+                value:           v.value,
+            };
+        });
+
+        // ✅ Load முடிஞ்சதும் current category render பண்ணு
+        var sel       = document.getElementById('customerCategory');
+        var opt       = sel ? sel.options[sel.selectedIndex] : null;
+        var layerId   = opt ? opt.dataset.layerId   : '';
+        var countryId = opt ? opt.dataset.countryId : '';
+        if (layerId) renderAssignLocation(layerId, countryId);
+
+    } catch(e) { console.error('lc-tree load failed', e); }
 }
 
+// Root layer = depth 0, parent_value_id null, not global
+function getRootLayer() {
+    return _lcLayers.find(function(l) {
+        return l.depth === 0 && l.parent_value_id === null && !l.is_global;
+    }) || null;
+}
+
+// Get values for a layer filtered by parent_value_id
+function getLcValues(layerId, parentValueId) {
+    return _lcValues.filter(function(v) {
+        if (v.layer_id !== String(layerId)) return false;
+        if (parentValueId != null)
+            return v.parent_value_id === String(parentValueId);
+        return v.parent_value_id === null;
+    });
+}
+
+// KEY FIX: Find child layer where lc_layers.parent_value_id = selected lc_layer_values.id
+// e.g. select india(id:8) → find layer where parent_value_id = '8' → state layer
+// e.g. select Tamilnadu(id:10) → find layer where parent_value_id = '10' → district layer
+function getChildLayer(selectedValueId) {
+    // Specific child layer for this exact value
+    var specific = _lcLayers.find(function(l) {
+        return !l.is_global && l.parent_value_id === String(selectedValueId);
+    });
+    if (specific) return specific;
+
+    // Global fallback — find global layer at the next depth
+    // First find the current depth by looking up the selected value's layer
+    var selectedValue = _lcValues.find(function(v) {
+        return v.id === String(selectedValueId);
+    });
+    if (!selectedValue) return null;
+
+    var currentLayer = _lcLayers.find(function(l) {
+        return l.id === selectedValue.layer_id;
+    });
+    if (!currentLayer) return null;
+
+    var nextDepth = currentLayer.depth + 1;
+    return _lcLayers.find(function(l) {
+        return l.is_global && l.depth === nextDepth;
+    }) || null;
+}
+
+// Build one dropdown row
+function buildLocSelect(rowIndex, layer, values, depth) {
+    var selectId = 'loc_' + rowIndex + '_d' + depth;
+    var name     = 'contact_persons[' + rowIndex + '][location][' + layer.id + ']';
+
+    var opts = '<option value="">-- ' + capFirst(layer.name) + ' --</option>';
+    values.forEach(function(v) {
+        opts += '<option value="' + escAttr(v.id) + '">' + escHtml(v.value) + '</option>';
+    });
+
+    return '<div class="loc-row" id="' + selectId + '_row"'
+         + ' style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+         + '<span style="font-size:11px;color:#666;min-width:56px;font-weight:600;text-transform:capitalize;">'
+         + escHtml(layer.name) + '</span>'
+         + '<select id="' + selectId + '" name="' + name + '"'
+         + ' data-row="' + rowIndex + '"'
+         + ' data-layer-id="' + layer.id + '"'
+         + ' data-depth="' + depth + '"'
+         + ' onchange="onLocChange(this)"'
+         + ' style="flex:1;padding:4px 7px;border:1px solid #d0d0d0;border-radius:4px;font-size:12px;">'
+         + opts + '</select></div>';
+}
+
+// Render root layer dropdown for a contact row
+function renderLocCell(rowIndex) {
+    var cell = document.getElementById('loc-cell-' + rowIndex);
+    if (!cell) return;
+
+    var rootLayer = getRootLayer();
+    if (!rootLayer) {
+        cell.innerHTML = '<span style="font-size:11px;color:#aaa;">No location layers</span>';
+        return;
+    }
+
+    var rootValues = getLcValues(rootLayer.id, null);
+    cell.innerHTML = '<div id="loc-wrap-' + rowIndex + '" style="min-width:180px;">'
+                   + buildLocSelect(rowIndex, rootLayer, rootValues, 0)
+                   + '</div>';
+}
+
+// On change — cascade child dropdowns using VALUE ID as key
+function onLocChange(sel) {
+    var rowIndex     = parseInt(sel.dataset.row);
+    var changedDepth = parseInt(sel.dataset.depth);
+    var selectedId   = sel.value; // this is lc_layer_values.id
+
+    var wrap = document.getElementById('loc-wrap-' + rowIndex);
+    if (!wrap) return;
+
+    // Remove all dropdowns deeper than current
+    wrap.querySelectorAll('.loc-row').forEach(function(row) {
+        var s = row.querySelector('select');
+        if (s && parseInt(s.dataset.depth) > changedDepth) row.remove();
+    });
+
+    if (!selectedId) return;
+
+    // Find child layer where lc_layers.parent_value_id = selectedId
+    var childLayer = getChildLayer(selectedId);
+    if (!childLayer) return;
+
+    // Get values for child layer filtered by selected value as parent
+    var childValues = getLcValues(childLayer.id, selectedId);
+    if (!childValues.length) return;
+
+    wrap.insertAdjacentHTML('beforeend',
+        buildLocSelect(rowIndex, childLayer, childValues, changedDepth + 1)
+    );
+}
+
+// Contact row with location column
+var contactRowIndex = 0;
+
+function makeContactRow() {
+    var i  = contactRowIndex++;
+    var tr = document.createElement('tr');
+    tr.id  = 'contact-row-' + i;
+    tr.innerHTML =
+        '<td><select name="contact_persons['+i+'][salutation]" style="width:88px;">'
+        + '<option></option><option>Mr.</option><option>Mrs.</option>'
+        + '<option>Ms.</option><option>Dr.</option>'
+        + '</select></td>'
+        + '<td><input type="text"  name="contact_persons['+i+'][first_name]"></td>'
+        + '<td><input type="text"  name="contact_persons['+i+'][last_name]"></td>'
+        + '<td><input type="email" name="contact_persons['+i+'][email]"></td>'
+        + '<td><input type="text"  name="contact_persons['+i+'][work_phone]"></td>'
+        + '<td><input type="text"  name="contact_persons['+i+'][mobile]"></td>'
+        + '<td class="action-col">'
+        +   '<button type="button" class="remove-row-btn" onclick="removeContactRow(this)">×</button>'
+        + '</td>';
+    return tr;
+}
+
+function addContactRow() {
+    document.getElementById('contactPersonsBody').appendChild(makeContactRow());
+}
+
+function removeContactRow(btn) {
+    var row   = btn.closest('tr');
+    var tbody = document.getElementById('contactPersonsBody');
+    if (tbody.rows.length > 1) {
+        row.remove();
+    } else {
+        row.querySelectorAll('input').forEach(function(i){ i.value = ''; });
+        row.querySelectorAll('select').forEach(function(s){ s.selectedIndex = 0; });
+    }
+}
+
+function renderAssignLocation(categoryLayerId, categoryCountryId) {
+    var wrap = document.getElementById('assign-loc-wrap');
+    if (!wrap) return;
+
+    if (!categoryLayerId) {
+        wrap.innerHTML = '<p style="color:#aaa;font-size:13px;">Please select a Customer Category first.</p>';
+        return;
+    }
+
+    var targetLayer = _lcLayers.find(function(l) {
+        return String(l.id) === String(categoryLayerId);
+    });
+
+    if (!targetLayer) {
+        wrap.innerHTML = '<p style="color:#aaa;font-size:13px;">Layer not found.</p>';
+        return;
+    }
+
+    var layerValues = [];
+    if (categoryCountryId) {
+        layerValues = _lcValues.filter(function(v) {
+            return String(v.layer_id)        === String(categoryLayerId)
+                && String(v.parent_value_id) === String(categoryCountryId);
+        });
+    }
+    if (!layerValues.length) {
+        layerValues = _lcValues.filter(function(v) {
+            return String(v.layer_id) === String(categoryLayerId);
+        });
+    }
+
+    if (!layerValues.length) {
+        wrap.innerHTML = '<p style="color:#aaa;font-size:13px;">No values found.</p>';
+        return;
+    }
+
+    // ✅ Used values disable — available values enable
+    var allUsed = layerValues.every(function(v) {
+        return _usedValueIds.includes(String(v.id));
+    });
+
+    var opts = '<option value="">-- Select ' + capFirst(targetLayer.name) + ' --</option>';
+    layerValues.forEach(function(v) {
+        var isUsed = _usedValueIds.includes(String(v.id));
+        opts += '<option value="' + escAttr(v.id) + '"'
+             + (isUsed ? ' disabled style="color:#ccc;"' : '')
+             + '>'
+             + escHtml(v.value)
+             + (isUsed ? ' (Already Assigned)' : '')
+             + '</option>';
+    });
+
+    // ✅ எல்லாமே used ஆயிட்டா warning காட்டு
+    var warningHtml = allUsed
+        ? '<div style="margin-top:8px;padding:8px 12px;background:#fff3cd;border:1px solid #ffc107;'
+        + 'border-radius:4px;font-size:12px;color:#856404;">'
+        + '⚠️ All locations for this category are already assigned to other customers.'
+        + '</div>'
+        : '';
+
+    wrap.innerHTML =
+        '<div class="form-row">'
+      + '<div class="form-label" style="text-transform:capitalize;">'
+      +   escHtml(targetLayer.name)
+      + '</div>'
+      + '<div class="form-control" style="max-width:320px;">'
+      + '<select id="assign-loc-select"'
+      + '  name="assign_location_value_id"'
+      + '  data-layer-id="' + escAttr(categoryLayerId) + '"'
+      + '  data-country-id="' + escAttr(categoryCountryId || '') + '"'
+      + '  onchange="onAssignLocChange(this)"'
+      + (allUsed ? ' disabled' : '') + '>'
+      + opts
+      + '</select>'
+      + warningHtml
+      + '</div></div>'
+      + '<input type="hidden" name="assign_location[layer_id]"  id="al_layer_id"  value="">'
+      + '<input type="hidden" name="assign_location[value_id]"  id="al_value_id"  value="">'
+      + '<input type="hidden" name="assign_location[path]"      id="al_path"      value="">'
+      + '<input type="hidden" name="assign_location[value_ids]" id="al_value_ids" value="">';
+}
+// Select change → path calculate பண்ணு
+function onAssignLocChange(sel) {
+    var selectedValueId = sel.value;
+
+    if (!selectedValueId) {
+        document.getElementById('al_layer_id').value  = '';
+        document.getElementById('al_value_id').value  = '';
+        document.getElementById('al_path').value      = '';
+        document.getElementById('al_value_ids').value = '';
+        return;
+    }
+
+    // ✅ Selected value-இல் இருந்து root வரைக்கும் parent chain trace பண்ணு
+    var chain = buildValueChain(selectedValueId);
+
+    var path     = chain.map(function(v) { return v.value; }).join(' → ');
+    var valueIds = chain.map(function(v) { return v.id; });
+
+    document.getElementById('al_layer_id').value  = sel.dataset.layerId;
+    document.getElementById('al_value_id').value  = selectedValueId;
+    document.getElementById('al_path').value      = path;
+    document.getElementById('al_value_ids').value = JSON.stringify(valueIds);
+}
+
+// ✅ Root → Leaf order-ல parent chain build பண்ணு
+function buildValueChain(valueId) {
+    var chain = [];
+    var current = _lcValues.find(function(v) {
+        return String(v.id) === String(valueId);
+    });
+
+    while (current) {
+        chain.unshift(current); // front-ல add பண்ணு (root first)
+        if (!current.parent_value_id) break;
+
+        current = _lcValues.find(function(v) {
+            return String(v.id) === String(current.parent_value_id);
+        });
+    }
+
+    return chain;
+}
+
+function capFirst(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
 function copyBilling() {
     ['attention','street1','street2','city','pincode','phone','fax'].forEach(function(f){
         var s=document.querySelector('[name="billing['+f+']"]'), d=document.querySelector('[name="shipping['+f+']"]');
@@ -1124,9 +1468,12 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function escAttr(s){ return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // Init
-addContactRow();
-addContactRow();
-loadCategoryDropdown();
+// Init
+loadLcLayers().then(function() {
+    document.getElementById('contactPersonsBody').innerHTML = '';
+    addContactRow();
+    addContactRow();
+});
 </script>
 </body>
 </html><?php /**PATH D:\MAMP\htdocs\femi_billing_11\resources\views/customers/create.blade.php ENDPATH**/ ?>

@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f5f5;color:#333}
-.wrap{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
+.wrap{max-width:960px;margin:0 auto;padding:1.5rem 1rem}
 .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
 h2{font-size:20px;font-weight:600;color:#333}
 .btn-new{background:#378ADD;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:14px;cursor:pointer;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
@@ -22,13 +22,18 @@ tr:hover td{background:#fafafa}
 .badge{display:inline-block;font-size:11px;border-radius:4px;padding:2px 8px;font-weight:600}
 .badge-sales{background:#e6f7ee;color:#1a7a3f}
 .badge-purchase{background:#fff3e0;color:#c76b00}
+.badge-both{background:#f3f0ff;color:#6c47d4}
 .badge-all{background:#EAF4FD;color:#378ADD}
 .badge-ind{background:#f3f0ff;color:#6c47d4}
-.action-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:4px 10px;border-radius:5px}
+.actions{display:flex;align-items:center;gap:4px}
+.action-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:5px 10px;border-radius:5px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .btn-edit{color:#378ADD}
 .btn-edit:hover{background:#EAF4FD}
+.btn-history{color:#7c3aed}
+.btn-history:hover{background:#f3f0ff}
 .btn-del{color:#d44}
 .btn-del:hover{background:#fdecea}
+.divider{width:1px;height:16px;background:#e0e0e0;margin:0 2px}
 .empty-state{text-align:center;padding:48px 20px;color:#aaa}
 .empty-state p{font-size:14px;margin-top:8px}
 .alert{padding:10px 16px;border-radius:6px;margin-bottom:1rem;font-size:14px}
@@ -39,7 +44,6 @@ tr:hover td{background:#fafafa}
 <body>
 <div class="wrap">
 
-  
   <?php if(session('success')): ?>
     <div class="alert alert-success"><?php echo e(session('success')); ?></div>
   <?php endif; ?>
@@ -83,7 +87,14 @@ tr:hover td{background:#fafafa}
               <?php endif; ?>
             </td>
             <td>
-              <span class="badge <?php echo e($pl->transaction_type === 'sales' ? 'badge-sales' : 'badge-purchase'); ?>">
+              <?php
+                $txBadge = match($pl->transaction_type) {
+                  'sales'    => 'badge-sales',
+                  'purchase' => 'badge-purchase',
+                  default    => 'badge-both',
+                };
+              ?>
+              <span class="badge <?php echo e($txBadge); ?>">
                 <?php echo e(ucfirst($pl->transaction_type)); ?>
 
               </span>
@@ -108,14 +119,30 @@ tr:hover td{background:#fafafa}
             </td>
             <td style="color:#666"><?php echo e($pl->currency ?? 'INR'); ?></td>
             <td>
-              <a href="<?php echo e(route('price-lists.edit', $pl->id)); ?>" class="action-btn btn-edit">Edit</a>
-              <form method="POST" action="<?php echo e(route('price-lists.destroy', $pl->id)); ?>"
-                    style="display:inline"
-                    onsubmit="return confirm('Delete this price list?')">
-                <?php echo csrf_field(); ?>
-                <?php echo method_field('DELETE'); ?>
-                <button type="submit" class="action-btn btn-del">Delete</button>
-              </form>
+              <div class="actions">
+                
+                <a href="<?php echo e(route('price-lists.edit', $pl->id)); ?>" class="action-btn btn-edit" title="Edit">
+                  ✏️ Edit
+                </a>
+
+                <div class="divider"></div>
+
+                
+                <a href="<?php echo e(route('price-lists.history', $pl->id)); ?>" class="action-btn btn-history" title="View History">
+                  🕐 History
+                </a>
+
+                <div class="divider"></div>
+
+                
+                <form method="POST" action="<?php echo e(route('price-lists.destroy', $pl->id)); ?>"
+                      style="display:inline"
+                      onsubmit="return confirm('Delete this price list?')">
+                  <?php echo csrf_field(); ?>
+                  <?php echo method_field('DELETE'); ?>
+                  <button type="submit" class="action-btn btn-del" title="Delete">🗑 Delete</button>
+                </form>
+              </div>
             </td>
           </tr>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>

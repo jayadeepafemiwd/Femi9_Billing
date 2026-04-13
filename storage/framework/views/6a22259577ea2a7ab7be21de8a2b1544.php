@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', 'Assemblies'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -28,6 +27,7 @@
           <th style="padding:10px 14px;text-align:right;color:#4a5568;font-weight:600;border-bottom:2px solid #e2e8f0;">Qty</th>
           <th style="padding:10px 14px;text-align:left;color:#4a5568;font-weight:600;border-bottom:2px solid #e2e8f0;">Status</th>
           <th style="padding:10px 14px;border-bottom:2px solid #e2e8f0;"></th>
+          <th style="padding:10px 14px;border-bottom:2px solid #e2e8f0;"></th>
         </tr>
       </thead>
       <tbody>
@@ -46,13 +46,17 @@
             </span>
           </td>
           <td style="padding:10px 14px;">
-            <form method="POST" action="<?php echo e(route('assemblies.destroy', $a->id)); ?>" style="display:inline;">
-              <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
-              <button type="submit" 
-                      style="background:#fee2e2;color:#ef4444;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;"
-                      onclick="return confirm('Delete this assembly?')">Delete</button>
-            </form>
-          </td>
+  <a href="<?php echo e(route('assemblies.edit', $a->id)); ?>"
+     style="background:#e2e8f0;color:#2d5be3;border:none;border-radius:4px;padding:4px 10px;text-decoration:none;font-size:12px;display:inline-block;margin-right:6px;">
+    Edit
+  </a>
+  <form method="POST" action="<?php echo e(route('assemblies.destroy', $a->id)); ?>" style="display:inline;">
+    <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
+    <button type="submit" 
+            style="background:#fee2e2;color:#ef4444;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;"
+            onclick="return confirm('Delete this assembly?')">Delete</button>
+  </form>
+</td>
         </tr>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
         <tr>

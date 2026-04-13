@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Composite Items'); ?>
 
 <?php $__env->startSection('content'); ?>

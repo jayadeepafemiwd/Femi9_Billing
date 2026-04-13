@@ -92,6 +92,7 @@
     .variant-indent { padding-left: 25px; color: #666; font-size: 13px; }
     .variant-sku { color: #888; font-size: 11px; margin-left: 8px; }
     .variant-badge { background: #f0f0f0; color: #666; font-size: 11px; padding: 2px 6px; border-radius: 12px; margin-left: 8px; }
+    .btn-history { background: #e6f7e6; color: #10b981; }
   </style>
 </head>
 <body>
@@ -106,9 +107,20 @@
     <div class="sidebar-item"><span>🏠</span><span>Home</span></div>
     <div class="sidebar-item active"><span>📦</span><span>Items</span><span class="arrow">▼</span></div>
     <div class="sidebar-sub">
-      <div class="sidebar-sub-active">Items +</div>
-      <div class="sidebar-sub-item">Price Lists</div>
+  <div class="sidebar-sub-active">Items +</div>
+  <?php if(!empty($settings['enable_price_lists'])): ?>
+    <div class="sidebar-sub-item"
+         onclick="window.location='<?php echo e(route('price-lists.index')); ?>'">
+      Price Lists
     </div>
+  <?php endif; ?>
+  <?php if(!empty($settings['enable_composite_items'])): ?>
+    <div class="sidebar-sub-item"
+         onclick="window.location='<?php echo e(route('composite-items.index')); ?>'">
+      Composite Items
+    </div>
+  <?php endif; ?>
+</div>
     <div class="sidebar-item"><span>🏪</span><span>Inventory</span><span class="arrow">▶</span></div>
     <div class="sidebar-item"><span>💼</span><span>Sales</span><span class="arrow">▶</span></div>
     <div class="sidebar-item"><span>🛒</span><span>Purchases</span><span class="arrow">▶</span></div>
@@ -245,13 +257,18 @@
                 <td>₹<?php echo e(number_format($product->cost_price, 2)); ?></td>
                <td>
   <a href="<?php echo e(route('products.show', $product->id)); ?>" class="btn-action btn-view">View</a>
-  <a href="<?php echo e(route('products.edit', $product->id)); ?>" class="btn-action btn-edit">Edit</a>
+<a href="<?php echo e(in_array($product->type, ['assembly_item', 'kit_item']) 
+        ? route('composite-items.edit', $product->id) 
+        : route('products.edit', $product->id)); ?>" class="btn-action btn-edit">Edit</a>
+
 
   <?php if($isComposite): ?>
     <a href="<?php echo e(route('composite-items.show', $product->id)); ?>" 
        class="btn-action" 
        style="background:#f3e8ff;color:#7c3aed;">🔩 Assemblies</a>
   <?php endif; ?>
+
+  <a href="<?php echo e(route('products.history', $product->id)); ?>" class="btn-action btn-history">History</a>
 
   <form action="<?php echo e(route('products.destroy', $product->id)); ?>" method="POST" style="display:inline;">
     <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>

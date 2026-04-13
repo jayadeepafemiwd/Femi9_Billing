@@ -1,0 +1,248 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SettingHandleController;
+use App\Http\Controllers\FieldCustomizationController;
+use App\Http\Controllers\LockConfigurationController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CompositeItemController;
+use App\Http\Controllers\BrandController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\UserCategoryController;
+use App\Http\Controllers\CustomerVendorController;
+use App\Http\Controllers\PriceListController;
+use App\Http\Controllers\LcLayerController;
+use App\Http\Controllers\AssemblyController;
+use App\Http\Controllers\TransactionSeriesController;
+
+
+// ===== HOME REDIRECT =====
+Route::get('/', function () {
+    return redirect()->route('products.index');
+});
+
+// ===== SETTINGS HANDLE ROUTES =====
+Route::prefix('setting_handle')->name('setting_handle.')->group(function () {
+    Route::get('/', [SettingHandleController::class, 'create'])->name('create');
+    Route::post('/', [SettingHandleController::class, 'store'])->name('store');
+    Route::delete('/', [SettingHandleController::class, 'destroy'])->name('destroy');
+});
+
+// ===== SIDEBAR SETTINGS ROUTES =====
+Route::prefix('settings')->name('settings.')->group(function () {
+    Route::get('/organization', fn() => view('organization.index'))->name('organization.index');
+    Route::get('/users-roles', fn() => view('users-roles.index'))->name('users.roles');
+    Route::get('/taxes-compliance', fn() => view('taxes-compliance.index'))->name('taxes.compliance');
+    Route::get('/setup-config', fn() => view('setup-config.index'))->name('setup.config');
+    Route::get('/customization', fn() => view('customization.index'))->name('customization.index');
+    Route::get('/automation', fn() => view('automation.index'))->name('automation.index');
+    Route::get('/general', fn() => view('general-settings.index'))->name('general.settings');
+    Route::get('/customers-vendors', fn() => view('customers-vendors.index'))->name('customers.vendors');
+});
+
+// ===== GENERAL REDIRECTS =====
+Route::get('/general', fn() => redirect()->route('setting_handle.create'))->name('general');
+Route::get('/record-locking', fn() => view('record-locking'))->name('record.locking');
+Route::get('/custom-buttons', fn() => view('custom-buttons'))->name('custom.buttons');
+Route::get('/related-lists', fn() => view('related-lists'))->name('related.lists');
+
+// ===== FIELD CUSTOMIZATION ROUTES =====
+Route::prefix('field_customization')->name('field_customization.')->group(function () {
+    Route::get('/', [FieldCustomizationController::class, 'index'])->name('index');
+    Route::get('/create', [FieldCustomizationController::class, 'create'])->name('create');
+    Route::post('/', [FieldCustomizationController::class, 'store'])->name('store');
+    Route::get('/{id}/edit', [FieldCustomizationController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [FieldCustomizationController::class, 'update'])->name('update');
+    Route::delete('/{id}', [FieldCustomizationController::class, 'destroy'])->name('destroy');
+    Route::patch('/{id}/toggle-status', [FieldCustomizationController::class, 'toggleStatus'])->name('toggle-status');
+    Route::patch('/{id}/toggle-pdf', [FieldCustomizationController::class, 'togglePdf'])->name('toggle-pdf');
+    Route::get('/{id}/access', [FieldCustomizationController::class, 'access'])->name('access');
+    Route::post('/{id}/access', [FieldCustomizationController::class, 'updateAccess'])->name('updateAccess');
+});
+
+// ===== LOCK CONFIGURATION ROUTES =====
+Route::prefix('lock_configuration')->name('lock_configuration.')->group(function () {
+    Route::get('/', [LockConfigurationController::class, 'index'])->name('index');
+    Route::get('/create', [LockConfigurationController::class, 'create'])->name('create');
+    Route::post('/', [LockConfigurationController::class, 'store'])->name('store');
+    Route::get('/{lockConfiguration}/edit', [LockConfigurationController::class, 'edit'])->name('edit');
+    Route::put('/{lockConfiguration}', [LockConfigurationController::class, 'update'])->name('update');
+    Route::delete('/{lockConfiguration}', [LockConfigurationController::class, 'destroy'])->name('destroy');
+    Route::patch('/{lockConfiguration}/toggle', [LockConfigurationController::class, 'toggleStatus'])->name('toggle');
+});
+
+// ===== PRODUCT ROUTES =====
+Route::resource('products', ProductController::class);
+Route::post('products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+Route::post('/products/{product}/opening-stock', [ProductController::class, 'saveOpeningStock'])->name('products.opening-stock');
+Route::post('/products/set-variant', function(\Illuminate\Http\Request $request) {
+    session(['current_variant' => $request->all()]);
+    return response()->json(['success' => true]);
+})->name('products.set.variant');
+Route::post('/products/clear-variant', function () {
+    session()->forget('current_variant');
+    return response()->json(['success' => true]);
+})->name('products.clear.variant');
+Route::get('/products/{id}/history', [ProductController::class, 'history'])->name('products.history');
+
+// ===== BRAND ROUTES =====
+Route::get('/brands/list', [BrandController::class, 'getList'])->name('brands.list');
+Route::resource('brands', BrandController::class)->except(['show', 'edit', 'update']);
+Route::put('/brands/{id}', [BrandController::class, 'update'])->name('brands.update');
+Route::get('/brands/{id}/edit', [BrandController::class, 'edit'])->name('brands.edit');
+
+// ===== LOCATION ROUTES =====
+// Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
+// Route::get('/locations/create', fn() => redirect()->route('locations.index'));
+// Route::get('/locations/{id}/edit', [LocationController::class, 'edit'])->where('id', '[0-9]+')->name('locations.edit');
+// Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
+// Route::put('/locations/{location}', [LocationController::class, 'update'])->name('locations.update');
+// Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
+
+// ===== CATEGORY ROUTES =====
+Route::get('/categories/list', [CategoryController::class, 'list']);
+Route::post('/categories', [CategoryController::class, 'store']);
+Route::put('/categories/{id}', [CategoryController::class, 'update']);
+Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+
+// ===== CUSTOMER ROUTES =====
+// ═══ CUSTOMER ROUTES ═══
+
+// ✅ Specific routes FIRST (resource-க்கு முன்னாடி)
+Route::get('/customers/used-locations', 
+    [CustomerController::class, 'getUsedLocations'])
+    ->name('customers.used-locations');
+
+// ✅ THEN resource
+Route::resource('customers', CustomerController::class);
+
+// ✅ THEN nested routes
+Route::put('/customers/{customer}/address', 
+    [CustomerController::class, 'updateAddress'])
+    ->name('customers.update_address');
+Route::post('/customers/{customer}/contact-persons', 
+    [CustomerController::class, 'storeContactPerson']);
+Route::put('/customers/{customer}/contact-persons/{index}', 
+    [CustomerController::class, 'updateContactPerson']);
+Route::post('/customers/{customer}/contact-persons/{index}/primary', 
+    [CustomerController::class, 'markContactPersonPrimary']);
+Route::delete('/customers/{customer}/contact-persons/{index}', 
+    [CustomerController::class, 'destroyContactPerson']);
+Route::post('/customers/{customer}/comments', 
+    [CustomerController::class, 'storeComment']);
+Route::delete('/customers/{customer}/comments/{commentId}', 
+    [CustomerController::class, 'destroyComment']);
+Route::get('customers/used-locations', [CustomerController::class, 'getUsedLocations']);
+Route::get('/admin/user-categories', function () {
+    return view('admin.user-categories.index');
+})->name('admin.user-categories.index');
+
+Route::prefix('user-categories')->group(function () {
+    Route::get('/',                     [UserCategoryController::class, 'index']);  // ← ADD THIS
+    Route::get('flat',                  [UserCategoryController::class, 'flat']);
+    Route::get('used-layers',           [UserCategoryController::class, 'usedLayers']);
+    Route::post('/',                    [UserCategoryController::class, 'store']);
+    Route::get('{userCategory}',        [UserCategoryController::class, 'show']);
+    Route::put('{userCategory}',        [UserCategoryController::class, 'update']);
+    Route::delete('{userCategory}',     [UserCategoryController::class, 'destroy']);
+});
+
+
+// ===== CUSTOMER VENDOR PREFERENCE ROUTES =====
+Route::get('/settings/preferences/contacts', [CustomerVendorController::class, 'create'])->name('customers-vendors.create');
+Route::post('/settings/preferences/contacts', [CustomerVendorController::class, 'store'])->name('customers-vendors.store');
+
+
+// ===== PRICE LIST ROUTES =====
+Route::prefix('price-lists')->name('price-lists.')->group(function () {
+    Route::get('/',           [PriceListController::class, 'index'])->name('index');
+    Route::get('/create',     [PriceListController::class, 'create'])->name('create');
+    Route::post('/',          [PriceListController::class, 'store'])->name('store');
+    Route::get('/{id}/edit',  [PriceListController::class, 'edit'])->name('edit');
+    Route::put('/{id}',       [PriceListController::class, 'update'])->name('update');
+    Route::delete('/{id}',    [PriceListController::class, 'destroy'])->name('destroy');
+    Route::patch('/{id}/toggle-status', [PriceListController::class, 'toggleStatus'])->name('toggle-status');
+});
+
+Route::apiResource('price-list-categories', PriceListCategoryController::class)
+     ->except(['show','create','edit']);
+
+     Route::prefix('assign-location')->group(function () {
+        Route::get('/',              [LcLayerController::class, 'index']);
+        Route::get('/tree',          [LcLayerController::class, 'getTree']);
+        Route::post('/add-layer',    [LcLayerController::class, 'addLayer']);
+        Route::post('/add-value',    [LcLayerController::class, 'addValue']);
+        Route::post('/delete-value', [LcLayerController::class, 'deleteValue']);
+        Route::post('/delete-layer', [LcLayerController::class, 'deleteLayer']);
+        Route::get('location-layers/values', [LcLayerController::class, 'values']);
+    });
+    // routes/api.php
+
+Route::prefix('composite-items')->name('composite-items.')->group(function () {
+
+    Route::get('search-products', [CompositeItemController::class, 'searchProducts'])
+        ->name('search-products');
+
+    Route::post('{id}/restore', [CompositeItemController::class, 'restore'])
+        ->name('restore');
+
+    // CRUD
+    Route::get('/',         [CompositeItemController::class, 'index'])->name('index');
+    Route::get('/create',   [CompositeItemController::class, 'create'])->name('create');
+    Route::post('/',        [CompositeItemController::class, 'store'])->name('store');
+    Route::get('{id}',      [CompositeItemController::class, 'show'])->name('show');
+    Route::get('{id}/edit', [CompositeItemController::class, 'edit'])->name('edit');
+    Route::put('{id}',      [CompositeItemController::class, 'update'])->name('update');
+    Route::delete('{id}',   [CompositeItemController::class, 'destroy'])->name('destroy');
+    Route::get('composite-items/{compositeItem}/edit', [CompositeItemController::class, 'edit'])->name('composite-items.edit');
+Route::put('composite-items/{compositeItem}', [CompositeItemController::class, 'update'])->name('composite-items.update');
+
+});
+
+Route::resource('assemblies', AssemblyController::class);
+// Assemblies
+Route::get('/assemblies',                  [App\Http\Controllers\AssemblyController::class, 'index'])->name('assemblies.index');
+Route::get('/assemblies/create',           [App\Http\Controllers\AssemblyController::class, 'create'])->name('assemblies.create');
+Route::post('/assemblies',                 [App\Http\Controllers\AssemblyController::class, 'store'])->name('assemblies.store');
+Route::get('/assemblies/{id}',             [App\Http\Controllers\AssemblyController::class, 'show'])->name('assemblies.show');
+Route::delete('/assemblies/{id}',          [App\Http\Controllers\AssemblyController::class, 'destroy'])->name('assemblies.destroy');
+Route::get('assemblies/{assembly}/edit', [AssemblyController::class, 'edit'])->name('assemblies.edit');
+Route::put('assemblies/{assembly}',      [AssemblyController::class, 'update'])->name('assemblies.update');
+
+// API — composite item details fetch (for form)
+Route::get('/assemblies/composite-item/{id}', [App\Http\Controllers\AssemblyController::class, 'getCompositeItem'])->name('assemblies.composite-item');
+
+Route::get('/lc-tree', [LcLayerController::class, 'getTree']);
+
+Route::post('/locations/{location}/attach-series', [TransactionSeriesController::class, 'attachToLocation'])
+    ->name('locations.attach-series');
+ 
+// Locations CRUD (if not already defined)
+Route::prefix('locations')->group(function () {
+    Route::get('/',             [LocationController::class, 'index'])  ->name('locations.index');
+    Route::post('/',            [LocationController::class, 'store'])  ->name('locations.store');
+    Route::get('/{location}/edit',   [LocationController::class, 'edit'])   ->name('locations.edit');
+    Route::put('/{location}',   [LocationController::class, 'update']) ->name('locations.update');
+    Route::delete('/{location}',[LocationController::class, 'destroy'])->name('locations.destroy');
+});
+
+Route::prefix('transaction-series')->group(function () {
+    Route::get('/',                      [TransactionSeriesController::class, 'index'])   ->name('transaction-series.index');
+    Route::get('/create',                [TransactionSeriesController::class, 'create'])  ->name('transaction-series.create');  // முன்னாடி add பண்ணினோம்
+    Route::post('/',                     [TransactionSeriesController::class, 'store'])   ->name('transaction-series.store');
+    Route::get('/{transactionSeries}/edit',   [TransactionSeriesController::class, 'edit'])   ->name('transaction-series.edit');  // ✅ இதை add பண்ணுங்கள்
+    Route::get('/{transactionSeries}',   [TransactionSeriesController::class, 'show'])    ->name('transaction-series.show');
+    Route::put('/{transactionSeries}',   [TransactionSeriesController::class, 'update'])  ->name('transaction-series.update');
+    Route::delete('/{transactionSeries}',[TransactionSeriesController::class, 'destroy']) ->name('transaction-series.destroy');
+    Route::get('/transaction-series/list', [TransactionSeriesController::class, 'list'])->name('transaction-series.list');
+});
+Route::get('composite-items/{id}/edit', [CompositeItemController::class, 'edit'])
+     ->name('composite-items.edit');
+
+Route::resource('price-lists', PriceListController::class);
+Route::get('price-lists/{id}/history', [PriceListController::class, 'history'])
+    ->name('price-lists.history');
+
+

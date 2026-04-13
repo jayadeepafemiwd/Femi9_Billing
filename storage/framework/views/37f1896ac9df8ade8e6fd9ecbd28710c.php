@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', 'New Assembly'); ?>
 
 <?php $__env->startPush('styles'); ?>
@@ -92,9 +91,7 @@
 }
 
 /* ── COMPOSITE SELECT ── */
-.composite-select-wrap {
-  position: relative;
-}
+.composite-select-wrap { position: relative; }
 .composite-input-box {
   display: flex;
   align-items: center;
@@ -158,6 +155,22 @@
   gap: 8px;
 }
 
+/* ── STOCK ALERT ── */
+.stock-alert {
+  background: #fef3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 16px;
+  display: none;
+}
+.stock-alert.show { display: block; }
+.stock-alert-title { font-weight: 600; margin-bottom: 6px; }
+.stock-alert ul { margin: 0; padding-left: 18px; }
+.stock-alert li { margin-bottom: 2px; }
+
 /* ── ASSOCIATED TABLE ── */
 .assoc-section { margin-top: 28px; }
 .assoc-title {
@@ -216,7 +229,7 @@
 .qty-input:focus { border-color: #2d5be3; }
 
 .qty-avail { font-size: 13px; color: #333; }
-.qty-avail.warn { color: #e74c3c; }
+.qty-avail.warn { color: #e74c3c; font-weight: 600; }
 
 .total-qty-cell { font-size: 13px; color: #333; }
 .total-qty-sub  { font-size: 11px; color: #888; }
@@ -249,6 +262,31 @@
 .cost-row a { color: #2d5be3; cursor: pointer; }
 
 hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
+
+/* ── PRODUCT SEARCH DD (for new rows) ── */
+.product-search-wrap { position: relative; }
+.product-search-dd {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 400;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.product-search-dd.open { display: block; }
+.product-search-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+}
+.product-search-item:hover { background: #f0f5ff; color: #2d5be3; }
+.product-search-item .ps-sku { font-size: 11px; color: #888; }
 
 /* ── BOTTOM BAR ── */
 .bottom-bar {
@@ -343,18 +381,25 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
 <div class="assembly-form">
   <h1 class="page-title">🔩 New Assembly</h1>
 
+  
+  <?php if(session('error')): ?>
+    <div style="background:#fde8e8;color:#c0392b;padding:10px 14px;border-radius:5px;margin-bottom:16px;font-size:13px;white-space:pre-line;">
+      <?php echo e(session('error')); ?>
+
+    </div>
+  <?php endif; ?>
+
+  
+  <div class="stock-alert" id="stockAlert">
+    <div class="stock-alert-title">⚠️ Insufficient Stock — Assembly not possible</div>
+    <ul id="stockAlertList"></ul>
+  </div>
+
   <form id="assemblyForm" method="POST" action="<?php echo e(route('assemblies.store')); ?>">
     <?php echo csrf_field(); ?>
     <input type="hidden" name="action" id="formAction" value="assemble">
     <input type="hidden" name="associated_items_json"    id="associatedItemsJson">
     <input type="hidden" name="associated_services_json" id="associatedServicesJson">
-
-    <?php if(session('error')): ?>
-      <div style="background:#fde8e8;color:#c0392b;padding:10px 14px;border-radius:5px;margin-bottom:16px;font-size:13px;">
-        <?php echo e(session('error')); ?>
-
-      </div>
-    <?php endif; ?>
 
     
     <div class="form-row">
@@ -363,25 +408,22 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
         <input type="hidden" name="composite_item_id" id="compositeItemId" value="<?php echo e($preselectedId ?? ''); ?>">
         <div class="composite-select-wrap">
           <div class="composite-input-box" id="compositeBox" onclick="toggleCompositeDd()">
-            <span class="composite-selected-name" id="compositeLabel">
-              <?php echo e($preselectedName ?? ''); ?>
-
-            </span>
+            <span class="composite-selected-name" id="compositeLabel"><?php echo e($preselectedName ?? ''); ?></span>
             <?php if(!$preselectedName): ?>
               <span class="composite-placeholder" id="compositePlaceholder">Select a composite item</span>
             <?php endif; ?>
-            <span class="composite-clear" id="compositeClear" 
+            <span class="composite-clear" id="compositeClear"
                   onclick="clearComposite(event)"
                   style="<?php echo e($preselectedId ? '' : 'display:none'); ?>">×</span>
             <span class="composite-chevron">▼</span>
           </div>
           <div class="composite-dd" id="compositeDd">
-            <input type="text" class="composite-dd-search" 
+            <input type="text" class="composite-dd-search"
                    placeholder="Search composite items..."
                    oninput="filterComposite(this.value)" autocomplete="off">
             <div id="compositeDdList">
               <?php $__currentLoopData = $compositeItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ci): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="composite-dd-item" 
+                <div class="composite-dd-item"
                      onclick="selectComposite(<?php echo e($ci->id); ?>, '<?php echo e(addslashes($ci->name)); ?>', '<?php echo e($ci->sku ?? ''); ?>')">
                   <?php echo e($ci->name); ?>
 
@@ -393,8 +435,7 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
             </div>
           </div>
         </div>
-        <div class="item-sku-sub" id="compositeSku" 
-             style="<?php echo e($preselectedId ? '' : 'display:none'); ?>">
+        <div class="item-sku-sub" id="compositeSku" style="<?php echo e($preselectedId ? '' : 'display:none'); ?>">
           SKU: <span id="compositeSkuVal"></span>
         </div>
       </div>
@@ -416,8 +457,7 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
     <div class="form-row">
       <div class="form-label gray">Description</div>
       <div class="form-content">
-        <textarea name="description" class="form-input" rows="3" 
-                  style="resize:vertical;"></textarea>
+        <textarea name="description" class="form-input" rows="3" style="resize:vertical;"></textarea>
       </div>
     </div>
 
@@ -438,7 +478,7 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
                class="form-input" value="1" min="0.0001" step="0.0001"
                oninput="updateTotalQty()" required>
         <div class="item-sku-sub" id="qtyAvailMsg">
-          You can Assemble <strong id="maxAssembleQty">0</strong> unit from the available stock.
+          You can assemble <strong id="maxAssembleQty">0</strong> unit(s) from available stock.
         </div>
       </div>
     </div>
@@ -447,8 +487,8 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
     <div class="form-row">
       <div class="form-label">Location*</div>
       <div class="form-content">
-        <select name="location_id" class="form-select" required>
-          <option value="">Add Location</option>
+        <select name="location_id" id="locationSelect" class="form-select" required>
+          <option value="">Select Location</option>
           <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $loc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <option value="<?php echo e($loc->id); ?>"><?php echo e($loc->location_name); ?></option>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -463,16 +503,16 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
       <div class="assoc-title">Associated Items*</div>
 
       <div class="info-box">
-        ℹ️ If you've incurred an addition cost while assembling this item such as rent, labour, or scrap; you can <strong>add it as a service item</strong> to associate that cost to the item.
+        ℹ️ If you've incurred an additional cost while assembling (e.g. rent, labour, scrap), add it as a <strong>service item</strong>.
       </div>
 
       <table class="assoc-table" id="itemsTable">
         <thead>
           <tr>
-            <th style="width:40%;">Item Details</th>
-            <th class="right">Quantity Required</th>
-            <th class="right">Total Qty required</th>
-            <th class="right">Quantity Available</th>
+            <th style="width:38%;">Item Details</th>
+            <th class="right">Qty Required</th>
+            <th class="right">Total Qty</th>
+            <th class="right">Qty Available</th>
             <th style="width:30px;"></th>
           </tr>
         </thead>
@@ -484,26 +524,22 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
       </table>
 
       <div style="padding:8px 0;">
-        <button type="button" class="add-row-btn" onclick="addItemRow()">
-          ➕ Add New Row
-        </button>
+        <button type="button" class="add-row-btn" onclick="addItemRow()">➕ Add New Row</button>
         &nbsp;&nbsp;
-        <button type="button" class="add-row-btn" onclick="addServiceToItems()">
-          ➕ Add Services
-        </button>
+        <button type="button" class="add-row-btn" onclick="addServiceRow()">➕ Add Services</button>
       </div>
     </div>
 
     
     <div class="assoc-section" style="margin-top:24px;">
-      <div class="assoc-title">Associated Services*</div>
+      <div class="assoc-title">Associated Services</div>
 
       <table class="assoc-table" id="servicesTable">
         <thead>
           <tr>
-            <th style="width:40%;">Service Details</th>
-            <th class="right">Quantity Required</th>
-            <th class="right">Total Qty required</th>
+            <th style="width:38%;">Service Details</th>
+            <th class="right">Qty Required</th>
+            <th class="right">Total Qty</th>
             <th class="right">Cost per unit</th>
             <th style="width:30px;"></th>
           </tr>
@@ -516,9 +552,7 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
       </table>
 
       <div style="padding:8px 0;">
-        <button type="button" class="add-row-btn" onclick="addServiceRow()">
-          ➕ Add New Row
-        </button>
+        <button type="button" class="add-row-btn" onclick="addServiceRow()">➕ Add New Row</button>
       </div>
     </div>
 
@@ -534,13 +568,13 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
       <button class="modal-x" onclick="closeNumModal()">×</button>
     </div>
     <div class="modal-body">
-      <p>You have selected manual assembly numbering. Do you want us to auto-generate it for you?</p>
+      <p>Do you want us to auto-generate assembly numbers?</p>
       <label class="radio-opt">
-        <input type="radio" name="num_pref" value="auto" id="numAuto"> 
+        <input type="radio" name="num_pref" value="auto" id="numAuto">
         Continue auto-generating assembly numbers
       </label>
       <label class="radio-opt">
-        <input type="radio" name="num_pref" value="manual" id="numManual" checked> 
+        <input type="radio" name="num_pref" value="manual" id="numManual" checked>
         Enter assembly numbers manually
       </label>
     </div>
@@ -565,12 +599,10 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
 const COMPOSITE_ITEMS = <?php echo json_encode($compositeItems, 15, 512) ?>;
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-let selectedComposite = null;
-let itemRows     = []; // { product_id, name, sku, unit, qty, qty_available, cost, image_url }
-let serviceRows  = []; // { product_id, name, sku, unit, qty, cost, image_url }
-let numPref      = 'manual'; // 'auto' | 'manual'
-let autoNum      = '<?php echo e($autoNumber); ?>';
-let rowCounter   = 0;
+let itemRows    = [];
+let serviceRows = [];
+let numPref     = 'manual';
+let autoNum     = '<?php echo e($autoNumber); ?>';
 
 // ── COMPOSITE DROPDOWN ────────────────────────────────
 function toggleCompositeDd() {
@@ -594,18 +626,15 @@ function filterComposite(q) {
 }
 
 async function selectComposite(id, name, sku) {
-  document.getElementById('compositeItemId').value   = id;
+  document.getElementById('compositeItemId').value = id;
   document.getElementById('compositeLabel').textContent = name;
-  document.getElementById('compositeLabel').style.display = '';
-  document.getElementById('compositePlaceholder') && 
+  document.getElementById('compositePlaceholder') &&
     (document.getElementById('compositePlaceholder').style.display = 'none');
   document.getElementById('compositeClear').style.display = '';
   document.getElementById('compositeSku').style.display  = '';
   document.getElementById('compositeSkuVal').textContent = sku || '—';
   document.getElementById('compositeDd').classList.remove('open');
   document.getElementById('compositeBox').classList.add('selected');
-
-  // Fetch associate items
   await loadCompositeDetails(id);
 }
 
@@ -616,9 +645,9 @@ function clearComposite(e) {
   document.getElementById('compositeClear').style.display = 'none';
   document.getElementById('compositeSku').style.display   = 'none';
   document.getElementById('compositeBox').classList.remove('selected');
-  selectedComposite = null;
   itemRows = []; serviceRows = [];
   renderItems(); renderServices();
+  hideStockAlert();
 }
 
 document.addEventListener('click', e => {
@@ -629,18 +658,19 @@ document.addEventListener('click', e => {
 
 async function loadCompositeDetails(id) {
   try {
-    const res  = await fetch(`/assemblies/composite-item/${id}`, {
+    const locationId = document.getElementById('locationSelect')?.value || '';
+    const res  = await fetch(`/assemblies/composite-item/${id}?location_id=${locationId}`, {
       headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
     });
     const data = await res.json();
     if (!data.success) return;
 
-    selectedComposite = data.data;
     itemRows    = data.data.items.map(i => ({ ...i, qty: i.quantity_required }));
     serviceRows = data.data.services.map(s => ({ ...s, qty: s.quantity_required }));
     renderItems();
     renderServices();
     updateMaxQty();
+    hideStockAlert();
   } catch(e) {
     console.error(e);
   }
@@ -650,7 +680,7 @@ async function loadCompositeDetails(id) {
 function renderItems() {
   const tbody = document.getElementById('itemsTbody');
   if (!itemRows.length) {
-    tbody.innerHTML = '<tr id="itemsEmpty"><td colspan="5" class="empty-msg">Select a composite item to load associated items</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">Select a composite item to load associated items</td></tr>';
     return;
   }
 
@@ -658,23 +688,32 @@ function renderItems() {
 
   tbody.innerHTML = itemRows.map((row, idx) => {
     const totalQty = (row.qty * qta).toFixed(4).replace(/\.?0+$/, '');
-    const avail    = row.quantity_available ?? 0;
-    const isWarn   = avail < (row.qty * qta);
+    const avail    = parseFloat(row.quantity_available ?? 0);
+    const needed   = row.qty * qta;
+    const isWarn   = avail < needed;
     const imgHtml  = row.image_url
       ? `<img src="${row.image_url}" alt="">`
       : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`;
 
+    // New row (no product_id yet) — show search input
+    const itemCell = row.product_id
+      ? `<div class="item-cell">
+           <div class="item-img">${imgHtml}</div>
+           <div>
+             <div class="item-name">${escHtml(row.name)}</div>
+             <div class="item-sku">${row.sku ? 'SKU: '+escHtml(row.sku) : ''}</div>
+           </div>
+         </div>`
+      : `<div class="product-search-wrap">
+           <input type="text" class="form-input" placeholder="Search product..."
+                  oninput="searchProduct(${idx}, this.value, 'item', this)"
+                  autocomplete="off">
+           <div class="product-search-dd" id="psDd_item_${idx}"></div>
+         </div>`;
+
     return `
       <tr data-idx="${idx}">
-        <td>
-          <div class="item-cell">
-            <div class="item-img">${imgHtml}</div>
-            <div>
-              <div class="item-name">${escHtml(row.name)}</div>
-              <div class="item-sku">${row.sku ? 'SKU: '+escHtml(row.sku) : ''}</div>
-            </div>
-          </div>
-        </td>
+        <td>${itemCell}</td>
         <td class="right">
           <input class="qty-input" type="number" min="0.0001" step="0.0001"
                  value="${row.qty}"
@@ -682,7 +721,7 @@ function renderItems() {
         </td>
         <td class="right">
           <div class="total-qty-cell">${totalQty}</div>
-          <div class="total-qty-sub">x ${qta} assemblies</div>
+          <div class="total-qty-sub">× ${qta} assemblies</div>
         </td>
         <td class="right">
           <span class="qty-avail ${isWarn ? 'warn' : ''}">
@@ -696,9 +735,7 @@ function renderItems() {
         </td>
       </tr>
       <tr>
-        <td colspan="5" class="cost-row">
-          🏷️ Cost Price : <a>View</a>
-        </td>
+        <td colspan="5" class="cost-row">🏷️ Cost Price: <a>View</a></td>
       </tr>`;
   }).join('');
 }
@@ -707,15 +744,17 @@ function onItemQtyChange(idx, val) {
   itemRows[idx].qty = parseFloat(val) || 0;
   renderItems();
   updateMaxQty();
+  checkStockBeforeAlert();
 }
 
 function removeItemRow(idx) {
   itemRows.splice(idx, 1);
   renderItems();
+  checkStockBeforeAlert();
 }
 
 function addItemRow() {
-  itemRows.push({ product_id: null, name: 'New Item', sku: '', unit: '', qty: 1, quantity_available: 0, cost: 0, image_url: null });
+  itemRows.push({ product_id: null, name: '', sku: '', unit: '', qty: 1, quantity_available: 0, cost: 0, image_url: null });
   renderItems();
 }
 
@@ -723,7 +762,7 @@ function addItemRow() {
 function renderServices() {
   const tbody = document.getElementById('servicesTbody');
   if (!serviceRows.length) {
-    tbody.innerHTML = '<tr id="servicesEmpty"><td colspan="5" class="empty-msg">No services added</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No services added</td></tr>';
     return;
   }
 
@@ -735,17 +774,24 @@ function renderServices() {
       ? `<img src="${row.image_url}" alt="">`
       : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`;
 
+    const svcCell = row.product_id
+      ? `<div class="item-cell">
+           <div class="item-img">${imgHtml}</div>
+           <div>
+             <div class="item-name">${escHtml(row.name)}</div>
+             <div class="item-sku">${row.sku ? 'SKU: '+escHtml(row.sku) : ''}</div>
+           </div>
+         </div>`
+      : `<div class="product-search-wrap">
+           <input type="text" class="form-input" placeholder="Search service..."
+                  oninput="searchProduct(${idx}, this.value, 'service', this)"
+                  autocomplete="off">
+           <div class="product-search-dd" id="psDd_service_${idx}"></div>
+         </div>`;
+
     return `
       <tr data-idx="${idx}">
-        <td>
-          <div class="item-cell">
-            <div class="item-img">${imgHtml}</div>
-            <div>
-              <div class="item-name">${escHtml(row.name)}</div>
-              <div class="item-sku">${row.sku ? 'SKU: '+escHtml(row.sku) : ''}</div>
-            </div>
-          </div>
-        </td>
+        <td>${svcCell}</td>
         <td class="right">
           <input class="qty-input" type="number" min="0.0001" step="0.0001"
                  value="${row.qty}"
@@ -753,7 +799,7 @@ function renderServices() {
         </td>
         <td class="right">
           <div class="total-qty-cell">${totalQty}</div>
-          <div class="total-qty-sub">x ${qta} assemblies</div>
+          <div class="total-qty-sub">× ${qta} assemblies</div>
         </td>
         <td class="right">${parseFloat(row.cost || 0).toFixed(2)}</td>
         <td>
@@ -762,9 +808,7 @@ function renderServices() {
         </td>
       </tr>
       <tr>
-        <td colspan="5" class="cost-row">
-          🏷️ Cost Price : <a>View</a>
-        </td>
+        <td colspan="5" class="cost-row">🏷️ Cost Price: <a>View</a></td>
       </tr>`;
   }).join('');
 }
@@ -780,17 +824,104 @@ function removeSvcRow(idx) {
 }
 
 function addServiceRow() {
-  serviceRows.push({ product_id: null, name: 'New Service', sku: '', unit: '', qty: 1, cost: 0, image_url: null });
+  serviceRows.push({ product_id: null, name: '', sku: '', unit: '', qty: 1, cost: 0, image_url: null });
   renderServices();
 }
 
-function addServiceToItems() { addServiceRow(); }
+// ── PRODUCT SEARCH (for new rows) ─────────────────────
+let searchTimer = null;
+async function searchProduct(idx, q, type, inputEl) {
+  const ddId = `psDd_${type}_${idx}`;
+  const dd   = document.getElementById(ddId);
+  if (!dd) return;
+
+  clearTimeout(searchTimer);
+  if (!q.trim()) { dd.classList.remove('open'); return; }
+
+  searchTimer = setTimeout(async () => {
+    try {
+      const productType = type === 'service' ? 'service' : 'goods';
+      const res  = await fetch(`/composite-items/search-products?q=${encodeURIComponent(q)}&type=${productType}`, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+      });
+      const data = await res.json();
+      const list = data.data || data.products || data || [];
+
+      if (!list.length) {
+        dd.innerHTML = '<div class="product-search-item" style="color:#aaa;">No results</div>';
+      } else {
+        dd.innerHTML = list.slice(0, 10).map(p => `
+          <div class="product-search-item"
+               onclick="selectProductRow(${idx}, ${JSON.stringify(p).replace(/"/g,'&quot;')}, '${type}')">
+            ${escHtml(p.name)}
+            ${p.sku ? `<div class="ps-sku">SKU: ${escHtml(p.sku)}</div>` : ''}
+          </div>`).join('');
+      }
+      dd.classList.add('open');
+    } catch(e) { console.error(e); }
+  }, 300);
+}
+
+async function selectProductRow(idx, product, type) {
+  const locationId = document.getElementById('locationSelect')?.value || '';
+  let availStock = 0;
+
+  if (type === 'item' && product.id) {
+    try {
+      const res  = await fetch(`/assemblies/composite-item/${document.getElementById('compositeItemId').value}?location_id=${locationId}`, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+      });
+    } catch(e) {}
+    // Fetch stock directly
+    try {
+      const res2 = await fetch(`/products/${product.id}?format=json`, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+      });
+    } catch(e) {}
+    availStock = product.stock_on_hand ?? 0;
+  }
+
+  if (type === 'item') {
+    itemRows[idx] = {
+      product_id: product.id,
+      name: product.name,
+      sku:  product.sku || '',
+      unit: product.unit || '',
+      qty:  1,
+      quantity_available: availStock,
+      cost: product.cost_price || 0,
+      image_url: null,
+    };
+    renderItems();
+    updateMaxQty();
+    checkStockBeforeAlert();
+  } else {
+    serviceRows[idx] = {
+      product_id: product.id,
+      name: product.name,
+      sku:  product.sku || '',
+      unit: product.unit || '',
+      qty:  1,
+      cost: product.cost_price || 0,
+      image_url: null,
+    };
+    renderServices();
+  }
+}
+
+// Close product search dd on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.product-search-wrap')) {
+    document.querySelectorAll('.product-search-dd').forEach(d => d.classList.remove('open'));
+  }
+});
 
 // ── QTY TO ASSEMBLE ────────────────────────────────────
 function updateTotalQty() {
   renderItems();
   renderServices();
   updateMaxQty();
+  checkStockBeforeAlert();
 }
 
 function updateMaxQty() {
@@ -798,10 +929,9 @@ function updateMaxQty() {
     document.getElementById('maxAssembleQty').textContent = 0;
     return;
   }
-  // max assemblies = min(available / qty_required) for all items
   let maxAssemble = Infinity;
   itemRows.forEach(r => {
-    if (r.qty > 0) {
+    if (r.qty > 0 && r.product_id) {
       maxAssemble = Math.min(maxAssemble, Math.floor((r.quantity_available ?? 0) / r.qty));
     }
   });
@@ -809,20 +939,53 @@ function updateMaxQty() {
   document.getElementById('maxAssembleQty').textContent = maxAssemble;
 }
 
-// ── NUMBER MODAL ────────────────────────────────────────
-function openNumModal() {
-  document.getElementById('numModal').classList.add('open');
-  document.getElementById(numPref === 'auto' ? 'numAuto' : 'numManual').checked = true;
+// ── STOCK ALERT (client-side) ─────────────────────────
+function checkStockBeforeAlert() {
+  const qta = parseFloat(document.getElementById('qtyToAssemble').value) || 1;
+  const shortages = [];
+
+  itemRows.forEach(r => {
+    if (!r.product_id) return;
+    const needed = r.qty * qta;
+    const avail  = parseFloat(r.quantity_available ?? 0);
+    if (avail < needed) {
+      shortages.push({
+        name:    r.name,
+        needed:  needed,
+        avail:   avail,
+        unit:    r.unit || '',
+      });
+    }
+  });
+
+  if (shortages.length) {
+    const list = document.getElementById('stockAlertList');
+    list.innerHTML = shortages.map(s =>
+      `<li><strong>${escHtml(s.name)}</strong>: Need <strong>${s.needed}</strong> ${escHtml(s.unit)} — Available only <strong>${s.avail}</strong> ${escHtml(s.unit)}</li>`
+    ).join('');
+    document.getElementById('stockAlert').classList.add('show');
+  } else {
+    hideStockAlert();
+  }
+
+  return shortages.length === 0;
 }
+
+function hideStockAlert() {
+  document.getElementById('stockAlert').classList.remove('show');
+}
+
+// ── NUMBER MODAL ────────────────────────────────────────
+function openNumModal() { document.getElementById('numModal').classList.add('open'); }
 function closeNumModal() { document.getElementById('numModal').classList.remove('open'); }
 function saveNumPref() {
   numPref = document.querySelector('input[name="num_pref"]:checked')?.value || 'manual';
   if (numPref === 'auto') {
-    document.getElementById('assemblyNumber').value = autoNum;
-    document.getElementById('assemblyNumber').readOnly = true;
+    document.getElementById('assemblyNumber').value     = autoNum;
+    document.getElementById('assemblyNumber').readOnly  = true;
     document.getElementById('assemblyNumber').style.background = '#f8f9fb';
   } else {
-    document.getElementById('assemblyNumber').readOnly = false;
+    document.getElementById('assemblyNumber').readOnly  = false;
     document.getElementById('assemblyNumber').style.background = '#fff';
   }
   closeNumModal();
@@ -832,24 +995,39 @@ function saveNumPref() {
 function submitForm(action) {
   document.getElementById('formAction').value = action;
 
-  // Build JSON payloads
+  const compositeId = document.getElementById('compositeItemId').value;
+  if (!compositeId) { alert('Please select a Composite Item first!'); return; }
+
+  const locationId = document.getElementById('locationSelect').value;
+  if (!locationId) { alert('Please select a Location!'); return; }
+
+  // For "assemble" action — check stock first (client-side)
+  if (action === 'assemble') {
+    const stockOk = checkStockBeforeAlert();
+    if (!stockOk) {
+      // Scroll to alert
+      document.getElementById('stockAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return; // Block submit — don't send to server
+    }
+  }
+
   document.getElementById('associatedItemsJson').value = JSON.stringify(
     itemRows.map(r => ({
       product_id: r.product_id,
-      name: r.name,
-      sku: r.sku,
-      unit: r.unit,
-      quantity: r.qty,
+      name:       r.name,
+      sku:        r.sku,
+      unit:       r.unit,
+      quantity:   r.qty,
       cost_price: r.cost ?? 0,
     }))
   );
   document.getElementById('associatedServicesJson').value = JSON.stringify(
     serviceRows.map(r => ({
       product_id: r.product_id,
-      name: r.name,
-      sku: r.sku,
-      unit: r.unit,
-      quantity: r.qty,
+      name:       r.name,
+      sku:        r.sku,
+      unit:       r.unit,
+      quantity:   r.qty,
       cost_price: r.cost ?? 0,
     }))
   );
@@ -863,16 +1041,23 @@ function escHtml(s) {
 }
 function escAttr(s) { return String(s||'').replace(/'/g,"\\'"); }
 
-// ── INIT — preselected composite item ──────────────────
+// ── INIT ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const pid = '<?php echo e($preselectedId ?? ''); ?>';
   if (pid) {
     loadCompositeDetails(pid);
     const ci = COMPOSITE_ITEMS.find(c => c.id == pid);
-    if (ci) {
-      document.getElementById('compositeSkuVal').textContent = ci.sku || '—';
-    }
+    if (ci) document.getElementById('compositeSkuVal').textContent = ci.sku || '—';
   }
+
+  // Reload stock when location changes
+  document.getElementById('locationSelect')?.addEventListener('change', function() {
+    const compositeId = document.getElementById('compositeItemId').value;
+    if (compositeId) loadCompositeDetails(compositeId);
+  });
+
+  // Also re-check when qty changes
+  document.getElementById('qtyToAssemble')?.addEventListener('input', checkStockBeforeAlert);
 });
 </script>
 <?php $__env->stopPush(); ?>

@@ -104,10 +104,11 @@ async function loadData() {
     const res = await api('/assign-location/tree');
     allLayers = (res.layers || []).map(l => ({
         ...l,
-        id        : String(l.id),
-        parent_id : l.parent_id ? String(l.parent_id) : null,
-        names     : Array.isArray(l.names) ? l.names : (l.names ? JSON.parse(l.names) : []),
-        is_global : !!l.is_global,
+        id         : String(l.id),
+        layer_type : l.layer_type || l.name || '',  // ← இந்த line add பண்ணு
+        parent_id  : l.parent_id ? String(l.parent_id) : null,
+        names      : Array.isArray(l.names) ? l.names : (l.names ? JSON.parse(l.names) : []),
+        is_global  : !!l.is_global,
     }));
     globalValues = (res.globalValues || []).map(v => ({
         ...v,
@@ -120,19 +121,16 @@ async function loadData() {
 /* ── Get names for current context ── */
 function currentLayerNames(layer) {
     if (!layer) return [];
-    if (!layer.is_global) return layer.names || [];
-
-    // Global layer — find names specific to current parent item
-    const parentNameId = navPath.length > 0
-        ? String(navPath[navPath.length - 1].itemId)
-        : null;
-
-    if (!parentNameId) return [];
-
-    const record = globalValues.find(
-        v => v.layer_id === String(layer.id) && v.parent_name_id === parentNameId
-    );
-    return record ? (record.names || []) : [];
+    
+    if (navPath.length === 0) {
+        // Root level — parent_value_id null ஆனவை
+        return (layer.names || []);
+    }
+    
+    // Drill down — current parent-க்கான values
+    const parentId = String(navPath[navPath.length - 1].itemId);
+    const allVals  = layer.all_values || [];
+    return allVals.filter(v => String(v.parent_value_id) === parentId);
 }
 
 /* ── currentLayer: specific first, then global fallback ── */
@@ -308,36 +306,22 @@ function removePendingTag(idx) {
     setTimeout(() => document.getElementById('tagRealInp')?.focus(), 30);
 }
 
-async function saveAllTags() {
-    const inp = document.getElementById('tagRealInp');
-    if (inp && inp.value.trim()) {
-        addPendingTag(inp.value.trim());
-        inp.value = '';
-    }
-    if (pendingTags.length === 0) { alert('Please type at least one name!'); return; }
-
-    const layer = currentLayer();
-    if (!layer) return;
-
-    const btn = document.getElementById('saveTagsBtn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-
-    // For global layers, pass parent_name_id so values are stored per-state
-    const parentNameId = layer.is_global && navPath.length > 0
-        ? String(navPath[navPath.length - 1].itemId)
-        : null;
-
-    for (const name of pendingTags) {
-        const payload = { layer_id: layer.id, name };
-        if (parentNameId) payload.parent_name_id = parentNameId;
-
-        const res = await api('/assign-location/add-name', payload);
-        if (!res.success) { alert(res.message || `Failed to save "${name}"`); break; }
-    }
-
-    pendingTags = [];
-    addingItem  = false;
-    await loadData();
+async function loadData() {
+    const res = await api('/assign-location/tree');
+    allLayers = (res.layers || []).map(l => ({
+        ...l,
+        id         : String(l.id),
+        layer_type : l.layer_type || l.name || '',  // ← இந்த line add பண்ணு
+        parent_id  : l.parent_id ? String(l.parent_id) : null,
+        names      : Array.isArray(l.names) ? l.names : (l.names ? JSON.parse(l.names) : []),
+        is_global  : !!l.is_global,
+    }));
+    globalValues = (res.globalValues || []).map(v => ({
+        ...v,
+        layer_id : String(v.layer_id),
+        names    : Array.isArray(v.names) ? v.names : (v.names ? JSON.parse(v.names) : []),
+    }));
+    render();
 }
 
 async function deleteItem(layerId, nameId) {

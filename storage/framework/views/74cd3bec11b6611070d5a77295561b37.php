@@ -64,6 +64,30 @@ td input[type=number]{width:90px;font-size:13px;padding:4px 8px;border:1px solid
 h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 .empty-row td{text-align:center;padding:24px;color:#aaa;font-size:13px}
 .alert-error{background:#fdecea;color:#c0392b;padding:10px 16px;border-radius:6px;margin-bottom:1rem;font-size:13px}
+.pl-cat-dropdown { position:relative; width:100%; }
+.pl-cat-selected {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 10px; border:1px solid #ccc; border-radius:6px;
+  background:#fff; cursor:pointer; font-size:14px; min-height:36px;
+}
+.pl-cat-selected:hover { border-color:#378ADD; }
+.pl-cat-list {
+  display:none; position:absolute; top:calc(100% + 3px); left:0; right:0;
+  background:#fff; border:1px solid #ccc; border-radius:6px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.12); z-index:200; max-height:220px; overflow-y:auto;
+}
+.pl-cat-list.open { display:block; }
+.pl-cat-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:9px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f0f0f0;
+}
+.pl-cat-item:last-child { border-bottom:none; }
+.pl-cat-item:hover { background:#f0f8ff; }
+.pl-cat-item.selected { background:#EAF4FD; }
+.pl-cat-name { font-weight:500; color:#333; }
+.pl-cat-loc { font-size:11px; color:#fff; background:#378ADD;
+              padding:2px 8px; border-radius:10px; white-space:nowrap; }
+.pl-cat-arrow { font-size:11px; color:#999; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -107,7 +131,63 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 
           onchange="renderItems()"> Purchase
       </label>
+      <label>
+        <input type="radio" name="transaction_type" value="both"
+          <?php echo e(old('transaction_type') === 'both' ? 'checked' : ''); ?>
+
+          onchange="renderItems()"> Both
+      </label>
     </div>
+  </div>
+</div>
+
+
+<div class="form-row">
+  <div class="form-label">Category <span class="info-icon" title="Group your price lists">ℹ</span></div>
+  <div class="form-control" style="max-width:420px;">
+
+    
+    <input type="hidden" name="category_id"   id="pl_category_id">
+    <input type="hidden" name="category_name" id="pl_category_name">
+
+    
+    <div class="pl-cat-dropdown" id="plCatDropdown">
+      <div class="pl-cat-selected" id="plCatSelected" onclick="togglePlCatList()">
+        <span id="plCatSelectedText" style="color:#999;">-- Select Category --</span>
+        <span class="pl-cat-arrow">▾</span>
+      </div>
+      <div class="pl-cat-list" id="plCatList">
+        <div class="pl-cat-item" data-id="" data-name="" data-loc=""
+             onclick="selectPlCat(this)">
+          <span class="pl-cat-name" style="color:#999;">-- Select Category --</span>
+        </div>
+        <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <div class="pl-cat-item"
+             data-id="<?php echo e($cat->id); ?>"
+             data-name="<?php echo e($cat->name); ?>"
+             data-loc="<?php echo e($cat->location_label); ?>"
+             onclick="selectPlCat(this)">
+          <span class="pl-cat-name"><?php echo e($cat->name); ?></span>
+          <?php if($cat->location_label): ?>
+            <span class="pl-cat-loc"><?php echo e($cat->location_label); ?></span>
+          <?php endif; ?>
+        </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="form-row">
+  <div class="form-label"></div>
+  <div class="form-control">
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+      <input type="checkbox" name="access_permission" id="access-permission" value="1"
+             <?php echo e(old('access_permission') ? 'checked' : ''); ?>>
+      This category use admin purpose only
+    </label>
   </div>
 </div>
 
@@ -295,6 +375,50 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 </div>
 
 </form>
+
+
+<div id="plCategoryModal"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+            z-index:1000;align-items:center;justify-content:center;"
+     onclick="if(event.target===this)closePLCategoryModal()">
+  <div style="background:#fff;border-radius:10px;width:480px;max-width:95vw;
+              box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 20px;border-bottom:1px solid #e8e8e8;background:#f5f9ff;">
+      <span style="font-size:15px;font-weight:600;color:#222;">⚙ Manage Price List Categories</span>
+      <button type="button" onclick="closePLCategoryModal()"
+              style="width:28px;height:28px;border-radius:50%;border:none;background:#eee;
+                     color:#555;font-size:16px;cursor:pointer;display:flex;
+                     align-items:center;justify-content:center;">×</button>
+    </div>
+    <div style="padding:20px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" id="newPLCatInput" placeholder="Enter category name..."
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addPLCategory();}"
+               style="flex:1;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;">
+        <button type="button" id="btn-add-pl-cat" onclick="addPLCategory()"
+                style="padding:8px 16px;background:#378ADD;color:#fff;border:none;
+                       border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;">
+          + Add
+        </button>
+      </div>
+      <div id="pl-cat-error" style="color:#c0392b;font-size:12px;margin-bottom:8px;display:none;"></div>
+      <div id="pl-cat-count" style="font-size:11px;color:#999;margin-bottom:10px;"></div>
+      <div id="pl-cat-list"
+           style="max-height:280px;overflow-y:auto;border:1px solid #e8e8e8;border-radius:6px;">
+        <div style="padding:32px;text-align:center;color:#aaa;font-size:13px;">Loading...</div>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;">
+      <button type="button" onclick="closePLCategoryModal()"
+              style="padding:8px 20px;border:1px solid #ccc;border-radius:6px;
+                     font-size:13px;cursor:pointer;background:#fff;color:#333;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 </div>
 
@@ -412,12 +536,199 @@ function escHtml(s) {
   return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Page load — old() value-க்கு ஏத்தமாதிரி show பண்ணு
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('price_list_type').value === 'individual_items') {
     selectType('ind');
   }
 });
+
+// ── Custom Category Dropdown ──────────────────────────────────────────────────
+function togglePlCatList() {
+  document.getElementById('plCatList').classList.toggle('open');
+}
+
+function selectPlCat(el) {
+  const id   = el.dataset.id;
+  const name = el.dataset.name;
+  const loc  = el.dataset.loc;
+
+  document.getElementById('pl_category_id').value   = id;
+  document.getElementById('pl_category_name').value = name;
+
+  const txt = document.getElementById('plCatSelectedText');
+  if (name) {
+    txt.style.color = '#333';
+    if (loc) {
+      txt.innerHTML = escHtml(name) +
+        ' <span style="font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:10px;margin-left:6px;">' +
+        escHtml(loc) + '</span>';
+    } else {
+      txt.textContent = name;
+    }
+  } else {
+    txt.style.color = '#999';
+    txt.textContent = '-- Select Category --';
+  }
+
+  document.querySelectorAll('.pl-cat-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('plCatList').classList.remove('open');
+}
+
+// Outside click close
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('plCatDropdown');
+  if (dd && !dd.contains(e.target)) {
+    document.getElementById('plCatList').classList.remove('open');
+  }
+});
+
+// ── Category Modal ────────────────────────────────────────────────────────────
+const PL_CAT_URL = '/user-categories';
+const CSRF_PL    = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+async function openPLCategoryModal() {
+  const modal = document.getElementById('plCategoryModal');
+  modal.style.display = 'flex';
+  document.getElementById('pl-cat-error').style.display = 'none';
+  document.getElementById('newPLCatInput').value = '';
+  await renderPLCatList();
+  setTimeout(() => document.getElementById('newPLCatInput').focus(), 100);
+}
+
+function closePLCategoryModal() {
+  document.getElementById('plCategoryModal').style.display = 'none';
+  refreshPlCatDropdown();
+}
+
+async function refreshPlCatDropdown() {
+  try {
+    const res  = await fetch(PL_CAT_URL, { headers: { 'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL } });
+    const json = await res.json();
+    if (!json.success) return;
+
+    const list      = document.getElementById('plCatList');
+    const currentId = document.getElementById('pl_category_id').value;
+
+    let html = `<div class="pl-cat-item" data-id="" data-name="" data-loc=""
+                     onclick="selectPlCat(this)">
+                  <span class="pl-cat-name" style="color:#999;">-- Select Category --</span>
+                </div>`;
+
+    json.data.forEach(cat => {
+      const loc      = cat.location_label ?? '';
+      const locBadge = loc ? `<span class="pl-cat-loc">${escHtml(loc)}</span>` : '';
+      const active   = String(cat.id) === String(currentId) ? ' selected' : '';
+      html += `<div class="pl-cat-item${active}" data-id="${cat.id}"
+                    data-name="${escHtml(cat.name)}" data-loc="${escHtml(loc)}"
+                    onclick="selectPlCat(this)">
+                 <span class="pl-cat-name">${escHtml(cat.name)}</span>
+                 ${locBadge}
+               </div>`;
+    });
+
+    list.innerHTML = html;
+  } catch(e) { console.error('refreshPlCatDropdown:', e); }
+}
+
+async function renderPLCatList() {
+  const list  = document.getElementById('pl-cat-list');
+  const count = document.getElementById('pl-cat-count');
+  list.innerHTML = '<div style="padding:32px;text-align:center;color:#aaa;font-size:13px;">Loading...</div>';
+  try {
+    const res  = await fetch(PL_CAT_URL, { headers: { 'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL } });
+    const json = await res.json();
+    if (!json.success || !json.data.length) {
+      list.innerHTML = '<div style="padding:32px;text-align:center;color:#aaa;font-size:13px;">No categories yet. Add one above ↑</div>';
+      count.textContent = '0 categories'; return;
+    }
+    count.textContent = json.data.length + ' categor' + (json.data.length===1?'y':'ies');
+    list.innerHTML = json.data.map(cat => {
+      const sn = cat.name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      return `<div style="display:flex;align-items:center;padding:10px 14px;
+                          border-bottom:1px solid #f0f0f0;gap:10px;" id="plcat-item-${cat.id}">
+        <span style="flex:1;font-size:13px;color:#333;font-weight:500;"
+              id="plcat-name-${cat.id}">${escHtml(cat.name)}</span>
+        <div id="plcat-actions-${cat.id}" style="display:flex;gap:4px;">
+          <button type="button" onclick="startPLEdit(${cat.id},'${sn}')"
+                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
+                         border:1px solid #b8d0ff;background:#fff;color:#378ADD;">✏ Edit</button>
+          <button type="button" onclick="deletePLCategory(${cat.id},'${sn}')"
+                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
+                         border:1px solid #fca5a5;background:#fff;color:#c0392b;">🗑 Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="padding:32px;text-align:center;color:#c0392b;font-size:13px;">Failed to load.</div>';
+  }
+}
+
+async function addPLCategory() {
+  const input = document.getElementById('newPLCatInput');
+  const errEl = document.getElementById('pl-cat-error');
+  const btn   = document.getElementById('btn-add-pl-cat');
+  const name  = input.value.trim();
+  errEl.style.display = 'none';
+  if (!name) { input.focus(); return; }
+  btn.disabled = true; btn.textContent = 'Adding...';
+  try {
+    const res  = await fetch(PL_CAT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF_PL},
+      body: JSON.stringify({ name })
+    });
+    const json = await res.json();
+    if (!json.success) { errEl.textContent = json.message||'Failed.'; errEl.style.display='block'; }
+    else { input.value=''; input.focus(); await renderPLCatList(); }
+  } catch(e) { errEl.textContent='Network error.'; errEl.style.display='block'; }
+  finally { btn.disabled=false; btn.textContent='+ Add'; }
+}
+
+function startPLEdit(id, name) {
+  document.getElementById(`plcat-name-${id}`).innerHTML =
+    `<input type="text" id="plcat-edit-${id}" value="${name}"
+            style="flex:1;padding:5px 8px;border:1px solid #378ADD;border-radius:4px;
+                   font-size:13px;outline:none;width:100%;"
+            onkeydown="if(event.key==='Enter')savePLEdit(${id});if(event.key==='Escape')renderPLCatList();">`;
+  document.getElementById(`plcat-actions-${id}`).innerHTML =
+    `<button type="button" onclick="savePLEdit(${id})"
+             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
+                    border:1px solid #86efac;background:#fff;color:#16a34a;">✔ Save</button>
+     <button type="button" onclick="renderPLCatList()"
+             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
+                    border:1px solid #ccc;background:#fff;color:#888;">✕</button>`;
+  setTimeout(() => { const i=document.getElementById(`plcat-edit-${id}`); if(i){i.focus();i.select();} }, 30);
+}
+
+async function savePLEdit(id) {
+  const inp   = document.getElementById(`plcat-edit-${id}`);
+  const errEl = document.getElementById('pl-cat-error');
+  if (!inp) return;
+  const name = inp.value.trim(); errEl.style.display='none';
+  if (!name) { inp.focus(); return; }
+  try {
+    const res  = await fetch(`${PL_CAT_URL}/${id}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF_PL},
+      body: JSON.stringify({ name })
+    });
+    const json = await res.json();
+    if (!json.success) { errEl.textContent=json.message||'Failed.'; errEl.style.display='block'; }
+    else await renderPLCatList();
+  } catch(e) { errEl.textContent='Network error.'; errEl.style.display='block'; }
+}
+
+async function deletePLCategory(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  try {
+    const res  = await fetch(`${PL_CAT_URL}/${id}`, {
+      method:'DELETE', headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL}
+    });
+    const json = await res.json();
+    if (json.success) await renderPLCatList(); else alert(json.message||'Failed.');
+  } catch(e) { alert('Network error.'); }
+}
 </script>
 </body>
 </html><?php /**PATH D:\MAMP\htdocs\femi_billing_11\resources\views/products/pricelist.blade.php ENDPATH**/ ?>

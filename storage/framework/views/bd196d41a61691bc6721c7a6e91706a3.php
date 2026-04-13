@@ -357,8 +357,12 @@ if ($selectedVariantName && $product->variants_data) {
           <?php endif; ?>
         </div>
        <div class="detail-header-actions">
-  <a href="<?php echo e(url('/products/' . $product->id . '/edit') . ($selectedVariant ? '?variant=' . urlencode($selectedVariant['name']) : '')); ?>" 
-     class="btn-edit-icon" title="Edit">✏️</a>
+<?php
+    $editUrl = in_array($product->type, ['assembly_item', 'kit_item'])
+        ? route('composite-items.edit', $product->id)
+        : url('/products/' . $product->id . '/edit') . ($selectedVariant ? '?variant=' . urlencode($selectedVariant['name']) : '');
+?>
+<a href="<?php echo e($editUrl); ?>" class="btn-edit-icon" title="Edit">✏️</a>
 
 <?php if($product->item_type === 'item'): ?>
     <button class="btn-adjust" onclick="openOpeningStock()">Adjust Stock</button>
@@ -817,8 +821,15 @@ if ($selectedVariantName && $product->variants_data) {
     <?php if(in_array($field, ['updated_at', 'created_at', 'deleted_at'])): ?> <?php continue; ?> <?php endif; ?>
               <tr style="border-bottom:1px solid #f0f2f7;">
                 <td style="padding:5px 10px;color:#555;font-weight:500;"><?php echo e($field); ?></td>
-                <td style="padding:5px 10px;color:#ef4444;"><?php echo e($h->old_data[$field] ?? '—'); ?></td>
-                <td style="padding:5px 10px;color:#10b981;"><?php echo e($newVal); ?></td>
+              <td style="padding:5px 10px;color:#ef4444;">
+                  <?php $oldVal = $h->old_data[$field] ?? '—'; ?>
+                  <?php echo e(is_array($oldVal) ? json_encode($oldVal) : $oldVal); ?>
+
+              </td>
+              <td style="padding:5px 10px;color:#10b981;">
+                  <?php echo e(is_array($newVal) ? json_encode($newVal) : $newVal); ?>
+
+              </td>
               </tr>
               <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </tbody>
