@@ -15,6 +15,7 @@ return new class extends Migration
             // Basic Info
             $table->enum('customer_type', ['business', 'individual'])->default('business');
              $table->string('customer_category', 100)->nullable();
+             $table->string('user_code', 20)->nullable();
              $table->json('assign_location')->nullable();
             $table->string('name', 100)->nullable();
             $table->string('company_name', 255)->nullable();

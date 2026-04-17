@@ -75,8 +75,8 @@ class SettingHandleController extends Controller
     $request->validate([
         'name'                           => 'required|string|max:200',
         'decimal_rate'                   => 'required|integer|min:0|max:6',
-        'custom_field.dimension_unit'    => 'required|in:cm,m,in,ft,mm',  // ⭐ fixed
-        'custom_field.weight_unit'       => 'required|in:kg,g,lb,oz,mg',  // ⭐ fixed
+        'custom_field.dimension_unit'    => 'required|in:cm,m,in,ft,mm',  
+        'custom_field.weight_unit'       => 'required|in:kg,g,lb,oz,mg', 
         'barcode_field'                  => 'required|in:sku,upc,ean,isbn',
         'inventory_start_date'           => 'required|date',
         'enable_serial_number'           => 'nullable|boolean',
@@ -94,8 +94,8 @@ class SettingHandleController extends Controller
 
     $configData = $this->sanitizeConfig([
         'decimal_rate'              => $request->decimal_rate,
-        'dimension_unit'            => $request->input('custom_field.dimension_unit'), // ⭐ fixed
-        'weight_unit'               => $request->input('custom_field.weight_unit'),    // ⭐ fixed
+        'dimension_unit'            => $request->input('custom_field.dimension_unit'), 
+        'weight_unit'               => $request->input('custom_field.weight_unit'),   
         'barcode_field'             => $request->barcode_field,
         'inventory_start_date'      => $request->inventory_start_date,
         'enable_serial_number'      => $request->boolean('enable_serial_number'),

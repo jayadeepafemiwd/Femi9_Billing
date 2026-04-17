@@ -114,6 +114,10 @@
   .dn-bold { font-weight: 700; color: #3b6cf8; }
   .dn-empty { padding: 14px 12px; font-size: 12px; color: #aaa; text-align: center; }
   .pl-cat-dropdown { position: relative; }
+  .sub-chip { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:2px solid #d0d8ff;border-radius:20px;font-size:12.5px;color:#555;background:#fff;cursor:pointer;transition:all 0.15s;user-select:none; }
+.sub-chip:hover { border-color:#3b6cf8;color:#3b6cf8; }
+.sub-chip.selected { border-color:#3b6cf8;background:#3b6cf8;color:#fff; }
+.sub-chip-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -220,6 +224,8 @@
                   <input type="hidden" name="customer_category"
                          id="customerCategoryValue"
                          value="<?php echo e($savedCat); ?>">
+                         <input type="hidden" name="customer_sub_category_id" id="customerSubCatId" 
+       value="<?php echo e(old('customer_sub_category_id', $customer->customer_sub_category_id)); ?>">
 
                   <div class="pl-cat-dropdown" id="custCatDropdown">
                     <div class="pl-cat-selected" id="custCatSelected"
@@ -237,7 +243,15 @@
                                 max-height:220px;overflow-y:auto;width:420px;">
                     </div>
                   </div>
-
+                     
+<div id="subCatWrap" style="display:none;margin-top:8px;">
+  <div style="background:#f8f9ff;border:1px solid #dce8ff;border-radius:8px;padding:10px 12px;">
+    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Sub-Category</div>
+    <div id="subCatChips" style="display:flex;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:12px;color:#aaa;">Loading...</span>
+    </div>
+  </div>
+</div>
                 </div>
               </div>
 
@@ -799,7 +813,10 @@ async function loadCategoryDropdown() {
 
                 /* Fetch used locations (exclude self) — await so _usedValueIds is ready */
                 await fetchUsedLocations(SAVED_CATEGORY);
-
+if (savedCat && savedCat.id) {
+    _currentCatId = savedCat.id;
+    loadSubCats(savedCat.id);
+}
             } else {
                 /* Category was saved but no longer exists in the list */
                 document.getElementById('custCatSelectedText').textContent = SAVED_CATEGORY;
@@ -865,6 +882,16 @@ function selectCustCat(el) {
     var loc       = el.dataset.loc;
 
     _currentCatLayerId   = layerId   || '';
+    _currentCatId = null;
+// find id from _allCategories
+var catObj = _allCategories.find(function(c) { return c.name === name; });
+if (catObj) _currentCatId = catObj.id;
+document.getElementById('customerSubCatId').value = '';
+if (_currentCatId) {
+    loadSubCats(_currentCatId);
+} else {
+    document.getElementById('subCatWrap').style.display = 'none';
+}
     _currentCatCountryId = countryId || '';
 
     document.getElementById('customerCategoryValue').value = name;
@@ -1252,7 +1279,50 @@ function removeContactRow(btn) {
         row.querySelectorAll('select').forEach(function(s) { s.selectedIndex = 0; });
     }
 }
+var _currentCatId = null;
 
+function loadSubCats(catId) {
+    document.getElementById('subCatWrap').style.display = 'block';
+    document.getElementById('subCatChips').innerHTML = '<span style="font-size:12px;color:#aaa;">Loading...</span>';
+    fetch('/user-sub-categories/by-category/' + catId, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+        var subs = json.data || [];
+        if (!subs.length) {
+            document.getElementById('subCatChips').innerHTML = '<span style="font-size:12px;color:#aaa;font-style:italic;">No sub-categories found.</span>';
+            return;
+        }
+        renderSubChips(subs);
+    })
+    .catch(function() {
+        document.getElementById('subCatChips').innerHTML = '<span style="color:#e53935;font-size:12px;">Failed to load.</span>';
+    });
+}
+
+function renderSubChips(subs) {
+    var selected = document.getElementById('customerSubCatId').value;
+    document.getElementById('subCatChips').innerHTML = subs.map(function(s) {
+        var isSel = String(s.id) === String(selected);
+        return '<div class="sub-chip' + (isSel ? ' selected' : '') + '" onclick="toggleSubChip(' + s.id + ', this)" data-id="' + s.id + '">'
+             + '<span class="sub-chip-dot"></span>'
+             + escHtml(s.name)
+             + (s.code ? ' <span style="font-size:10px;opacity:0.75;">(' + escHtml(s.code) + ')</span>' : '')
+             + '</div>';
+    }).join('');
+}
+
+function toggleSubChip(id, el) {
+    var h = document.getElementById('customerSubCatId');
+    document.querySelectorAll('#subCatChips .sub-chip').forEach(function(c) { c.classList.remove('selected'); });
+    if (h.value === String(id)) {
+        h.value = '';
+    } else {
+        h.value = id;
+        el.classList.add('selected');
+    }
+}
 /* ════════════════════════════════════════════════════
    INIT
    FIX: loadLcLayers() and loadCategoryDropdown() run

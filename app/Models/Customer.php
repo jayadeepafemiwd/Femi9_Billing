@@ -15,6 +15,8 @@ class Customer extends Model
     protected $fillable = [
         'customer_type',
         'customer_category',
+        'customer_sub_category_id',
+        'user_code',
          'assign_location',
         'name',
         'company_name',
@@ -55,4 +57,8 @@ class Customer extends Model
     {
         return $this->common_address['shipping'] ?? null;
     }
+    public function subCategory()
+{
+    return $this->belongsTo(\App\Models\UserSubCategory::class, 'customer_sub_category_id');
+}
 }

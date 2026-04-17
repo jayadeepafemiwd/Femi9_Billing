@@ -17,8 +17,10 @@ class Location extends Model
         'is_child',
         'parent_location_id',
         'address_details',
+        'default_series_id',
         'additional_data',
         'transaction_series_id',
+        'default_series_id',
         'created_by',
     ];
 

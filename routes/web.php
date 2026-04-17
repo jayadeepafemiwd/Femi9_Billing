@@ -16,6 +16,9 @@ use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\LcLayerController;
 use App\Http\Controllers\AssemblyController;
 use App\Http\Controllers\TransactionSeriesController;
+use App\Http\Controllers\UserSubCategoryController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ReferralController;
 
 
 // ===== HOME REDIRECT =====
@@ -108,9 +111,7 @@ Route::put('/categories/{id}', [CategoryController::class, 'update']);
 Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
 // ===== CUSTOMER ROUTES =====
-// ═══ CUSTOMER ROUTES ═══
 
-// ✅ Specific routes FIRST (resource-க்கு முன்னாடி)
 Route::get('/customers/used-locations', 
     [CustomerController::class, 'getUsedLocations'])
     ->name('customers.used-locations');
@@ -138,6 +139,9 @@ Route::get('customers/used-locations', [CustomerController::class, 'getUsedLocat
 Route::get('/admin/user-categories', function () {
     return view('admin.user-categories.index');
 })->name('admin.user-categories.index');
+// routes/web.php
+Route::get('/customers/{customer}/panel-data', [CustomerController::class, 'panelData']);
+Route::get('/customers/{id}/panel-data', [CustomerController::class, 'panelData']);
 
 Route::prefix('user-categories')->group(function () {
     Route::get('/',                     [UserCategoryController::class, 'index']);  // ← ADD THIS
@@ -227,16 +231,17 @@ Route::prefix('locations')->group(function () {
     Route::put('/{location}',   [LocationController::class, 'update']) ->name('locations.update');
     Route::delete('/{location}',[LocationController::class, 'destroy'])->name('locations.destroy');
 });
-
-Route::prefix('transaction-series')->group(function () {
-    Route::get('/',                      [TransactionSeriesController::class, 'index'])   ->name('transaction-series.index');
-    Route::get('/create',                [TransactionSeriesController::class, 'create'])  ->name('transaction-series.create');  // முன்னாடி add பண்ணினோம்
-    Route::post('/',                     [TransactionSeriesController::class, 'store'])   ->name('transaction-series.store');
-    Route::get('/{transactionSeries}/edit',   [TransactionSeriesController::class, 'edit'])   ->name('transaction-series.edit');  // ✅ இதை add பண்ணுங்கள்
-    Route::get('/{transactionSeries}',   [TransactionSeriesController::class, 'show'])    ->name('transaction-series.show');
-    Route::put('/{transactionSeries}',   [TransactionSeriesController::class, 'update'])  ->name('transaction-series.update');
-    Route::delete('/{transactionSeries}',[TransactionSeriesController::class, 'destroy']) ->name('transaction-series.destroy');
-    Route::get('/transaction-series/list', [TransactionSeriesController::class, 'list'])->name('transaction-series.list');
+Route::prefix('transaction-series')->name('transaction-series.')->group(function () {
+    // ⚠️ /list முதல்ல வரணும் — இல்லன்னா /{transactionSeries} அதை catch பண்ணிடும்
+    Route::get('/list',                     [TransactionSeriesController::class, 'list'])   ->name('list');
+    
+    Route::get('/',                         [TransactionSeriesController::class, 'index'])  ->name('index');
+    Route::get('/create',                   [TransactionSeriesController::class, 'create']) ->name('create');
+    Route::post('/',                        [TransactionSeriesController::class, 'store'])  ->name('store');
+    Route::get('/{transactionSeries}/edit', [TransactionSeriesController::class, 'edit'])  ->name('edit');
+    Route::get('/{transactionSeries}',      [TransactionSeriesController::class, 'show'])  ->name('show');
+    Route::put('/{transactionSeries}',      [TransactionSeriesController::class, 'update'])->name('update');
+    Route::delete('/{transactionSeries}',   [TransactionSeriesController::class, 'destroy'])->name('destroy');
 });
 Route::get('composite-items/{id}/edit', [CompositeItemController::class, 'edit'])
      ->name('composite-items.edit');
@@ -245,4 +250,28 @@ Route::resource('price-lists', PriceListController::class);
 Route::get('price-lists/{id}/history', [PriceListController::class, 'history'])
     ->name('price-lists.history');
 
+    Route::prefix('user-sub-categories')->name('user_sub_categories.')->group(function () {
+    Route::get('/',                     [UserSubCategoryController::class, 'index'])      ->name('index');
+    Route::post('/',                    [UserSubCategoryController::class, 'store'])      ->name('store');
+    Route::put('/{id}',                 [UserSubCategoryController::class, 'update'])     ->name('update');
+    Route::delete('/{id}',              [UserSubCategoryController::class, 'destroy'])    ->name('destroy');
+    Route::get('/by-category/{id}',     [UserSubCategoryController::class, 'byCategory'])->name('byCategory');
+});
+Route::get('/invoices/location-stock', [InvoiceController::class, 'getLocationStock']);
+Route::get('/invoices/invoice-number', [InvoiceController::class, 'getInvoiceNumber']);
+
+Route::get('/', fn() => redirect()->route('invoices.index'));
+Route::get('/invoices/invoice-number', [InvoiceController::class, 'getInvoiceNumber']);
+// ── Invoice Routes ──
+Route::get('/invoices/create',   [InvoiceController::class, 'create'])->name('invoices.create');
+Route::post('/invoices',         [InvoiceController::class, 'store'])->name('invoices.store');
+Route::get('/invoices/{id}',     [InvoiceController::class, 'show'])->name('invoices.show');
+Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+
+Route::get('/api/products/{id}', [InvoiceController::class, 'getProduct'])->name('products.get');
+
+Route::get('/referrals',          [ReferralController::class, 'index']);
+Route::post('/referrals',         [ReferralController::class, 'store']);
+Route::put('/referrals/{id}',     [ReferralController::class, 'update']);
+Route::delete('/referrals/{id}',  [ReferralController::class, 'destroy']);
 

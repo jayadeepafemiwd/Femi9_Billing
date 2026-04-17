@@ -428,9 +428,9 @@ public function index(Request $request)
             'request_params' => $request->all(),
         ]);
 
-        // ✅ Query — எல்லா item_type-உம் (item + composite_item)
+        
         $query = Product::query();
-
+      
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -657,10 +657,11 @@ if ($request->item_variant_type === 'contains_variants' && $request->filled('var
     }
 }
     $productData = array_merge($sanitized, [
-     'item_type'     => 'item',  // ← இதை add பண்ணுங்க
+     'item_type'     => 'item',  
     'brand'         => $brandName,
     'product_image' => json_encode(['front_image' => $frontImagePath]),
     'variants_data' => $variantsData ? json_encode($variantsData) : null,
+    'access_product' => $request->boolean('access_product'),
     'additional_data' => json_encode(array_merge(
         $this->sanitizeCustomField($request->input('custom_field', [])),
         $this->resolveAdditionalFields($request->input('additional_fields', [])),
@@ -1071,6 +1072,7 @@ return view('products.show', compact(
             $updateData = array_merge($sanitized, [
                 'brand'           => $brandName,
                 'product_image'   => json_encode(['front_image' => $frontImagePath]),
+                'access_product' => $request->boolean('access_product'),
                 'additional_data' => json_encode(array_merge(
                     $newCf,
                     $newAdditional,

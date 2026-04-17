@@ -19,7 +19,8 @@ return new class extends Migration
             // ── Product Image & Brand ───────────────────────────────
             $table->string('product_image')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();  // FK reference
-            $table->string('brand')->nullable();                  // brand name (denormalized)
+            $table->string('brand')->nullable();    
+            $table->boolean('access_product')->default(false)->comment('true = admin only visibility');        
 
             // ── Item Details ────────────────────────────────────────
             $table->enum('item_variant_type', ['single', 'contains_variants'])->default('single');

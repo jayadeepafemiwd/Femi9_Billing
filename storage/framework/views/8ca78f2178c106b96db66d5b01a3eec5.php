@@ -150,7 +150,10 @@
   .add-more-btn { display: inline-flex; align-items: center; gap: 6px; color: #3b6cf8; font-size: 13px; cursor: pointer; border: none; background: none; padding: 4px 0; margin-bottom: 8px; }
   .tab-content { display: none; }
   .alert-danger { background: #fde8e8; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
-  .alert-danger ul { margin-left: 16px; margin-top: 4px; }
+  .alert-danger ul { margin-left: 16px; margin-top: 4px; }.sub-chip { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:2px solid #d0d8ff;border-radius:20px;font-size:12.5px;color:#555;background:#fff;cursor:pointer;transition:all 0.15s;user-select:none; }
+.sub-chip:hover { border-color:#3b6cf8;color:#3b6cf8; }
+.sub-chip.selected { border-color:#3b6cf8;background:#3b6cf8;color:#fff; }
+.sub-chip-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
 
   /* ═══════════════════════════════════════════
      DISPLAY NAME DROPDOWN  (simple, no tags)
@@ -312,7 +315,7 @@
 
     <input type="hidden" name="customer_category" id="customerCategoryValue" 
            value="<?php echo e(old('customer_category')); ?>">
-
+    <input type="hidden" name="customer_sub_category_id" id="customerSubCatId" value="<?php echo e(old('customer_sub_category_id')); ?>">
     
     <div class="pl-cat-dropdown" id="custCatDropdown">
       <div class="pl-cat-selected" id="custCatSelected" onclick="toggleCustCatList()"
@@ -335,8 +338,9 @@
         <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;"
-             data-name="<?php echo e($cat->name); ?>"
-             data-layer-id="<?php echo e($cat->assign_fix_location); ?>"
+            data-name="<?php echo e($cat->name); ?>"
+            data-id="<?php echo e($cat->id); ?>"
+            data-layer-id="<?php echo e($cat->assign_fix_location); ?>"
              data-country-id="<?php echo e($cat->country_id); ?>"
              data-loc="<?php echo e($cat->location_label); ?>"
              onclick="selectCustCat(this)"
@@ -355,6 +359,14 @@
       </div>
     </div>
 
+<div id="subCatWrap" style="display:none;margin-top:8px;">
+  <div style="background:#f8f9ff;border:1px solid #dce8ff;border-radius:8px;padding:10px 12px;">
+    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Sub-Category</div>
+    <div id="subCatChips" style="display:flex;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:12px;color:#aaa;">Loading...</span>
+    </div>
+  </div>
+</div>
   </div>
 </div>
             
@@ -928,10 +940,18 @@ function selectCustCat(el) {
 
     // ✅ Cache store
     _currentCatLayerId   = layerId   || '';
+    _currentCatId   = el.dataset.id || null; 
+    _currentCatName = name || '';
     _currentCatCountryId = countryId || '';
-
+    
+             
     document.getElementById('customerCategoryValue').value = name;
-
+document.getElementById('customerSubCatId').value = '';
+if (_currentCatId) {
+    loadSubCats(_currentCatId);
+} else {
+    document.getElementById('subCatWrap').style.display = 'none';
+}
     var txt = document.getElementById('custCatSelectedText');
     if (name) {
         txt.style.color = '#333';
@@ -1330,6 +1350,50 @@ function removeContactRow(btn) {
     }
 }
 
+var _currentCatId = null;
+
+function loadSubCats(catId) {
+    document.getElementById('subCatWrap').style.display = 'block';
+    document.getElementById('subCatChips').innerHTML = '<span style="font-size:12px;color:#aaa;">Loading...</span>';
+    fetch('/user-sub-categories/by-category/' + catId, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+        var subs = json.data || [];
+        if (!subs.length) {
+            document.getElementById('subCatChips').innerHTML = '<span style="font-size:12px;color:#aaa;font-style:italic;">No sub-categories found.</span>';
+            return;
+        }
+        renderSubChips(subs);
+    })
+    .catch(function() {
+        document.getElementById('subCatChips').innerHTML = '<span style="color:#e53935;font-size:12px;">Failed to load.</span>';
+    });
+}
+
+function renderSubChips(subs) {
+    var selected = document.getElementById('customerSubCatId').value;
+    document.getElementById('subCatChips').innerHTML = subs.map(function(s) {
+        var isSel = String(s.id) === String(selected);
+        return '<div class="sub-chip' + (isSel ? ' selected' : '') + '" onclick="toggleSubChip(' + s.id + ', this)" data-id="' + s.id + '">'
+             + '<span class="sub-chip-dot"></span>'
+             + escHtml(s.name)
+             + (s.code ? ' <span style="font-size:10px;opacity:0.75;">(' + escHtml(s.code) + ')</span>' : '')
+             + '</div>';
+    }).join('');
+}
+
+function toggleSubChip(id, el) {
+    var h = document.getElementById('customerSubCatId');
+    document.querySelectorAll('#subCatChips .sub-chip').forEach(function(c) { c.classList.remove('selected'); });
+    if (h.value === String(id)) {
+        h.value = '';
+    } else {
+        h.value = id;
+        el.classList.add('selected');
+    }
+}
 function renderAssignLocation(categoryLayerId, categoryCountryId) {
     var wrap = document.getElementById('assign-loc-wrap');
     if (!wrap) return;

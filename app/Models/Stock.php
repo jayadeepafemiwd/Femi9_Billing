@@ -21,6 +21,8 @@ class Stock extends Model
         'value_per_unit',
         'total_value',
         'type',
+        'source_type', 
+        'source_id',
     ];
 
     protected $casts = [

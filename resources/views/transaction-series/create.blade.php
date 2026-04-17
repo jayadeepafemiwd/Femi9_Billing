@@ -30,7 +30,6 @@
 
     .settings-wrapper { display: flex; height: 100vh; overflow: hidden; background: var(--zoho-white); }
 
-    /* ── Sidebar (same as index) ── */
     .settings-sidebar {
         width: 260px; min-width: 260px;
         background: var(--zoho-sidebar-bg);
@@ -82,7 +81,6 @@
         border-radius: 3px; margin-left: 6px; vertical-align: middle;
     }
 
-    /* ── Content ── */
     .settings-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 
     .content-topbar {
@@ -97,10 +95,8 @@
         display: flex; align-items: center; gap: 4px;
     }
 
-    /* ── Create Page Layout ── */
     .create-page { padding: 24px 32px; max-width: 800px; }
 
-    /* Breadcrumb */
     .breadcrumb {
         display: flex; align-items: center; gap: 6px;
         font-size: 12px; color: var(--zoho-text-muted);
@@ -113,7 +109,6 @@
     .page-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: var(--zoho-text); }
     .page-subtitle { font-size: 13px; color: var(--zoho-text-muted); margin-bottom: 24px; }
 
-    /* Form Card */
     .form-card {
         background: var(--zoho-white);
         border: 1px solid var(--zoho-border);
@@ -131,7 +126,6 @@
 
     .form-card-body { padding: 20px; }
 
-    /* Series Name row */
     .series-name-row {
         display: flex; align-items: center; gap: 16px; margin-bottom: 4px;
     }
@@ -156,7 +150,6 @@
     .field-error { font-size: 11px; color: var(--zoho-red); margin-top: 4px; display: none; }
     .field-error.show { display: block; }
 
-    /* Modules Table */
     .trans-table {
         width: 100%; border-collapse: collapse;
         border: 1px solid var(--zoho-border);
@@ -174,9 +167,7 @@
     }
     .trans-table tr:last-child td { border-bottom: none; }
     .trans-table tr:hover td { background: var(--zoho-row-hover); }
-
     .trans-table .module-name { font-weight: 500; font-size: 13px; }
-
     .trans-table input {
         width: 100%; padding: 6px 10px;
         border: 1px solid var(--zoho-input-border);
@@ -196,7 +187,6 @@
         transition: background 0.15s;
     }
 
-    /* Footer Actions */
     .form-actions {
         display: flex; gap: 10px; align-items: center;
         padding: 16px 0;
@@ -220,7 +210,6 @@
     }
     .btn-secondary:hover { background: var(--zoho-gray-bg); }
 
-    /* Alert */
     .alert {
         padding: 10px 14px; border-radius: 4px; font-size: 13px;
         margin-bottom: 16px; display: none; align-items: center; gap: 8px;
@@ -229,7 +218,6 @@
     .alert-success { background: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
     .alert-error   { background: #FFEBEE; color: #C62828; border: 1px solid #EF9A9A; }
 
-    /* Spinner */
     .spinner {
         width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
         border-top-color: white; border-radius: 50%;
@@ -237,18 +225,48 @@
     }
     .spinner.show { display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
     /* Multi-select loc tag */
-.loc-tag {
-    display:inline-flex; align-items:center; gap:4px;
-    background:#E8F0FE; color:var(--zoho-blue);
-    border:1px solid #C5D8FC; border-radius:3px;
-    padding:2px 6px; font-size:12px;
-}
-.loc-tag-remove {
-    cursor:pointer; font-size:11px; line-height:1;
-    color:var(--zoho-text-muted);
-}
-.loc-tag-remove:hover { color:var(--zoho-red); }
+    .loc-tag {
+        display:inline-flex; align-items:center; gap:4px;
+        background:#E8F0FE; color:var(--zoho-blue);
+        border:1px solid #C5D8FC; border-radius:3px;
+        padding:2px 6px; font-size:12px;
+    }
+    .loc-tag-remove {
+        cursor:pointer; font-size:11px; line-height:1;
+        color:var(--zoho-text-muted);
+    }
+    .loc-tag-remove:hover { color:var(--zoho-red); }
+
+    /* Price-List style Category Dropdown */
+    .ts-cat-dropdown { position:relative; width:100%; }
+    .ts-cat-selected {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:7px 10px; border:1px solid var(--zoho-input-border); border-radius:4px;
+        background:var(--zoho-white); cursor:pointer; font-size:13px; min-height:36px;
+    }
+    .ts-cat-selected:hover { border-color:var(--zoho-blue); }
+    .ts-cat-list {
+        display:none; position:absolute; top:calc(100% + 3px); left:0; right:0;
+        background:var(--zoho-white); border:1px solid var(--zoho-border); border-radius:4px;
+        box-shadow:0 6px 20px rgba(0,0,0,0.12); z-index:600; max-height:220px; overflow-y:auto;
+    }
+    .ts-cat-list.open { display:block; }
+    .ts-cat-item {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:9px 12px; cursor:pointer; font-size:13px;
+        border-bottom:1px solid #f0f0f0;
+    }
+    .ts-cat-item:last-child { border-bottom:none; }
+    .ts-cat-item:hover { background:#F0F4FF; }
+    .ts-cat-item.selected { background:#E8F0FE; }
+    .ts-cat-name { font-weight:500; color:var(--zoho-text); }
+    .ts-cat-loc {
+        font-size:11px; color:#fff; background:var(--zoho-blue);
+        padding:2px 8px; border-radius:10px; white-space:nowrap;
+    }
+    .ts-cat-arrow { font-size:11px; color:#999; margin-left:6px; }
 </style>
 @endpush
 
@@ -319,241 +337,115 @@
 
             <div id="js-alert" class="alert"></div>
 
-            {{-- Series Name Card --}}
-           <div class="form-card-body">
-    {{-- Series Name --}}
-    <div class="series-name-row">
-        <label for="series-name">Series Name</label>
-        <div style="flex:1;">
-            <input type="text"
-                   id="series-name"
-                   class="form-control"
-                   placeholder="e.g. Default Transaction Series"
-                   style="width:100%; max-width:400px;"
-                   oninput="clearNameError()">
-            <div class="field-error" id="name-error">Series name is required</div>
-        </div>
-    </div>
+            <div class="form-card-body">
 
-    {{-- Location --}}
-    {{-- Location Multi-Select --}}
-<div class="series-name-row" style="margin-top:14px; align-items:flex-start;">
-    <label style="color:var(--zoho-text); padding-top:6px;">Location</label>
-    <div style="flex:1; max-width:400px;">
-
-        {{-- Selected Tags + Dropdown Trigger --}}
-        <div id="loc-box"
-             onclick="toggleLocDropdown()"
-             style="min-height:36px; padding:4px 28px 4px 8px; border:1px solid var(--zoho-input-border);
-                    border-radius:4px; cursor:pointer; background:var(--zoho-white); position:relative;
-                    display:flex; flex-wrap:wrap; gap:4px; align-items:center;"
-        >
-            <span id="loc-placeholder" style="color:#9CA3AF; font-size:13px;">— Select Locations —</span>
-            {{-- Tags rendered here by JS --}}
-            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
-                         color:var(--zoho-text-muted);pointer-events:none;">▾</span>
-        </div>
-
-        {{-- Dropdown Panel --}}
-        <div id="loc-dropdown"
-             style="display:none; position:absolute; z-index:200; background:var(--zoho-white);
-                    border:1px solid var(--zoho-border); border-radius:4px;
-                    box-shadow:0 4px 12px rgba(0,0,0,0.1); width:400px; max-height:220px; overflow-y:auto;">
-
-            {{-- Search inside dropdown --}}
-            <div style="padding:8px; border-bottom:1px solid var(--zoho-border);">
-                <input type="text"
-                       id="loc-search"
-                       onclick="event.stopPropagation()"
-                       oninput="filterLocs()"
-                       placeholder="Search locations..."
-                       style="width:100%; padding:5px 8px; border:1px solid var(--zoho-input-border);
-                              border-radius:4px; font-size:12px; outline:none;">
-            </div>
-
-            <div id="loc-options">
-                @foreach($locations ?? [] as $loc)
-                <label id="loc-opt-{{ $loc->id }}"
-                       onclick="event.stopPropagation()"
-                       style="display:flex; align-items:center; gap:8px; padding:8px 12px;
-                              cursor:pointer; font-size:13px;"
-                       onmouseenter="this.style.background='var(--zoho-row-hover)'"
-                       onmouseleave="this.style.background=''">
-                    <input type="checkbox"
-                           value="{{ $loc->id }}"
-                           data-name="{{ $loc->location_name }}"
-                           onchange="onLocChange(this)"
-                           style="accent-color:var(--zoho-blue); width:14px; height:14px;">
-                    {{ $loc->location_name }}
-                </label>
-                @endforeach
-            </div>
-        </div>
-
-    </div>
-</div>
-{{-- Category --}}
-<div class="series-name-row" style="margin-top:14px;">
-    <label style="color:var(--zoho-text);">Category</label>
-    <div style="flex:1; max-width:400px; position:relative;">
-
-        <input type="hidden" name="category_id"   id="cat-hid-id"   value="" />
-        <input type="hidden" name="category_name" id="cat-hid-name" value="" />
-
-        {{-- Trigger box --}}
-        <div id="cat-dd-box"
-             onclick="toggleCatDd()"
-             style="display:flex; align-items:center; justify-content:space-between;
-                    border:1px solid var(--zoho-input-border); border-radius:4px;
-                    padding:7px 10px; cursor:pointer; background:var(--zoho-white);
-                    font-size:13px; min-height:36px;">
-            <span id="cat-dd-lbl" style="color:#9CA3AF;">Select a category</span>
-            <span id="cat-dd-chev" style="color:var(--zoho-text-muted); pointer-events:none;">▾</span>
-        </div>
-
-        {{-- Dropdown panel --}}
-        <div id="cat-dd-panel"
-             style="display:none; position:absolute; top:calc(100% + 3px); left:0;
-                    width:100%; background:var(--zoho-white);
-                    border:1px solid var(--zoho-border); border-radius:4px;
-                    box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:600;">
-
-            {{-- Search --}}
-            <div style="padding:7px 10px; border-bottom:1px solid var(--zoho-border);
-                        display:flex; align-items:center; gap:6px;">
-                <span style="color:#bbb; font-size:13px;">🔍</span>
-                <input type="text" id="cat-dd-q"
-                       placeholder="Search"
-                       oninput="filterCatDd(this.value)"
-                       onclick="event.stopPropagation()"
-                       autocomplete="off"
-                       style="flex:1; border:none; outline:none;
-                              font-size:13px; font-family:inherit; background:transparent;" />
-            </div>
-
-            {{-- List --}}
-            <div id="cat-dd-list"
-                 style="max-height:200px; overflow-y:auto;">
-                <div style="padding:12px; color:#aaa; font-size:13px; text-align:center;">
-                    Loading...
-                </div>
-            </div>
-
-            {{-- Manage link --}}
-           <div onclick="openCatModal()"
-     style="display:flex; align-items:center; gap:7px; padding:10px 14px;
-            font-size:13px; color:var(--zoho-blue); font-weight:500;
-            cursor:pointer; border-top:1px solid var(--zoho-border);">
-    ⚙️ Manage Categories
-</div>
-        </div>
-    </div>
-</div>
-{{-- MANAGE CATEGORIES MODAL --}}
-<div id="cat-modal"
-     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35);
-            z-index:2000; align-items:flex-start; justify-content:center; padding-top:60px;">
-    <div style="background:#fff; border-radius:8px; width:700px; max-width:96vw;
-                max-height:80vh; display:flex; flex-direction:column;
-                box-shadow:0 8px 32px rgba(0,0,0,0.18); overflow:hidden;">
-
-        {{-- Header --}}
-        <div style="display:flex; align-items:center; justify-content:space-between;
-                    padding:16px 24px; border-bottom:1px solid #eee; flex-shrink:0;">
-            <span style="font-size:16px; font-weight:600; color:#222;">Manage Categories</span>
-            <button onclick="closeCatModal()"
-                    style="background:none; border:none; font-size:22px;
-                           color:#e74c3c; cursor:pointer; font-weight:700;">✕</button>
-        </div>
-
-        {{-- Body --}}
-        <div style="flex:1; overflow-y:auto; padding:24px;">
-
-            {{-- Add / Edit Form --}}
-            <div id="cat-new-form" style="display:none; margin-bottom:20px;
-                                          padding-bottom:20px; border-bottom:2px solid #e8eaf0;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                    <label style="width:140px; font-size:13px; font-weight:500;
-                                  text-align:right; flex-shrink:0; color:#c0392b;">
-                        Category Name*
-                    </label>
-                    <input type="text" id="cat-name-inp"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();saveCat();}"
-                           style="flex:1; border:2px solid #2d5be3; border-radius:6px;
-                                  padding:7px 12px; font-size:14px; font-family:inherit; outline:none;" />
-                </div>
-                <!-- <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                    <label style="width:140px; font-size:13px; font-weight:500;
-                                  text-align:right; flex-shrink:0; color:#444;">
-                        Parent Category
-                    </label>
-                    <div style="flex:1; position:relative;">
-                        <select id="cat-par-sel"
-                                style="width:100%; border:1px solid #d0d4de; border-radius:6px;
-                                       padding:7px 12px; font-size:14px; background:#fff;
-                                       appearance:none; font-family:inherit; outline:none; color:#333;">
-                            <option value="">— None —</option>
-                        </select>
-                        <span style="position:absolute; right:10px; top:50%;
-                                     transform:translateY(-50%); pointer-events:none;
-                                     color:#888; font-size:11px;">▼</span>
+                {{-- Series Name --}}
+                <div class="series-name-row">
+                    <label for="series-name">Series Name</label>
+                    <div style="flex:1;">
+                        <input type="text"
+                               id="series-name"
+                               class="form-control"
+                               placeholder="e.g. Default Transaction Series"
+                               style="width:100%; max-width:400px;"
+                               oninput="clearNameError()">
+                        <div class="field-error" id="name-error">Series name is required</div>
                     </div>
-                </div> -->
-                <div id="cat-fe"
-                     style="display:none; color:#dc3545; font-size:12px;
-                            margin-left:152px; margin-top:-8px; margin-bottom:8px;"></div>
-                <div style="display:flex; gap:8px; margin-left:152px;">
-                    <button id="btn-cs" onclick="saveCat()"
-                            style="background:#2d5be3; color:#fff; border:none; border-radius:6px;
-                                   padding:8px 22px; font-weight:600; font-size:13px; cursor:pointer;">
-                        Save
-                    </button>
-                    <button onclick="hideCatForm()"
-                            style="background:#fff; color:#555; border:1px solid #d0d4de;
-                                   border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">
-                        Cancel
-                    </button>
                 </div>
-            </div>
 
-            {{-- List Header --}}
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-                <span style="font-size:12px; font-weight:700; color:#4a5568;
-                             letter-spacing:0.6px; text-transform:uppercase;">Categories</span>
-                <button id="btn-anc" onclick="showCatForm()"
-                        style="display:flex; align-items:center; gap:5px; background:none;
-                               border:none; color:#2d5be3; font-size:13px; font-weight:600;
-                               cursor:pointer; padding:4px 8px; border-radius:4px;">
-                    <span style="width:18px; height:18px; border-radius:50%; background:#2d5be3;
-                                 color:#fff; display:inline-flex; align-items:center;
-                                 justify-content:center; font-size:16px; font-weight:700;">+</span>
-                    Add New Category
-                </button>
-            </div>
+                {{-- Location Multi-Select --}}
+                <div class="series-name-row" style="margin-top:14px; align-items:flex-start;">
+                    <label style="color:var(--zoho-text); padding-top:6px;">Location</label>
+                    <div style="flex:1; max-width:400px;">
 
-            {{-- Success Message --}}
-            <div id="cat-ms"
-                 style="display:none; background:#d4edda; color:#155724; font-size:12px;
-                        padding:8px 12px; border-radius:4px; margin-bottom:12px;"></div>
+                        <div id="loc-box"
+                             onclick="toggleLocDropdown()"
+                             style="min-height:36px; padding:4px 28px 4px 8px; border:1px solid var(--zoho-input-border);
+                                    border-radius:4px; cursor:pointer; background:var(--zoho-white); position:relative;
+                                    display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                            <span id="loc-placeholder" style="color:#9CA3AF; font-size:13px;">— Select Locations —</span>
+                            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                                         color:var(--zoho-text-muted);pointer-events:none;">▾</span>
+                        </div>
 
-            {{-- Category List --}}
-            <div id="cat-li-wrap">
-                <div style="text-align:center; padding:24px; color:#aaa; font-size:13px;">
-                    Loading...
+                        <div id="loc-dropdown"
+                             style="display:none; position:absolute; z-index:200; background:var(--zoho-white);
+                                    border:1px solid var(--zoho-border); border-radius:4px;
+                                    box-shadow:0 4px 12px rgba(0,0,0,0.1); width:400px; max-height:220px; overflow-y:auto;">
+                            <div style="padding:8px; border-bottom:1px solid var(--zoho-border);">
+                                <input type="text"
+                                       id="loc-search"
+                                       onclick="event.stopPropagation()"
+                                       oninput="filterLocs()"
+                                       placeholder="Search locations..."
+                                       style="width:100%; padding:5px 8px; border:1px solid var(--zoho-input-border);
+                                              border-radius:4px; font-size:12px; outline:none;">
+                            </div>
+                            <div id="loc-options">
+                                @foreach($locations ?? [] as $loc)
+                                <label id="loc-opt-{{ $loc->id }}"
+                                       onclick="event.stopPropagation()"
+                                       style="display:flex; align-items:center; gap:8px; padding:8px 12px;
+                                              cursor:pointer; font-size:13px;"
+                                       onmouseenter="this.style.background='var(--zoho-row-hover)'"
+                                       onmouseleave="this.style.background=''">
+                                    <input type="checkbox"
+                                           value="{{ $loc->id }}"
+                                           data-name="{{ $loc->location_name }}"
+                                           onchange="onLocChange(this)"
+                                           style="accent-color:var(--zoho-blue); width:14px; height:14px;">
+                                    {{ $loc->location_name }}
+                                </label>
+                                @endforeach
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        {{-- Footer --}}
-        <div style="padding:12px 24px; border-top:1px solid #eee; flex-shrink:0;">
-            <button onclick="closeCatModal()"
-                    style="background:#fff; color:#555; border:1px solid #d0d4de;
-                           border-radius:6px; padding:8px 20px; font-size:13px; cursor:pointer;">
-                Close
-            </button>
-        </div>
-    </div>
-</div>
+                {{-- Category Dropdown (Blade-rendered, Price List style) --}}
+                <div class="series-name-row" style="margin-top:14px;">
+                    <label style="color:var(--zoho-text);">Category</label>
+                    <div style="flex:1; max-width:400px;">
+
+                        <input type="hidden" id="cat-hid-id"   value="">
+                        <input type="hidden" id="cat-hid-name" value="">
+
+                        <div class="ts-cat-dropdown" id="tsCatDropdown">
+                            <div class="ts-cat-selected" id="tsCatSelected" onclick="toggleTsCatList()">
+                                <span id="tsCatSelectedText" style="color:#9CA3AF;">— Select Category —</span>
+                                <span class="ts-cat-arrow">▾</span>
+                            </div>
+                            <div class="ts-cat-list" id="tsCatList">
+                                {{-- ✅ Blank option --}}
+                                <div class="ts-cat-item"
+                                     data-id=""
+                                     data-name=""
+                                     data-loc=""
+                                     onclick="selectTsCat(this)">
+                                    <span class="ts-cat-name" style="color:#9CA3AF;">— Select Category —</span>
+                                </div>
+                                {{-- ✅ Blade-rendered categories with location badge --}}
+                                @foreach($categories ?? [] as $cat)
+                                <div class="ts-cat-item"
+                                     data-id="{{ $cat->id }}"
+                                     data-name="{{ $cat->name }}"
+                                     data-loc="{{ $cat->location_label ?? '' }}"
+                                     onclick="selectTsCat(this)">
+                                    <span class="ts-cat-name">{{ $cat->name }}</span>
+                                    @if(!empty($cat->location_label))
+                                        <span class="ts-cat-loc">{{ $cat->location_label }}</span>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>{{-- end form-card-body --}}
+
             {{-- Modules Table Card --}}
             <div class="form-card">
                 <div class="form-card-header">Module Numbering Preferences</div>
@@ -568,7 +460,7 @@
                             </tr>
                         </thead>
                         <tbody id="modules-tbody">
-                            {{-- Rendered by JS below --}}
+                            {{-- Rendered by JS --}}
                         </tbody>
                     </table>
                 </div>
@@ -595,7 +487,6 @@
                 max-height:85vh; display:flex; flex-direction:column;
                 box-shadow:0 8px 32px rgba(0,0,0,0.2); overflow:hidden;">
 
-        {{-- Header --}}
         <div style="display:flex; align-items:center; justify-content:space-between;
                     padding:16px 24px; border-bottom:1px solid #eee; flex-shrink:0;">
             <span id="gen-modal-title" style="font-size:16px; font-weight:700; color:#222;">
@@ -606,7 +497,6 @@
                            color:#888; cursor:pointer; font-weight:700;">✕</button>
         </div>
 
-        {{-- Body --}}
         <div style="flex:1; overflow-y:auto; padding:24px;">
 
             <p style="font-size:13px; color:#666; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
@@ -614,7 +504,6 @@
                 <span style="color:#aaa; font-size:14px; cursor:pointer;" title="Use these to build your numbering format">ⓘ</span>
             </p>
 
-            {{-- Rows Table --}}
             <table style="width:100%; border-collapse:collapse; border:1px solid #e2e8f0;">
                 <thead>
                     <tr style="background:#f8fafd;">
@@ -636,7 +525,6 @@
                 <tbody id="gen-rows-tbody"></tbody>
             </table>
 
-            {{-- Add Attribute Button --}}
             <button type="button" onclick="genAddRow()"
                     style="display:inline-flex; align-items:center; gap:5px; color:var(--zoho-blue);
                            font-size:13px; font-weight:500; cursor:pointer; border:none;
@@ -644,7 +532,6 @@
                 + Add Attribute
             </button>
 
-            {{-- Preview --}}
             <div style="margin-top:20px;">
                 <div style="font-size:12px; font-weight:700; color:#555; margin-bottom:8px;">
                     Series Preview
@@ -659,7 +546,6 @@
             </div>
         </div>
 
-        {{-- Footer --}}
         <div style="padding:14px 24px; border-top:1px solid #eee;
                     display:flex; gap:10px; flex-shrink:0;">
             <button onclick="applyGenFormat()"
@@ -692,48 +578,48 @@ const TRANS_MODULES = [
     { name: 'Delivery Challan',  prefix: 'DC-',   start: '00001'  },
 ];
 
+// ── Helpers ──
+function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escHtmlCat(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════
+// DOMContentLoaded
+// ══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Table render ──
+    // Modules Table render
     const tbody = document.getElementById('modules-tbody');
-   tbody.innerHTML = TRANS_MODULES.map((m, i) => `
-    <tr>
-        <td class="module-name">
-            ${m.name}
-            <div style="margin-top:4px;">
-                <button type="button"
-                        onclick="openGenModal(${i})"
-                        style="font-size:11px; color:var(--zoho-blue); background:none;
-                               border:none; cursor:pointer; padding:0;
-                               display:inline-flex; align-items:center; gap:3px;">
-                    ＋ Add New Series
-                </button>
-            </div>
-        </td>
-        <td><input type="text" id="prefix-${i}" value="${esc(m.prefix)}"
-                   placeholder="e.g. INV-" oninput="updatePreview(${i})"></td>
-        <td><input type="text" id="start-${i}"  value="${esc(m.start)}"
-                   placeholder="00001"    oninput="updatePreview(${i})"></td>
-        <td><span class="preview-badge" id="preview-${i}">${esc(m.prefix + m.start)}</span></td>
-    </tr>
-`).join('');
+    tbody.innerHTML = TRANS_MODULES.map((m, i) => `
+        <tr>
+            <td class="module-name">
+                ${esc(m.name)}
+                <div style="margin-top:4px;">
+                    <button type="button"
+                            onclick="openGenModal(${i})"
+                            style="font-size:11px; color:var(--zoho-blue); background:none;
+                                   border:none; cursor:pointer; padding:0;
+                                   display:inline-flex; align-items:center; gap:3px;">
+                        ＋ Add New Series
+                    </button>
+                </div>
+            </td>
+            <td><input type="text" id="prefix-${i}" value="${esc(m.prefix)}"
+                       placeholder="e.g. INV-" oninput="updatePreview(${i})"></td>
+            <td><input type="text" id="start-${i}"  value="${esc(m.start)}"
+                       placeholder="00001"    oninput="updatePreview(${i})"></td>
+            <td><span class="preview-badge" id="preview-${i}">${esc(m.prefix + m.start)}</span></td>
+        </tr>
+    `).join('');
 
-    // ── Cat modal outside click ──
-  document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('cat-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeCatModal();
-    });
-});
-
-    // ── Cat dropdown outside click ──
-    document.addEventListener('click', function(e) {
-        const box   = document.getElementById('cat-dd-box');
-        const panel = document.getElementById('cat-dd-panel');
-        if (box && panel && !box.contains(e.target) && !panel.contains(e.target)) {
-            closeCatDd();
-        }
-    });
-
+    // URL param clean
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('created') === '1') {
+        history.replaceState({}, '', window.location.pathname);
+    }
 });
 
 // ── Preview update ──
@@ -808,258 +694,50 @@ function filterLocs() {
 }
 
 // ══════════════════════════════════════
-// CATEGORY DROPDOWN
+// CATEGORY DROPDOWN (Blade-rendered, Price List style)
 // ══════════════════════════════════════
-let _cats = [], _catOpen = false, _selCatId = null;
-
-(async function initCats() { await _fetchCats(); })();
-
-async function _fetchCats() {
-    try {
-        const r = await fetch('/user-categories', {
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        const j = await r.json();
-        if (j.success) {
-            // ✅ user-categories response format: { id, name }
-            // parent_name இல்லாம வரும் — அதனால map பண்ணு
-            _cats = j.data.map(c => ({
-                id:          c.id,
-                name:        c.name,
-                parent_name: null,
-                parent_id:   null,
-                full_name:   c.name,
-            }));
-            _renderCatDdList('');
-        }
-    } catch(e) {
-        console.error('Category fetch failed', e);
-    }
+function toggleTsCatList() {
+    document.getElementById('tsCatList').classList.toggle('open');
 }
 
-function toggleCatDd() { _catOpen ? closeCatDd() : openCatDd(); }
+function selectTsCat(el) {
+    const id   = el.dataset.id;
+    const name = el.dataset.name;
+    const loc  = el.dataset.loc;
 
-function openCatDd() {
-    _catOpen = true;
-    document.getElementById('cat-dd-panel').style.display = 'block';
-    document.getElementById('cat-dd-chev').textContent = '▴';
-    document.getElementById('cat-dd-q').value = '';
-    _renderCatDdList('');
-    setTimeout(() => document.getElementById('cat-dd-q').focus(), 20);
-}
-
-function closeCatDd() {
-    _catOpen = false;
-    document.getElementById('cat-dd-panel').style.display = 'none';
-    document.getElementById('cat-dd-chev').textContent = '▾';
-}
-
-function filterCatDd(q) { _renderCatDdList(q); }
-
-function _renderCatDdList(q) {
-    const el = document.getElementById('cat-dd-list');
-    q = (q || '').trim().toLowerCase();
-    const list = q
-        ? _cats.filter(c => c.name.toLowerCase().includes(q) ||
-                             (c.parent_name || '').toLowerCase().includes(q))
-        : _cats;
-
-    if (!list.length) {
-        el.innerHTML = '<div style="padding:12px;color:#aaa;font-size:13px;text-align:center;">No categories found</div>';
-        return;
-    }
-    el.innerHTML = list.map(c => `
-        <div onclick="selCat(${c.id},'${c.name.replace(/'/g,"\\'")}')"
-             style="display:flex;align-items:center;gap:8px;padding:9px 14px;
-                    font-size:13px;cursor:pointer;
-                    background:${_selCatId===c.id?'#2d5be3':'transparent'};
-                    color:${_selCatId===c.id?'#fff':'#333'};"
-             onmouseenter="if(${_selCatId}!==${c.id})this.style.background='#f0f4ff'"
-             onmouseleave="if(${_selCatId}!==${c.id})this.style.background='transparent'">
-            <span>📁</span>
-            <span>${esc(c.name)}</span>
-            ${c.parent_name
-                ? `<span style="font-size:11px;color:#aaa;margin-left:2px;">(${esc(c.parent_name)})</span>`
-                : ''}
-        </div>
-    `).join('');
-}
-
-function selCat(id, name) {
-    _selCatId = id;
     document.getElementById('cat-hid-id').value   = id;
     document.getElementById('cat-hid-name').value = name;
-    const lbl = document.getElementById('cat-dd-lbl');
-    lbl.textContent = name;
-    lbl.style.color = 'var(--zoho-text)';
-    closeCatDd();
+
+    const txt = document.getElementById('tsCatSelectedText');
+    if (name) {
+        txt.style.color = 'var(--zoho-text)';
+        txt.innerHTML = escHtmlCat(name) + (loc
+            ? ` <span class="ts-cat-loc" style="margin-left:6px;">${escHtmlCat(loc)}</span>`
+            : '');
+    } else {
+        txt.style.color = '#9CA3AF';
+        txt.textContent = '— Select Category —';
+    }
+
+    document.querySelectorAll('.ts-cat-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('tsCatList').classList.remove('open');
 }
+
+// Outside click → close category dropdown
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('tsCatDropdown');
+    if (dd && !dd.contains(e.target)) {
+        document.getElementById('tsCatList').classList.remove('open');
+    }
+});
 
 // ══════════════════════════════════════
-// MANAGE CATEGORIES MODAL
-// ══════════════════════════════════════
-let _editCatId = null;
-
-function openCatModal() {
-    closeCatDd();  // dropdown close பண்ணிட்டு modal திற
-    document.getElementById('cat-modal').style.display = 'flex';
-    hideCatForm();
-    _renderModalList();
-}
-
-function closeCatModal() {
-    document.getElementById('cat-modal').style.display = 'none';
-    hideCatForm();
-}
-
-function showCatForm(eId, eNm, ePar) {
-    _editCatId = eId || null;
-    document.getElementById('cat-new-form').style.display = 'block';
-    document.getElementById('cat-name-inp').value = eNm || '';
-    document.getElementById('cat-fe').style.display = 'none';
-    document.getElementById('btn-cs').textContent = eId ? 'Update' : 'Save';
-    document.getElementById('btn-anc').style.display = 'none';
-    const sel = document.getElementById('cat-par-sel');
-    sel.innerHTML = '<option value="">— None —</option>';
-    _cats.forEach(c => {
-        if (c.id !== eId) {
-            const o = document.createElement('option');
-            o.value = c.id;
-            o.textContent = c.full_name || c.name;
-            if (c.id === ePar) o.selected = true;
-            sel.appendChild(o);
-        }
-    });
-    setTimeout(() => document.getElementById('cat-name-inp').focus(), 30);
-}
-
-function hideCatForm() {
-    document.getElementById('cat-new-form').style.display = 'none';
-    document.getElementById('btn-anc').style.display = 'flex';
-    document.getElementById('cat-name-inp').value = '';
-    document.getElementById('cat-fe').style.display = 'none';
-    _editCatId = null;
-}
-
-async function saveCat() {
-    const name = document.getElementById('cat-name-inp').value.trim();
-    const fe   = document.getElementById('cat-fe');
-    const btn  = document.getElementById('btn-cs');
-    fe.style.display = 'none';
-    if (!name) { 
-        fe.textContent = 'Category name cannot be empty.'; 
-        fe.style.display = 'block'; 
-        return; 
-    }
-    btn.disabled = true;
-    btn.textContent = _editCatId ? 'Updating...' : 'Saving...';
-    try {
-        // ✅ /user-categories route use பண்ணு
-        const res = await fetch(
-            _editCatId ? `/user-categories/${_editCatId}` : '/user-categories', 
-            {
-                method: _editCatId ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ name })  // ✅ parent_id தேவையில்லை
-            }
-        );
-        const j = await res.json();
-        if (!res.ok) { 
-            fe.textContent = j.message || 'Failed.'; 
-            fe.style.display = 'block'; 
-        } else { 
-            hideCatForm(); 
-            _showCatMsg(_editCatId ? 'Category updated!' : 'Category added!'); 
-            await _fetchCats(); 
-            _renderModalList(); 
-        }
-    } catch { 
-        fe.textContent = 'Network error.'; 
-        fe.style.display = 'block'; 
-    } finally { 
-        btn.disabled = false; 
-        btn.textContent = _editCatId ? 'Update' : 'Save'; 
-    }
-}
-function _renderModalList() {
-    const el = document.getElementById('cat-li-wrap');
-    if (!_cats.length) {
-        el.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;font-size:13px;">No categories added yet</div>';
-        return;
-    }
-    el.innerHTML = _cats.map(c => `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;
-                    border-bottom:1px solid #f0f2f7;">
-            <span style="font-size:16px;color:#5b8dee;">📁</span>
-            <span style="flex:1;font-size:13px;font-weight:500;color:#333;">
-                ${esc(c.name)}
-                ${c.parent_name?`<span style="font-size:11px;color:#aaa;margin-left:4px;">(${esc(c.parent_name)})</span>`:''}
-            </span>
-            <div style="display:flex;gap:2px;">
-                <button onclick="showCatForm(${c.id},'${c.name.replace(/'/g,"\\'")}',${c.parent_id||'null'})"
-                        style="background:none;border:none;cursor:pointer;padding:4px 7px;
-                               border-radius:4px;font-size:13px;color:#2d5be3;">✏️ Edit</button>
-                <button onclick="delCat(${c.id},'${c.name.replace(/'/g,"\\'")}')"
-                        style="background:none;border:none;cursor:pointer;padding:4px 7px;
-                               border-radius:4px;font-size:13px;color:#e74c3c;">🗑️ Delete</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function delCat(id, name) {
-    if (!confirm(`Delete category "${name}"?`)) return;
-    try {
-        const res = await fetch(`/user-categories/${id}`, {  // ✅ மாத்துங்க
-            method: 'DELETE',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        const j = await res.json();
-        if (res.ok && j.success) {
-            if (_selCatId === id) {
-                _selCatId = null;
-                document.getElementById('cat-hid-id').value   = '';
-                document.getElementById('cat-hid-name').value = '';
-                const lbl = document.getElementById('cat-dd-lbl');
-                lbl.textContent = 'Select a category';
-                lbl.style.color = '#9CA3AF';
-            }
-            _showCatMsg('Category deleted!');
-            await _fetchCats();
-            _renderModalList();
-        } else { 
-            alert(j.message || 'Failed to delete'); 
-        }
-    } catch { 
-        alert('Network error'); 
-    }
-}
-
-function _showCatMsg(m) {
-    const el = document.getElementById('cat-ms');
-    el.textContent   = m;
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 3000);
-}
-
-// ══════════════════════════════════════
-// SAVE — category_id include
+// SAVE
 // ══════════════════════════════════════
 function saveSeries() {
     const name = document.getElementById('series-name').value.trim();
+
     if (!name) {
         document.getElementById('series-name').classList.add('error');
         document.getElementById('name-error').classList.add('show');
@@ -1076,10 +754,9 @@ function saveSeries() {
                  (document.getElementById(`start-${i}`)?.value  ?? m.start),
     }));
 
-  const locationIds = Object.keys(selectedLocs);
-
-    const categoryId   = document.getElementById('cat-hid-id').value   || null;  // ✅
-    const categoryName = document.getElementById('cat-hid-name').value  || null;  // ✅
+    const locationIds  = Object.keys(selectedLocs);
+    const categoryId   = document.getElementById('cat-hid-id').value   || null;
+    const categoryName = document.getElementById('cat-hid-name').value  || null;
 
     const btn     = document.getElementById('save-btn');
     const spinner = document.getElementById('save-spinner');
@@ -1097,8 +774,8 @@ function saveSeries() {
             name,
             series,
             location_id:   locationIds,
-            category_id:   categoryId,    // ✅
-            category_name: categoryName,  // ✅
+            category_id:   categoryId,
+            category_name: categoryName,
         }),
     })
     .then(r => r.json())
@@ -1120,27 +797,17 @@ function saveSeries() {
 
 function showAlert(msg, type) {
     const el = document.getElementById('js-alert');
-    el.className   = `alert alert-${type} show`;    
+    el.className   = `alert alert-${type} show`;
     el.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
     setTimeout(() => el.classList.remove('show'), 5000);
 }
 
-function esc(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('created') === '1') {
-    history.replaceState({}, '', window.location.pathname);
-}
-
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
 // GENERATE SERIES FORMAT MODAL
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
 let _genModuleIdx = null;
 let _genRowCount  = 0;
 
-// Open modal for a specific module
 function openGenModal(moduleIdx) {
     _genModuleIdx = moduleIdx;
     _genRowCount  = 0;
@@ -1149,7 +816,6 @@ function openGenModal(moduleIdx) {
     document.getElementById('gen-modal-title').textContent = 'Generate Series - ' + moduleName;
     document.getElementById('gen-rows-tbody').innerHTML = '';
 
-    // Auto-add 2 default rows
     genAddRow('Module Name', 'First', 3, 'Upper Case', '-');
     genAddRow('Custom Text', '',      0, 'Upper Case', '');
 
@@ -1162,13 +828,11 @@ function closeGenModal() {
     _genModuleIdx = null;
 }
 
-// Close on outside click
 document.addEventListener('click', function(e) {
     const modal = document.getElementById('gen-modal');
     if (modal && e.target === modal) closeGenModal();
 });
 
-// Add a row to the generator table
 function genAddRow(attr, showType, showCount, letterCase, separator) {
     _genRowCount++;
     const n = _genRowCount;
@@ -1256,7 +920,6 @@ function genAddRow(attr, showType, showCount, letterCase, separator) {
     genUpdatePreview();
 }
 
-// When attribute dropdown changes
 function genAttrChanged(n) {
     const attr = document.getElementById('gen-attr-' + n)?.value;
     const cell = document.getElementById('gen-show-cell-' + n);
@@ -1301,7 +964,6 @@ function genDelRow(n) {
     genUpdatePreview();
 }
 
-// Build part value for preview
 function genGetPartValue(n) {
     const attr      = document.getElementById('gen-attr-' + n)?.value || '';
     const caseType  = document.getElementById('gen-case-' + n)?.value || 'None';
@@ -1317,7 +979,6 @@ function genGetPartValue(n) {
             : '00001';
         raw = start;
     } else {
-        // Module Name
         const showType  = document.getElementById('gen-show-type-' + n)?.value || 'First';
         const showCount = parseInt(document.getElementById('gen-show-count-' + n)?.value || 3);
         raw = showType === 'First' ? modName.slice(0, showCount) : modName.slice(-showCount);
@@ -1329,7 +990,6 @@ function genGetPartValue(n) {
     return raw;
 }
 
-// Build full preview string
 function genBuildPreview() {
     const rows = document.querySelectorAll('#gen-rows-tbody tr');
     let result = '';
@@ -1347,19 +1007,14 @@ function genUpdatePreview() {
     document.getElementById('gen-preview-box').textContent = preview || '—';
 }
 
-// Apply generated format to the prefix field of that module
 function applyGenFormat() {
     if (_genModuleIdx === null) return;
-
     const format = genBuildPreview();
-
-    // Prefix field-ல் set பண்ணு
     const prefixInput = document.getElementById('prefix-' + _genModuleIdx);
     if (prefixInput) {
         prefixInput.value = format;
-        updatePreview(_genModuleIdx);  // preview badge update
+        updatePreview(_genModuleIdx);
     }
-
     closeGenModal();
 }
 </script>

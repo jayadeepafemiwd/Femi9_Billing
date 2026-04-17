@@ -24,8 +24,9 @@ class Product extends Model
     'product_image',
     'additional_data',
     'variants_data',
-    'associate_item_details',  // ← இதுவும் add பண்ணுங்க
-    'opening_stock',
+    'associate_item_details',  
+    'opening_stock', 
+    'access_product', 
 ];
 
 protected $casts = [
@@ -38,6 +39,7 @@ protected $casts = [
     'additional_data'   => 'array',
     'variants_data'         => 'array',  // ← JSON auto array
     'associate_item_details'=> 'array',
+    'access_product' => 'boolean',
     ];
     // Scopes for easy filtering
     public function scopeGoods($query)

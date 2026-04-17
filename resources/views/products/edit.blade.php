@@ -350,7 +350,23 @@ if ($rawImg) {
                 <button type="button" class="btn-gear" onclick="openBrandModal()">⚙️</button>
               </div>
             </div>
-
+  <!-- Admin Only Access -->
+<div class="form-row" style="margin-top: 4px;">
+    <label class="field-label" style="width:140px;"></label>
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;">
+        <input 
+            type="checkbox" 
+            name="access_product" 
+            id="access_product"
+            value="1"
+            {{ old('access_product', $product->access_product) ? 'checked' : '' }}
+            style="width:16px; height:16px; accent-color:#2d5be3; cursor:pointer;"
+        />
+        <span style="font-size:13px; color:#555;">
+            This product show only for the <strong>Admin</strong>
+        </span>
+    </label>
+</div>
           </div>
 
           <!-- ══ IMAGE PANEL ══ -->

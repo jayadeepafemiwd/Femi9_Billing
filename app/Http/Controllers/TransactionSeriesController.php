@@ -23,12 +23,24 @@ class TransactionSeriesController extends Controller
     }
 
     // ── GET /transaction-series/create ──────────────────────
-    public function create()
-    {
-        $locations = Location::whereNull('deleted_at')->get();
-        return view('transaction-series.create', compact('locations'));
-    }
+  // App\Http\Controllers\TransactionSeriesController.php
 
+public function create()
+{
+    $locations = \App\Models\Location::all(); // already irukkum
+
+    // ✅ இதை add பண்ணுங்க
+    $categories = \App\Models\UserCategory::all()
+        ->map(function($cat) {
+            return (object)[
+                'id'             => $cat->id,
+                'name'           => $cat->name,
+                'location_label' => $cat->location_label ?? null,
+            ];
+        });
+
+    return view('transaction-series.create', compact('locations', 'categories'));
+}
     // ── POST /transaction-series ─────────────────────────────
     //
     // ⭐ KEY POINT:

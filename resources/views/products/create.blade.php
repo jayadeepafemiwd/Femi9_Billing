@@ -520,8 +520,28 @@ img.vit-preview { width: 100%; height: 100%; object-fit: cover; display: none; b
                 <button type="button" class="btn-gear" onclick="openBrandModal()" title="Manage Brands">⚙️</button>
               </div>
             </div>
+            <div class="form-row" style="margin-top: 2px; margin-bottom: 0;">
+  <label class="field-label"></label>
+  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; 
+                background:#f0f4ff; border:1px solid #c5d3f7; border-radius:6px; 
+                padding:8px 14px; width:fit-content;">
+    <input 
+      type="checkbox" 
+      name="access_product" 
+      id="access_product"
+      value="1"
+      {{ old('access_product') ? 'checked' : '' }}
+      style="width:16px; height:16px; accent-color:#2d5be3; cursor:pointer;"
+    />
+    <span style="font-size:13px; color:#444;">
+      🔒 This product show only for the <strong style="color:#2d5be3;">Admin</strong>
+    </span>
+  </label>
+</div>
+
           </div>
 
+          
           <!-- Image Panel -->
           <div class="image-panel">
             <div class="upload-label">Product Image</div>

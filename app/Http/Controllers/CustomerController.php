@@ -19,6 +19,7 @@ class CustomerController extends Controller
             // ── Basic Info ────────────────────────────────────
             'customer_type'     => 'required|in:business,individual',
             'customer_category' => 'nullable|string|max:100',
+           'customer_sub_category_id' => 'nullable|exists:user_sub_categories,id',
             'assign_location.layer_id'  => 'nullable|string',
             'assign_location.value_id'  => 'nullable|string',
             'assign_location.path'      => 'nullable|string|max:500',
@@ -183,12 +184,19 @@ class CustomerController extends Controller
                 'billing'  => $this->sanitizeAddress($request->input('billing',  [])),
                 'shipping' => $this->sanitizeAddress($request->input('shipping', [])),
             ];
-
+             
+            // ── 6. user_code generate ─────────────────────────────────
+$userCode = null;
+if ($request->filled('customer_category')) {
+    $userCode = $this->generateUserCode($request->customer_category);
+}
             // ── 5. Create Customer ────────────────────────────────────
             $customer = Customer::create([
                 'customer_type'     => $request->customer_type,
                 'customer_category' => $request->customer_category,
+               'customer_sub_category_id' => $request->customer_sub_category_id ?: null,
                 'name'              => $fullName,
+                'user_code' => $userCode,
                 'company_name'      => $request->company_name,
                 'display_name'      => $request->display_name,
                 'email'             => $request->email,
@@ -291,6 +299,100 @@ class CustomerController extends Controller
         return response()->json(['success' => true]);
     }
 
+
+    // CustomerController
+ public function panelData($id)
+{
+    $customer = Customer::findOrFail($id);
+
+    // Parse JSON columns
+    $additionalDatas = is_string($customer->additional_datas)
+        ? json_decode($customer->additional_datas, true)
+        : ($customer->additional_datas ?? []);
+
+    // ✅ common_address parse
+    $commonAddress = $customer->common_address ?? [];
+    if (is_string($commonAddress)) {
+        $commonAddress = json_decode($commonAddress, true) ?? [];
+    }
+
+    // ✅ Contacts — first_name + last_name join பண்ணு
+   $contacts = collect($additionalDatas['contact_persons'] ?? [])
+    ->map(fn($c) => [
+        'name'           => trim(
+                                ($c['salutation'] ?? '') . ' ' .
+                                ($c['first_name'] ?? '') . ' ' .
+                                ($c['last_name']  ?? '')
+                            ) ?: '—',
+        'email'          => $c['email']       ?? null,
+        'phone'          => $c['work_phone']  ?? null,
+        'mobile'         => $c['mobile']      ?? null,
+        'designation'    => $c['designation'] ?? null,  // ✅ extra info
+        'department'     => $c['department']  ?? null,
+        'is_primary'     => (bool)($c['is_primary']    ?? false),
+        'portal_enabled' => (bool)($c['portal_access'] ?? false),
+    ])->values()->toArray();
+    // ✅ Activity
+    $activities = \App\Models\History::where('module', 'customer')
+        ->where('record_id', $id)
+        ->with('user')
+        ->latest()
+        ->take(20)
+        ->get()
+        ->map(function ($h) {
+            return [
+                'user'        => $h->user?->name ?? 'System',
+                'time'        => $h->created_at->diffForHumans(),
+                'description' => match($h->action) {
+                    'create'          => 'Customer created',
+                    'update'          => self::buildUpdateDescription($h->old_data, $h->new_data),
+                    'delete'          => 'Customer deleted',
+                    'comment_added'   => 'Comment added: "' . ($h->new_data['comment'] ?? '') . '"',
+                    'comment_deleted' => 'Comment deleted',
+                    default           => ucfirst($h->action),
+                },
+                'action' => $h->action,
+            ];
+        })->toArray();
+
+    // ✅ Address — empty check
+    $hasData      = fn($addr) => $addr && array_filter($addr, fn($v) => !empty($v));
+    $billingAddr  = $commonAddress['billing']  ?? null;
+    $shippingAddr = $commonAddress['shipping'] ?? null;
+
+    return response()->json([
+        'outstanding'      => 0,
+        'credits'          => 0,
+        'customer_type'    => ucfirst($customer->customer_type ?? ''),
+        'currency'         => $additionalDatas['currency']      ?? 'INR',
+        'payment_terms'    => $additionalDatas['payment_terms'] ?? '—',
+        'pan'              => $customer->pan                    ?? '—',
+        'gstin'            => $additionalDatas['gstin']         ?? '—',
+        'portal_status'    => '—',
+        'contacts'         => $contacts,
+        'billing_address'  => $hasData($billingAddr)  ? $billingAddr  : null,
+        'shipping_address' => $hasData($shippingAddr) ? $shippingAddr : null,
+        'activities'       => $activities,
+    ]);
+}
+
+private static function buildUpdateDescription(?array $oldData, ?array $newData): string
+{
+    if (empty($newData)) return 'Record updated';
+
+    $parts = [];
+    foreach ($newData as $key => $newVal) {
+        $oldVal = $oldData[$key] ?? '—';
+        $label  = ucwords(str_replace(['.', '_'], ' ', $key));
+        if ($oldVal !== $newVal) {
+            $parts[] = "{$label}: \"{$oldVal}\" → \"{$newVal}\"";
+        }
+    }
+
+    return empty($parts)
+        ? 'Record updated'
+        : implode(', ', array_slice($parts, 0, 3)) . (count($parts) > 3 ? ' ...' : '');
+}
     // ================================================================
     //  EDIT  ✅ FIX: $categories added (was missing before)
     // ================================================================
@@ -381,6 +483,7 @@ class CustomerController extends Controller
             $customer->update([
                 'customer_type'     => $request->customer_type     ?? $customer->customer_type,
                 'customer_category' => $request->customer_category ?? $customer->customer_category,
+                'customer_sub_category_id' => $request->customer_sub_category_id ?? $customer->customer_sub_category_id,
                 'name'              => $fullName                   ?? $customer->name,
                 'company_name'      => $request->company_name      ?? $customer->company_name,
                 'display_name'      => $request->display_name      ?? $customer->display_name,
@@ -636,7 +739,50 @@ class CustomerController extends Controller
 
         return response()->json(['success' => true]);
     }
+   
 
+ private function generateUserCode(string $categoryName): string
+{
+    $category = \App\Models\UserCategory::where('name', $categoryName)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+    if (!$category) {
+        return strtoupper(substr($categoryName, 0, 3)) . '001';
+    }
+
+    $baseCode = strtoupper($category->code); // SS001, MV0001, SS01
+
+    // letters + numbers split
+    preg_match('/^([A-Z]+)(\d+)$/', $baseCode, $m);
+
+    if (!$m) {
+        return $baseCode;
+    }
+
+    $letters   = $m[1];            // "SS", "MV", "CF"
+    $baseNum   = $m[2];            // "001", "0001", "01"
+    $padLength = strlen($baseNum); // 3, 4, 2
+
+    // இந்த category-ல் last customer user_code எடு
+    $last = Customer::where('customer_category', $categoryName)
+                ->whereNotNull('user_code')
+                ->whereNull('deleted_at')
+                ->lockForUpdate()
+                ->orderByDesc('id')
+                ->value('user_code');
+
+    if ($last) {
+        // SS002 → numbers part → 002 → int → 2 → +1 → 3
+        preg_match('/^[A-Z]+(\d+)$/', strtoupper($last), $lm);
+        $next = isset($lm[1]) ? ((int)$lm[1] + 1) : ((int)$baseNum + 1);
+    } else {
+        // First customer → base code அப்படியே
+        $next = (int)$baseNum;
+    }
+
+    return $letters . str_pad($next, $padLength, '0', STR_PAD_LEFT);
+}
     // ================================================================
     //  DESTROY
     // ================================================================
@@ -684,26 +830,28 @@ class CustomerController extends Controller
         ];
     }
 
-    private function sanitizeContactPersons(array $persons): array
-    {
-        $clean = [];
-        foreach ($persons as $p) {
-            if (empty($p['first_name']) && empty($p['email'])) {
-                continue;
-            }
-            $clean[] = [
-                'salutation' => $this->clean($p['salutation'] ?? null),
-                'first_name' => $this->clean($p['first_name'] ?? null),
-                'last_name'  => $this->clean($p['last_name']  ?? null),
-                'email'      => $this->clean($p['email']      ?? null),
-                'work_phone' => $this->clean($p['work_phone'] ?? null),
-                'mobile'     => $this->clean($p['mobile']     ?? null),
-                'location'   => $p['location'] ?? [],
-            ];
+   private function sanitizeContactPersons(array $persons): array
+{
+    $clean = [];
+    foreach ($persons as $p) {
+        if (empty($p['first_name']) && empty($p['email'])) {
+            continue;
         }
-        return $clean;
+        $clean[] = [
+            'salutation'    => $this->clean($p['salutation'] ?? null),
+            'first_name'    => $this->clean($p['first_name'] ?? null),
+            'last_name'     => $this->clean($p['last_name']  ?? null),
+            'email'         => $this->clean($p['email']      ?? null),
+            'work_phone'    => $this->clean($p['work_phone'] ?? null),
+            'mobile'        => $this->clean($p['mobile']     ?? null),
+            'location'      => $p['location']     ?? [],
+            // ✅ இந்த இரண்டு fields add பண்ணு
+            'is_primary'    => (bool)($p['is_primary']    ?? false),
+            'portal_access' => (bool)($p['portal_access'] ?? false),
+        ];
     }
-
+    return $clean;
+}
     private function clean(?string $value): ?string
     {
         if ($value === null) return null;
