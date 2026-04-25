@@ -121,22 +121,17 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 <div class="form-row">
   <div class="form-label">Category <span title="Group your price lists">ℹ</span></div>
   <div class="form-control" style="max-width:420px;">
-
-    {{-- ✅ Single hidden inputs only --}}
     <input type="hidden" name="category_id"   id="pl_category_id"
-           value="{{ old('category_id',   $priceList->category_id) }}">
+           value="{{ old('category_id', $priceList->category_id) }}">
     <input type="hidden" name="category_name" id="pl_category_name"
            value="{{ old('category_name', $priceList->category_name) }}">
-
-    {{-- Custom dropdown --}}
     <div class="pl-cat-dropdown" id="plCatDropdown">
-      <div class="pl-cat-selected" id="plCatSelected" onclick="togglePlCatList()">
+      <div class="pl-cat-selected" id="plCatSelected" onclick="togglePlCatList(event)">
         <span id="plCatSelectedText" style="color:#999;">-- Select Category --</span>
         <span class="pl-cat-arrow">▾</span>
       </div>
       <div class="pl-cat-list" id="plCatList">
-        <div class="pl-cat-item" data-id="" data-name="" data-loc=""
-             onclick="selectPlCat(this)">
+        <div class="pl-cat-item" data-id="" data-name="" data-loc="" onclick="selectPlCat(this)">
           <span class="pl-cat-name" style="color:#999;">-- Select Category --</span>
         </div>
         @foreach($categories as $cat)
@@ -153,7 +148,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
         @endforeach
       </div>
     </div>
-
   </div>
 </div>
 
@@ -206,7 +200,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 
 {{-- ===== ALL ITEMS FIELDS ===== --}}
 <div id="all-fields" style="{{ $plType === 'individual_items' ? 'display:none' : '' }}">
-
   <div class="form-row">
     <div class="form-label req">Percentage*</div>
     <div class="form-control">
@@ -221,7 +214,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label req">Round Off To*</div>
     <div class="form-control rel">
@@ -251,7 +243,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
 </div>
 
 {{-- ===== INDIVIDUAL ITEMS FIELDS ===== --}}
@@ -261,7 +252,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
   $includeDiscount = old('include_discount', $priceList->include_discount ?? false);
 @endphp
 <div id="ind-fields" style="{{ $plType === 'individual_items' ? '' : 'display:none' }}">
-
   <div class="form-row">
     <div class="form-label">Pricing Scheme</div>
     <div class="form-control">
@@ -280,7 +270,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label">Currency</div>
     <div class="form-control">
@@ -291,7 +280,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </select>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label">Discount</div>
     <div class="form-control">
@@ -306,9 +294,7 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="divider"></div>
-
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <div class="section-title" style="margin-bottom:0">Customise Rates in Bulk</div>
     <div class="import-toggle">
@@ -316,7 +302,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       <div class="toggle-sw" id="import-toggle" onclick="toggleImport()"></div>
     </div>
   </div>
-
   <div id="items-table-section">
     <div class="table-wrap">
       <table>
@@ -334,7 +319,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </table>
     </div>
   </div>
-
   <div id="import-section" style="display:none">
     <div class="import-section">
       <p><strong>1. Export items as XLS file</strong><br>Export all items or filter specific items, export them to an XLS file, update the rates, and import the file back.</p>
@@ -348,7 +332,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       <button type="button" class="btn-export" style="margin-top:10px">&#8595; Import Items</button>
     </div>
   </div>
-
 </div>{{-- end #ind-fields --}}
 
 <div class="btn-row">
@@ -366,23 +349,22 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 </div>
 
 <script>
+{{-- ✅ SAVED DATA — renderItems() call ஆவதற்கு முன்னே declare ஆகணும் --}}
+const SAVED_UNIT_ITEMS   = {!! json_encode($priceList->individual_items_unit   ?? []) !!};
+const SAVED_VOLUME_ITEMS = {!! json_encode($priceList->individual_items_volume ?? []) !!};
+
 @php
-$productJson = isset($items) ? $items->map(function($p) {
+$productJson = $items->map(function($p) {
     return [
         'id'            => $p->id,
         'name'          => $p->name,
         'sku'           => $p->sku ?? '',
         'selling_price' => (float)($p->selling_price ?? 0),
         'cost_price'    => (float)($p->cost_price    ?? 0),
-        'custom_rate'   => null,
-        'start_quantity'=> null,
-        'end_quantity'  => null,
     ];
-})->values()->toJson() : '[]';
-$extraRangesJson = '[]';
+})->values()->toJson();
 @endphp
 const ALL_PRODUCTS = {!! $productJson !!};
-const EXTRA_RANGES = {!! $extraRangesJson !!};
 
 let extraIdx = 10000;
 
@@ -390,8 +372,9 @@ function escHtml(s) {
   return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── Category dropdown ─────────────────────────────────────────────────────────
-function togglePlCatList() {
+// ── Category Dropdown ─────────────────────────────────────────────────────────
+function togglePlCatList(e) {
+  e.stopPropagation(); // ← outside-click immediately close ஆகாம இருக்க
   document.getElementById('plCatList').classList.toggle('open');
 }
 
@@ -419,7 +402,7 @@ function selectPlCat(el) {
   document.getElementById('plCatList').classList.remove('open');
 }
 
-// Close on outside click
+// Outside click → close dropdown
 document.addEventListener('click', function(e) {
   const dd = document.getElementById('plCatDropdown');
   if (dd && !dd.contains(e.target)) {
@@ -427,9 +410,9 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ── Page load ─────────────────────────────────────────────────────────────────
+// ── Page Load ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore saved category selection
+  // Saved category restore
   const savedId = "{{ $priceList->category_id ?? '' }}";
   if (savedId) {
     const match = document.querySelector(`.pl-cat-item[data-id="${savedId}"]`);
@@ -442,11 +425,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── Items table ───────────────────────────────────────────────────────────────
+// ── Items Table ───────────────────────────────────────────────────────────────
 function renderItems() {
   const tbody    = document.getElementById('items-tbody');
   const isVolume = (document.querySelector('input[name="pricing_scheme"]:checked')?.value ?? 'volume') === 'volume';
-  const txn      =  document.querySelector('input[name="transaction_type"]:checked')?.value ?? 'sales';
+  const saved    = isVolume ? SAVED_VOLUME_ITEMS : SAVED_UNIT_ITEMS;
+  const txn      = document.querySelector('input[name="transaction_type"]:checked')?.value ?? 'sales';
 
   if (!ALL_PRODUCTS.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No products found.</td></tr>`;
@@ -456,14 +440,19 @@ function renderItems() {
   tbody.innerHTML = '';
 
   ALL_PRODUCTS.forEach((item, idx) => {
+    // ── Saved JSON la irundhu data edukrom ────────────────────────────────────
+    const savedItem  = saved?.[item.id];        // product id = key
+    const firstRange = savedItem?.ranges?.[0];  // first range
+
     const rate = txn === 'purchase' ? item.cost_price : item.selling_price;
     const rateDisplay = rate > 0
       ? `&#8377;${rate.toLocaleString('en-IN',{minimumFractionDigits:2})}`
       : `<span style="color:#aaa">—</span>`;
 
-    const startVal  = item.start_quantity != null ? item.start_quantity : '';
-    const endVal    = item.end_quantity   != null ? item.end_quantity   : '';
-    const customVal = item.custom_rate    != null ? item.custom_rate    : '';
+    // ── Pre-fill saved values ─────────────────────────────────────────────────
+    const startVal  = firstRange?.start_qty   ?? '';
+    const endVal    = firstRange?.end_qty     ?? '';
+    const customVal = firstRange?.custom_rate ?? '';
 
     const row = document.createElement('tr');
     row.dataset.itemId = item.id;
@@ -474,27 +463,33 @@ function renderItems() {
         ${item.sku ? `<div class="item-sku">SKU: ${escHtml(item.sku)}</div>` : ''}
       </td>
       <td>${rateDisplay}</td>
-      <td>${isVolume ? `<input type="number" name="items[${idx}][start_quantity]" min="1" style="width:70px" value="${escHtml(String(startVal))}">` : '&mdash;'}</td>
-      <td>${isVolume ? `<input type="number" name="items[${idx}][end_quantity]"   min="1" style="width:70px" value="${escHtml(String(endVal))}">` : '&mdash;'}</td>
+      <td>${isVolume
+        ? `<input type="number" name="items[${idx}][start_quantity]" min="1" style="width:70px" value="${escHtml(String(startVal))}">`
+        : '&mdash;'}</td>
+      <td>${isVolume
+        ? `<input type="number" name="items[${idx}][end_quantity]" min="1" style="width:70px" value="${escHtml(String(endVal))}">`
+        : '&mdash;'}</td>
       <td><input type="number" name="items[${idx}][custom_rate]" placeholder="0" min="0" style="width:90px" value="${escHtml(String(customVal))}"></td>
       <td><button type="button" class="btn-del" onclick="removeRow(this)">&#10005;</button></td>`;
     tbody.appendChild(row);
 
     if (isVolume) {
-      const myExtras = EXTRA_RANGES.filter(r => r.item_id == item.id);
-      myExtras.forEach(extra => {
+      // ── Extra ranges restore (2nd, 3rd range...) ──────────────────────────
+      const allRanges = savedItem?.ranges ?? [];
+      allRanges.slice(1).forEach(extra => {
         const ei = extraIdx++;
         const er = document.createElement('tr');
         er.innerHTML = `
           <td><input type="hidden" name="items[${ei}][item_id]" value="${item.id}"></td>
           <td></td>
-          <td><input type="number" name="items[${ei}][start_quantity]" min="1" style="width:70px" value="${extra.start_quantity ?? ''}"></td>
-          <td><input type="number" name="items[${ei}][end_quantity]"   min="1" style="width:70px" value="${extra.end_quantity   ?? ''}"></td>
-          <td><input type="number" name="items[${ei}][custom_rate]" placeholder="0" min="0" style="width:90px" value="${extra.custom_rate ?? ''}"></td>
+          <td><input type="number" name="items[${ei}][start_quantity]" min="1" style="width:70px" value="${escHtml(String(extra.start_qty ?? ''))}"></td>
+          <td><input type="number" name="items[${ei}][end_quantity]"   min="1" style="width:70px" value="${escHtml(String(extra.end_qty   ?? ''))}"></td>
+          <td><input type="number" name="items[${ei}][custom_rate]" placeholder="0" min="0" style="width:90px" value="${escHtml(String(extra.custom_rate ?? ''))}"></td>
           <td><button type="button" class="btn-del" onclick="this.closest('tr').remove()">&#10005;</button></td>`;
         tbody.appendChild(er);
       });
 
+      // ── "+ Add New Range" button ──────────────────────────────────────────
       const rr = document.createElement('tr');
       rr.className = 'range-hint-row';
       rr.dataset.parentId = item.id;

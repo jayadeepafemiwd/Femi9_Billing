@@ -1132,6 +1132,8 @@ function osCopyAll(type) {
 function osSave() {
   const rows = [], used = [];
   let err = '';
+  const variantName = new URLSearchParams(window.location.search).get('variant') || '';
+  
   document.querySelectorAll('.osLoc').forEach(inp => {
     const n = inp.dataset.n;
     const locId = inp.value;
@@ -1142,6 +1144,7 @@ function osSave() {
     used.push(locId);
     rows.push({ bin_location_id: locId, quantity: qty, value_per_unit: val });
   });
+  
   if (err) { osShowAlert(err, 'error'); return; }
   if (!rows.length) { osShowAlert('Please add at least one row', 'error'); return; }
 
@@ -1155,7 +1158,7 @@ function osSave() {
       'X-Requested-With': 'XMLHttpRequest',
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
     },
-    body: JSON.stringify({ rows })
+    body: JSON.stringify({ rows, variant_name: variantName }) // ✅ இதுவொன்னே போதும்
   })
   .then(r => r.json())
   .then(data => {

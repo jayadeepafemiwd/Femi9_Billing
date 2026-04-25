@@ -689,6 +689,21 @@ if ($request->item_variant_type === 'contains_variants' && $request->filled('var
 
             $product = Product::create($productData);
 
+            // ✅ item_variants table-ல save பண்ணு
+if ($product->item_variant_type === 'contains_variants' && !empty($variantsData['variants'])) {
+    foreach ($variantsData['variants'] as $index => $variant) {
+        \App\Models\ItemVariant::create([
+            'item_id'       => $product->id,
+            'combo_key'     => $variant['combo_key'] ?? $variant['name'] ?? 'variant-' . $index,
+            'name'          => $variant['name'] ?? null,
+            'sku'           => $variant['sku'] ?? null,
+            'cost_price'    => $variant['cost_price'] ?? null,
+            'selling_price' => $variant['selling_price'] ?? null,
+            'image'         => $variant['product_image'] ?? null,
+            'sort_order'    => $index,
+        ]);
+    }
+}
             DB::commit();
 
             $this->clearProductCache();
@@ -766,6 +781,15 @@ public function saveOpeningStock(Request $request, $product)
         ], 403);
     }
 
+    // ✅ Variant check
+    $variantId = null;
+    if ($request->filled('variant_name')) {
+        $variant = \App\Models\ItemVariant::where('item_id', $product->id)
+                    ->where('name', $request->variant_name)
+                    ->first();
+        $variantId = $variant?->id;
+    }
+
     $rows = $request->input('rows', []);
 
     if (empty($rows)) {
@@ -787,87 +811,106 @@ public function saveOpeningStock(Request $request, $product)
         ], 422);
     }
 
-    // ✅ STEP 1: OLD stock — loop start ஆவதுக்கு முன்னாடி எடு
+    // ✅ STEP 1: OLD stock
     $oldStockMap   = [];
     $oldTotalStock = 0;
 
-    foreach ($rows as $row) {
-        $locId = $row['bin_location_id'];
-        $old   = (float)(\App\Models\Stock::where('product_id', $product->id)
-                    ->where('location_id', $locId)
-                    ->whereNull('deleted_at')
-                    ->value('stock_on_hand') ?? 0);
-        $oldStockMap[$locId] = $old;
-        $oldTotalStock      += $old;
-    }
-
-    // ✅ STEP 2: Stock update
-    $updatedLocations = [];
-
-    foreach ($rows as $row) {
-        $qty        = (float) ($row['quantity']       ?? 0);
-        $valPerUnit = (float) ($row['value_per_unit'] ?? 0);
-        $totalValue = $qty * $valPerUnit;
-        $locId      = $row['bin_location_id'];
-
-        try {
-            $stock = \App\Models\Stock::withTrashed()
-                ->where('product_id', $product->id)
+   // STEP 1: OLD stock — Stock → ItemStock, product_id → item_id
+foreach ($rows as $row) {
+    $locId = $row['bin_location_id'];
+    $old   = (float)(\App\Models\ItemStock::where('item_id', $product->id)
                 ->where('location_id', $locId)
-                ->first();
+                ->where('variant_id', $variantId)
+                ->whereNull('deleted_at')
+                ->value('stock_on_hand') ?? 0);
+    $oldStockMap[$locId] = $old;
+    $oldTotalStock      += $old;
+}
 
-            if ($stock) {
-                if ($stock->trashed()) $stock->restore();
-                $stock->update([
-                    'opening_stock'   => $qty,
-                    'stock_on_hand'   => $qty,
-                    'committed_stock' => 0,
-                    'available_stock' => $qty,
-                    'value_per_unit'  => $valPerUnit,
-                    'total_value'     => $totalValue,
-                    'type'            => 'opening',
-                ]);
-            } else {
-                $stock = \App\Models\Stock::create([
-                    'product_id'      => $product->id,
-                    'location_id'     => $locId,
-                    'opening_stock'   => $qty,
-                    'stock_on_hand'   => $qty,
-                    'committed_stock' => 0,
-                    'available_stock' => $qty,
-                    'value_per_unit'  => $valPerUnit,
-                    'total_value'     => $totalValue,
-                    'type'            => 'opening',
-                ]);
-            }
+// STEP 2: Stock update
+foreach ($rows as $row) {
+    $qty        = (float)($row['quantity']       ?? 0);
+    $valPerUnit = (float)($row['value_per_unit'] ?? 0);
+    $totalValue = $qty * $valPerUnit;
+    $locId      = $row['bin_location_id'];
 
-            $loc = Location::find($locId);
+    try {
+        $stock = \App\Models\ItemStock::withTrashed()
+            ->where('item_id', $product->id)
+            ->where('location_id', $locId)
+            ->where('variant_id', $variantId)
+            ->first();
 
-            $updatedLocations[] = [
-                'id'            => (int) $loc->id,
-                'location_name' => $loc->location_name,
-                'stock_on_hand' => (float) $stock->stock_on_hand,
-                'committed'     => (float) $stock->committed_stock,
-                'available'     => (float) $stock->available_stock,
-            ];
-
-        } catch (\Exception $e) {
-            \Log::error('Stock save error', ['row' => $row, 'error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'DB error: ' . $e->getMessage()], 500);
+        if ($stock) {
+            if ($stock->trashed()) $stock->restore();
+            $stock->update([
+                'opening_stock'      => $qty,
+                'stock_on_hand'      => $qty,
+                'committed_stock'    => 0,
+                'available_for_sale' => $qty,  // available_stock → available_for_sale
+                'value_per_unit'     => $valPerUnit,
+                'total_value'        => $totalValue,
+            ]);
+        } else {
+            $stock = \App\Models\ItemStock::create([
+                'item_id'            => $product->id,  // product_id → item_id
+                'variant_id'         => $variantId,
+                'location_id'        => $locId,
+                'opening_stock'      => $qty,
+                'stock_on_hand'      => $qty,
+                'committed_stock'    => 0,
+                'available_for_sale' => $qty,  // available_stock → available_for_sale
+                'value_per_unit'     => $valPerUnit,
+                'total_value'        => $totalValue,
+            ]);
         }
+
+        // ✅ Ledger entry — புதுசா add
+        \App\Models\ItemStockLedger::create([
+            'item_id'             => $product->id,
+            'location_id'         => $locId,
+            'variant_id'          => $variantId,
+            'transaction_type'    => 'opening',
+            'transaction_date'    => now()->toDateString(),
+            'qty_change'          => $qty,
+            'committed_change'    => 0,
+            'unit_value'          => $valPerUnit,
+            'stock_on_hand_after' => $qty,
+            'committed_after'     => 0,
+            'available_after'     => $qty,
+            'created_by'          => Auth::id(),
+        ]);
+
+        $loc = Location::find($locId);
+        $updatedLocations[] = [
+            'id'            => (int)$loc->id,
+            'location_name' => $loc->location_name,
+            'stock_on_hand' => (float)$stock->stock_on_hand,
+            'committed'     => (float)$stock->committed_stock,
+            'available'     => (float)$stock->available_for_sale,  // available_stock → available_for_sale
+        ];
+
+    } catch (\Exception $e) {
+        \Log::error('Stock save error', ['row' => $row, 'error' => $e->getMessage()]);
+        return response()->json(['success' => false, 'message' => 'DB error: ' . $e->getMessage()], 500);
     }
+}
 
-    // ✅ STEP 3: Total stock
-    $totalStock = \App\Models\Stock::where('product_id', $product->id)
-        ->whereNull('deleted_at')
-        ->sum('stock_on_hand');
+// STEP 3: Total stock
+$totalStock = \App\Models\ItemStock::where('item_id', $product->id)
+    ->where('variant_id', $variantId)
+    ->whereNull('deleted_at')
+    ->sum('stock_on_hand');
 
-    // ✅ STEP 4: Observer duplicate தவிர்க்க — withoutEvents பயன்படுத்து
-    Product::withoutEvents(function () use ($product, $totalStock) {
-        $product->update(['opening_stock' => $totalStock]);
-    });
+// STEP 4: Product opening_stock update
+$allVariantsTotal = \App\Models\ItemStock::where('item_id', $product->id)
+    ->whereNull('deleted_at')
+    ->sum('stock_on_hand');
 
-    // ✅ STEP 5: Changed locations மட்டும் filter பண்ணு
+Product::withoutEvents(function () use ($product, $allVariantsTotal) {
+    $product->update(['opening_stock' => $allVariantsTotal]);
+});
+    // ✅ STEP 5: Changed locations filter
     $changedOld = [];
     $changedNew = [];
 
@@ -882,7 +925,7 @@ public function saveOpeningStock(Request $request, $product)
         }
     }
 
-    // ✅ STEP 6: Changed இருந்தா மட்டும் History save
+    // ✅ STEP 6: History save
     if (!empty($changedNew)) {
         \App\Models\History::create([
             'module'    => 'product',
@@ -892,10 +935,12 @@ public function saveOpeningStock(Request $request, $product)
             'old_data'  => [
                 'total_stock' => $oldTotalStock,
                 'locations'   => $changedOld,
+                'variant_id'  => $variantId, // ✅
             ],
             'new_data'  => [
                 'total_stock' => (float) $totalStock,
                 'locations'   => $changedNew,
+                'variant_id'  => $variantId, // ✅
             ],
         ]);
     }
@@ -910,65 +955,78 @@ public function saveOpeningStock(Request $request, $product)
     // ================================================================
     //  SHOW
     // ================================================================
-
-   public function show($id)
+public function show($id)
 {
-$product = Product::findOrFail($id);
-$products = Product::latest()->get();
-// ✅ item_type எதுவாக இருந்தாலும் — same show page
-// composite_item, assembly_item, kit_item, goods, service
-// எல்லாமே products.show view-க்கே வரும்
-$locations = collect();
-$transactions = collect();
-$histories = \App\Models\History::where('module', 'product')
-->where('record_id', $product->id)
-->with('user')
-->orderBy('created_at', 'desc')
-->get();
-$settingRow = \App\Models\SettingHandle::where('category_name', 'products')->first();
-$settings = $settingRow ? ($settingRow->config ?? []) : [];
-$variantName = request()->query('variant');
-$selectedVariant = null;
-if ($variantName && $product->variants_data) {
-$variantsData = is_string($product->variants_data)
-? json_decode($product->variants_data, true)
-: $product->variants_data;
-foreach (($variantsData['variants'] ?? []) as $v) {
-if ($v['name'] === $variantName) {
-$selectedVariant = $v;
-break;
-}
-}
-}
-$stockLocations = Location::orderBy('location_name')->get()
-->map(function ($location) use ($product) {
-$stock = \App\Models\Stock::where('product_id', $product->id)
-->where('location_id', $location->id)
-->whereNull('deleted_at')
-->first();
-return [
-'id' => $location->id,
-'location_name' => $location->location_name,
-'location_type' => $location->location_type,
-'stock_on_hand' => $stock?->stock_on_hand ?? 0,
-'committed' => $stock?->committed_stock ?? 0,
-'available' => $stock?->available_stock ?? 0,
-'value_per_unit' => $stock?->value_per_unit ?? 0,
-];
-});
-// Composite item details (assembly/kit-க்கு associate items)
-$associateItemDetails = [];
-if (in_array($product->item_type, ['composite_item']) ||
-in_array($product->type, ['assembly_item', 'kit_item'])) {
-$associateItemDetails = is_array($product->associate_item_details)
-? $product->associate_item_details
-: (json_decode($product->associate_item_details ?? '{}', true) ?? []);
-}
-return view('products.show', compact(
-'product', 'products', 'stockLocations',
-'associateItemDetails',
-'locations', 'transactions', 'histories', 'settings'
-));
+    $product = Product::findOrFail($id);
+    $products = Product::latest()->get();
+
+    $locations = collect();
+    $transactions = collect();
+    $histories = \App\Models\History::where('module', 'product')
+        ->where('record_id', $product->id)
+        ->with('user')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    $settingRow = \App\Models\SettingHandle::where('category_name', 'products')->first();
+    $settings = $settingRow ? ($settingRow->config ?? []) : [];
+
+    $variantName = request()->query('variant');
+    $selectedVariant = null;
+
+    // ✅ Variant ID எடு
+    $variantId = null;
+    if ($variantName && $product->variants_data) {
+        $variantsData = is_string($product->variants_data)
+            ? json_decode($product->variants_data, true)
+            : $product->variants_data;
+
+        foreach (($variantsData['variants'] ?? []) as $v) {
+            if ($v['name'] === $variantName) {
+                $selectedVariant = $v;
+                break;
+            }
+        }
+
+        // ✅ DB-ல இருந்து variant_id எடு
+        $variantId = \App\Models\ItemVariant::where('item_id', $product->id)
+            ->where('name', $variantName)
+            ->value('id');
+    }
+
+    // ✅ Variant filter உடன் stock எடு
+  $stockLocations = Location::orderBy('location_name')->get()
+    ->map(function ($location) use ($product, $variantId) {
+        $stock = \App\Models\ItemStock::where('item_id', $product->id)
+            ->where('location_id', $location->id)
+            ->where('variant_id', $variantId)
+            ->whereNull('deleted_at')
+            ->first();
+        return [
+            'id'             => $location->id,
+            'location_name'  => $location->location_name,
+            'location_type'  => $location->location_type,
+            'stock_on_hand'  => $stock?->stock_on_hand      ?? 0,
+            'committed'      => $stock?->committed_stock     ?? 0,
+            'available'      => $stock?->available_for_sale  ?? 0,  // available_stock → available_for_sale
+            'value_per_unit' => $stock?->value_per_unit      ?? 0,
+        ];
+    });
+
+    // Composite item details
+    $associateItemDetails = [];
+    if (in_array($product->item_type, ['composite_item']) ||
+        in_array($product->type, ['assembly_item', 'kit_item'])) {
+        $associateItemDetails = is_array($product->associate_item_details)
+            ? $product->associate_item_details
+            : (json_decode($product->associate_item_details ?? '{}', true) ?? []);
+    }
+
+    return view('products.show', compact(
+        'product', 'products', 'stockLocations',
+        'associateItemDetails',
+        'locations', 'transactions', 'histories', 'settings'
+    ));
 }
     // ================================================================
     //  UPDATE
@@ -1105,6 +1163,23 @@ return view('products.show', compact(
             ]);
 
             $product->update($updateData);
+            // ✅ Variants update — பழையதை delete பண்ணி புதுசா insert
+if (isset($variantsData['variants'])) {
+    \App\Models\ItemVariant::where('item_id', $product->id)->delete();
+    
+    foreach ($variantsData['variants'] as $index => $variant) {
+        \App\Models\ItemVariant::create([
+            'item_id'       => $product->id,
+            'combo_key'     => $variant['combo_key'] ?? $variant['name'] ?? 'variant-' . $index,
+            'name'          => $variant['name'] ?? null,
+            'sku'           => $variant['sku'] ?? null,
+            'cost_price'    => $variant['cost_price'] ?? null,
+            'selling_price' => $variant['selling_price'] ?? null,
+            'image'         => $variant['product_image'] ?? null,
+            'sort_order'    => $index,
+        ]);
+    }
+}
 
             DB::commit();
 

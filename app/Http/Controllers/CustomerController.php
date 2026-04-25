@@ -355,6 +355,35 @@ if ($request->filled('customer_category')) {
             ];
         })->toArray();
 
+        // ✅ Activity — customer's invoice history
+$invoiceIds = \App\Models\Invoice::where('customer_id', $id)->pluck('id');
+
+$activities = \App\Models\History::where('module', 'invoice')
+    ->whereIn('record_id', $invoiceIds)
+    ->with('user')
+    ->latest()
+    ->take(20)
+    ->get()
+    ->map(function ($h) {
+        $invoiceNumber = \App\Models\Invoice::find($h->record_id)?->invoice_number ?? '';
+        $new = is_array($h->new_data) ? $h->new_data : (json_decode($h->new_data ?? '{}', true) ?? []);
+
+        return [
+            'user'        => $h->user?->name ?? 'System',
+            'time'        => $h->created_at->diffForHumans(),
+            'description' => match($h->action) {
+                'create'         => '🧾 Invoice <strong>' . $invoiceNumber . '</strong> created for ₹' . number_format($new['grand_total'] ?? 0, 2),
+                'status_changed' => '🔄 ' . $invoiceNumber . ': Status → <strong>' . ($new['status'] ?? '?') . '</strong>',
+                'comment'        => '💬 ' . $invoiceNumber . ': ' . ($new['comment'] ?? ''),
+                'update'         => '✏️ Invoice <strong>' . $invoiceNumber . '</strong> updated',
+                'delete'         => '🗑️ Invoice <strong>' . $invoiceNumber . '</strong> deleted',
+                'payment'        => '💰 Payment for <strong>' . $invoiceNumber . '</strong>',
+                default          => ucfirst(str_replace('_', ' ', $h->action)),
+            },
+            'action' => $h->action,
+        ];
+    })->toArray();
+    
     // ✅ Address — empty check
     $hasData      = fn($addr) => $addr && array_filter($addr, fn($v) => !empty($v));
     $billingAddr  = $commonAddress['billing']  ?? null;

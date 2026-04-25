@@ -15,8 +15,9 @@ return new class extends Migration
             $table->string('item_name');
             $table->decimal('quantity', 10, 2)->default(1);
             $table->decimal('rate', 10, 2)->default(0);
-              $table->json('gst_data')->nullable();
+            $table->json('gst_data')->nullable();
             $table->decimal('amount', 10, 2)->default(0);
+            $table->decimal('courier_charges', 10, 2)->default(0);
             $table->timestamps();
         });
     }

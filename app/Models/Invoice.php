@@ -28,7 +28,9 @@ class Invoice extends Model
         'tax_type',
         'tax_percent',
         'tax_amount',
-        'adjustment',
+        // 'adjustment',
+        'courier_charges',
+        'extra_charges',
         'grand_total',
         'customer_notes',
         'terms_conditions',
@@ -38,6 +40,7 @@ class Invoice extends Model
     protected $casts = [
         'invoice_date' => 'date',
         'due_date'     => 'date',
+        'extra_charges' => 'array',
     ];
 
     // Relationships

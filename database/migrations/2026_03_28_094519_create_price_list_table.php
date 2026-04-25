@@ -26,6 +26,8 @@ return new class extends Migration
 
             // Individual Items fields
             $table->enum('pricing_scheme', ['unit', 'volume'])->nullable();
+             $table->json('individual_items_unit')->nullable();
+            $table->json('individual_items_volume')->nullable();
             $table->string('currency')->default('INR');
             $table->boolean('include_discount')->default(false);
 

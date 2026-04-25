@@ -29,6 +29,8 @@ return new class extends Migration
         $table->decimal('tax_percent', 5, 2)->default(0);
         $table->decimal('tax_amount', 10, 2)->default(0);
         $table->decimal('adjustment', 10, 2)->default(0);
+        $table->decimal('courier_charges', 10, 2)->default(0);
+        $table->json('extra_charges')->nullable();
         $table->decimal('grand_total', 10, 2)->default(0);
         $table->text('customer_notes')->nullable();
         $table->text('terms_conditions')->nullable();

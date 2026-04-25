@@ -64,30 +64,18 @@ td input[type=number]{width:90px;font-size:13px;padding:4px 8px;border:1px solid
 h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 .empty-row td{text-align:center;padding:24px;color:#aaa;font-size:13px}
 .alert-error{background:#fdecea;color:#c0392b;padding:10px 16px;border-radius:6px;margin-bottom:1rem;font-size:13px}
-.pl-cat-dropdown { position:relative; width:100%; }
-.pl-cat-selected {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:7px 10px; border:1px solid #ccc; border-radius:6px;
-  background:#fff; cursor:pointer; font-size:14px; min-height:36px;
-}
-.pl-cat-selected:hover { border-color:#378ADD; }
-.pl-cat-list {
-  display:none; position:absolute; top:calc(100% + 3px); left:0; right:0;
-  background:#fff; border:1px solid #ccc; border-radius:6px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.12); z-index:200; max-height:220px; overflow-y:auto;
-}
-.pl-cat-list.open { display:block; }
-.pl-cat-item {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:9px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f0f0f0;
-}
-.pl-cat-item:last-child { border-bottom:none; }
-.pl-cat-item:hover { background:#f0f8ff; }
-.pl-cat-item.selected { background:#EAF4FD; }
-.pl-cat-name { font-weight:500; color:#333; }
-.pl-cat-loc { font-size:11px; color:#fff; background:#378ADD;
-              padding:2px 8px; border-radius:10px; white-space:nowrap; }
-.pl-cat-arrow { font-size:11px; color:#999; margin-left:6px; }
+.pl-cat-dropdown{position:relative;width:100%}
+.pl-cat-selected{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;font-size:14px;min-height:36px}
+.pl-cat-selected:hover{border-color:#378ADD}
+.pl-cat-list{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);z-index:200;max-height:220px;overflow-y:auto}
+.pl-cat-list.open{display:block}
+.pl-cat-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0}
+.pl-cat-item:last-child{border-bottom:none}
+.pl-cat-item:hover{background:#f0f8ff}
+.pl-cat-item.selected{background:#EAF4FD}
+.pl-cat-name{font-weight:500;color:#333}
+.pl-cat-loc{font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.pl-cat-arrow{font-size:11px;color:#999;margin-left:6px}
 </style>
 </head>
 <body>
@@ -140,22 +128,17 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 
 {{-- PRICE LIST CATEGORY --}}
 <div class="form-row">
-  <div class="form-label">Category <span class="info-icon" title="Group your price lists">ℹ</span></div>
+  <div class="form-label">Category <span title="Group your price lists">ℹ</span></div>
   <div class="form-control" style="max-width:420px;">
-
-    {{-- ✅ FIXED: Only ONE set of hidden inputs (no duplicates) --}}
     <input type="hidden" name="category_id"   id="pl_category_id">
     <input type="hidden" name="category_name" id="pl_category_name">
-
-    {{-- Custom dropdown --}}
     <div class="pl-cat-dropdown" id="plCatDropdown">
-      <div class="pl-cat-selected" id="plCatSelected" onclick="togglePlCatList()">
+      <div class="pl-cat-selected" id="plCatSelected" onclick="togglePlCatList(event)">
         <span id="plCatSelectedText" style="color:#999;">-- Select Category --</span>
         <span class="pl-cat-arrow">▾</span>
       </div>
       <div class="pl-cat-list" id="plCatList">
-        <div class="pl-cat-item" data-id="" data-name="" data-loc=""
-             onclick="selectPlCat(this)">
+        <div class="pl-cat-item" data-id="" data-name="" data-loc="" onclick="selectPlCat(this)">
           <span class="pl-cat-name" style="color:#999;">-- Select Category --</span>
         </div>
         @foreach($categories as $cat)
@@ -172,7 +155,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
         @endforeach
       </div>
     </div>
-
   </div>
 </div>
 
@@ -225,7 +207,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 
 {{-- ===== ALL ITEMS FIELDS ===== --}}
 <div id="all-fields" style="{{ old('price_list_type','all_items') === 'individual_items' ? 'display:none' : '' }}">
-
   <div class="form-row">
     <div class="form-label req">Percentage*</div>
     <div class="form-control">
@@ -240,7 +221,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label req">Round Off To*</div>
     <div class="form-control rel">
@@ -269,12 +249,10 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
 </div>
 
 {{-- ===== INDIVIDUAL ITEMS FIELDS ===== --}}
 <div id="ind-fields" style="{{ old('price_list_type') === 'individual_items' ? '' : 'display:none' }}">
-
   <div class="form-row">
     <div class="form-label">Pricing Scheme</div>
     <div class="form-control">
@@ -293,7 +271,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label">Currency</div>
     <div class="form-control">
@@ -304,7 +281,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </select>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-label">Discount</div>
     <div class="form-control">
@@ -319,9 +295,7 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </div>
     </div>
   </div>
-
   <div class="divider"></div>
-
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <div class="section-title" style="margin-bottom:0">Customise Rates in Bulk</div>
     <div class="import-toggle">
@@ -329,7 +303,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       <div class="toggle-sw" id="import-toggle" onclick="toggleImport()"></div>
     </div>
   </div>
-
   <div id="items-table-section">
     <div class="table-wrap">
       <table>
@@ -347,7 +320,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       </table>
     </div>
   </div>
-
   <div id="import-section" style="display:none">
     <div class="import-section">
       <p><strong>1. Export items as XLS file</strong><br>Export all items or filter specific items, export them to an XLS file, update the rates, and import the file back.</p>
@@ -361,7 +333,6 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
       <button type="button" class="btn-export" style="margin-top:10px">&#8595; Import Items</button>
     </div>
   </div>
-
 </div>{{-- end #ind-fields --}}
 
 <div class="btn-row">
@@ -433,10 +404,15 @@ const ALL_PRODUCTS = {!! $productJson !!};
 
 let extraIdx = 10000;
 
+function escHtml(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Items Table ───────────────────────────────────────────────────────────────
 function renderItems() {
   const tbody    = document.getElementById('items-tbody');
   const isVolume = (document.querySelector('input[name="pricing_scheme"]:checked')?.value ?? 'volume') === 'volume';
-  const txn      =  document.querySelector('input[name="transaction_type"]:checked')?.value ?? 'sales';
+  const txn      = document.querySelector('input[name="transaction_type"]:checked')?.value ?? 'sales';
 
   if (!ALL_PRODUCTS.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No products found.</td></tr>`;
@@ -527,18 +503,15 @@ function toggleImport() {
   document.getElementById('import-section').style.display      = on ? 'block' : 'none';
 }
 
-function escHtml(s) {
-  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('price_list_type').value === 'individual_items') {
     selectType('ind');
   }
 });
 
-// ── Custom Category Dropdown ──────────────────────────────────────────────────
-function togglePlCatList() {
+// ── Category Dropdown ─────────────────────────────────────────────────────────
+function togglePlCatList(e) {
+  e.stopPropagation(); // ← outside-click handler trigger ஆகாம இருக்க
   document.getElementById('plCatList').classList.toggle('open');
 }
 
@@ -553,13 +526,9 @@ function selectPlCat(el) {
   const txt = document.getElementById('plCatSelectedText');
   if (name) {
     txt.style.color = '#333';
-    if (loc) {
-      txt.innerHTML = escHtml(name) +
-        ' <span style="font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:10px;margin-left:6px;">' +
-        escHtml(loc) + '</span>';
-    } else {
-      txt.textContent = name;
-    }
+    txt.innerHTML = escHtml(name) + (loc
+      ? ' <span style="font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:10px;margin-left:6px;">' + escHtml(loc) + '</span>'
+      : '');
   } else {
     txt.style.color = '#999';
     txt.textContent = '-- Select Category --';
@@ -570,7 +539,7 @@ function selectPlCat(el) {
   document.getElementById('plCatList').classList.remove('open');
 }
 
-// Outside click close
+// Outside click → close dropdown
 document.addEventListener('click', function(e) {
   const dd = document.getElementById('plCatDropdown');
   if (dd && !dd.contains(e.target)) {
@@ -598,32 +567,79 @@ function closePLCategoryModal() {
 
 async function refreshPlCatDropdown() {
   try {
-    const res  = await fetch(PL_CAT_URL, { headers: { 'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL } });
+    const res  = await fetch(PL_CAT_URL, { headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL} });
     const json = await res.json();
     if (!json.success) return;
 
     const list      = document.getElementById('plCatList');
     const currentId = document.getElementById('pl_category_id').value;
 
-    let html = `<div class="pl-cat-item" data-id="" data-name="" data-loc=""
-                     onclick="selectPlCat(this)">
+    let html = `<div class="pl-cat-item" data-id="" data-name="" data-loc="" onclick="selectPlCat(this)">
                   <span class="pl-cat-name" style="color:#999;">-- Select Category --</span>
                 </div>`;
 
     json.data.forEach(cat => {
-      const loc      = cat.location_label ?? '';
-      const locBadge = loc ? `<span class="pl-cat-loc">${escHtml(loc)}</span>` : '';
-      const active   = String(cat.id) === String(currentId) ? ' selected' : '';
+      const loc    = cat.location_label ?? '';
+      const badge  = loc ? `<span class="pl-cat-loc">${escHtml(loc)}</span>` : '';
+      const active = String(cat.id) === String(currentId) ? ' selected' : '';
       html += `<div class="pl-cat-item${active}" data-id="${cat.id}"
                     data-name="${escHtml(cat.name)}" data-loc="${escHtml(loc)}"
                     onclick="selectPlCat(this)">
-                 <span class="pl-cat-name">${escHtml(cat.name)}</span>
-                 ${locBadge}
+                 <span class="pl-cat-name">${escHtml(cat.name)}</span>${badge}
                </div>`;
     });
-
     list.innerHTML = html;
   } catch(e) { console.error('refreshPlCatDropdown:', e); }
+}
+
+function applyRowPriceListBySelect(idx, selectEl) {
+    const priceListId = selectEl.value;
+    const labelEl = document.getElementById('pl-label-rate-' + idx);
+
+    if (!priceListId) {
+        const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+        const pid = sel ? parseInt(sel.value) : null;
+        if (pid && PRODUCTS[pid]) {
+            document.getElementById('irate-' + idx).value = PRODUCTS[pid].rate.toFixed(2);
+        }
+        if (labelEl) labelEl.textContent = '';
+        calcRow(idx);
+        return;
+    }
+
+    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+    const pid = sel ? parseInt(sel.value) : null;
+
+    if (!pid) {
+        alert('Please select a product first.');
+        selectEl.value = '';
+        return;
+    }
+
+    fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const rates = data.rates || {};
+        
+        // ✅ String key-ஆகவும் integer key-ஆகவும் check பண்ணு
+        const rateData = rates[pid] || rates[String(pid)] || null;
+        
+        if (rateData) {
+            document.getElementById('irate-' + idx).value = 
+                parseFloat(rateData.rate).toFixed(2);
+            if (labelEl) labelEl.textContent = '✓ ' + (data.name || 'Applied');
+        } else {
+            alert('This price list has no rate configured for this product.');
+            selectEl.value = '';
+        }
+        calcRow(idx);
+    })
+    .catch(() => { 
+        alert('Failed to load price list rates.'); 
+        selectEl.value = ''; 
+    });
 }
 
 async function renderPLCatList() {
@@ -631,7 +647,7 @@ async function renderPLCatList() {
   const count = document.getElementById('pl-cat-count');
   list.innerHTML = '<div style="padding:32px;text-align:center;color:#aaa;font-size:13px;">Loading...</div>';
   try {
-    const res  = await fetch(PL_CAT_URL, { headers: { 'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL } });
+    const res  = await fetch(PL_CAT_URL, { headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF_PL} });
     const json = await res.json();
     if (!json.success || !json.data.length) {
       list.innerHTML = '<div style="padding:32px;text-align:center;color:#aaa;font-size:13px;">No categories yet. Add one above ↑</div>';
@@ -640,17 +656,13 @@ async function renderPLCatList() {
     count.textContent = json.data.length + ' categor' + (json.data.length===1?'y':'ies');
     list.innerHTML = json.data.map(cat => {
       const sn = cat.name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      return `<div style="display:flex;align-items:center;padding:10px 14px;
-                          border-bottom:1px solid #f0f0f0;gap:10px;" id="plcat-item-${cat.id}">
-        <span style="flex:1;font-size:13px;color:#333;font-weight:500;"
-              id="plcat-name-${cat.id}">${escHtml(cat.name)}</span>
+      return `<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #f0f0f0;gap:10px;" id="plcat-item-${cat.id}">
+        <span style="flex:1;font-size:13px;color:#333;font-weight:500;" id="plcat-name-${cat.id}">${escHtml(cat.name)}</span>
         <div id="plcat-actions-${cat.id}" style="display:flex;gap:4px;">
           <button type="button" onclick="startPLEdit(${cat.id},'${sn}')"
-                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
-                         border:1px solid #b8d0ff;background:#fff;color:#378ADD;">✏ Edit</button>
+                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid #b8d0ff;background:#fff;color:#378ADD;">✏ Edit</button>
           <button type="button" onclick="deletePLCategory(${cat.id},'${sn}')"
-                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
-                         border:1px solid #fca5a5;background:#fff;color:#c0392b;">🗑 Delete</button>
+                  style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid #fca5a5;background:#fff;color:#c0392b;">🗑 Delete</button>
         </div>
       </div>`;
     }).join('');
@@ -683,16 +695,13 @@ async function addPLCategory() {
 function startPLEdit(id, name) {
   document.getElementById(`plcat-name-${id}`).innerHTML =
     `<input type="text" id="plcat-edit-${id}" value="${name}"
-            style="flex:1;padding:5px 8px;border:1px solid #378ADD;border-radius:4px;
-                   font-size:13px;outline:none;width:100%;"
+            style="flex:1;padding:5px 8px;border:1px solid #378ADD;border-radius:4px;font-size:13px;outline:none;width:100%;"
             onkeydown="if(event.key==='Enter')savePLEdit(${id});if(event.key==='Escape')renderPLCatList();">`;
   document.getElementById(`plcat-actions-${id}`).innerHTML =
     `<button type="button" onclick="savePLEdit(${id})"
-             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
-                    border:1px solid #86efac;background:#fff;color:#16a34a;">✔ Save</button>
+             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid #86efac;background:#fff;color:#16a34a;">✔ Save</button>
      <button type="button" onclick="renderPLCatList()"
-             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;
-                    border:1px solid #ccc;background:#fff;color:#888;">✕</button>`;
+             style="padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid #ccc;background:#fff;color:#888;">✕</button>`;
   setTimeout(() => { const i=document.getElementById(`plcat-edit-${id}`); if(i){i.focus();i.select();} }, 30);
 }
 
@@ -700,7 +709,8 @@ async function savePLEdit(id) {
   const inp   = document.getElementById(`plcat-edit-${id}`);
   const errEl = document.getElementById('pl-cat-error');
   if (!inp) return;
-  const name = inp.value.trim(); errEl.style.display='none';
+  const name = inp.value.trim();
+  errEl.style.display = 'none';
   if (!name) { inp.focus(); return; }
   try {
     const res  = await fetch(`${PL_CAT_URL}/${id}`, {

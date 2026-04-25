@@ -12,6 +12,7 @@ class PriceListItem extends Model
         'start_quantity',
         'end_quantity',
         'custom_rate',
+        'ranges',
     ];
 
     protected $casts = [
@@ -20,6 +21,7 @@ class PriceListItem extends Model
         'custom_rate'    => 'decimal:2',
          'old_data' => 'array',
     'new_data' => 'array',
+    'ranges' => 'array',
     ];
 
     // PriceListItem → Product

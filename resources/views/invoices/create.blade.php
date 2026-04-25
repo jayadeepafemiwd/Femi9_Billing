@@ -333,12 +333,13 @@ select {
                             onchange="onCustomerChange(this.value)">
                         <option value="">Select or add a customer</option>
                         @foreach($customers as $c)
-                        <option value="{{ $c->id }}"
-                                data-address="{{ json_encode($c->common_address) }}"
-                                {{ old('customer_id') == $c->id ? 'selected' : '' }}>
-                            {{ $c->display_name }}
-                        </option>
-                        @endforeach
+                  <option value="{{ $c->id }}"
+                    data-address="{{ json_encode($c->common_address) }}"
+                    data-category-id="{{ $userCategories[$c->customer_category] ?? '' }}"
+                    {{ old('customer_id') == $c->id ? 'selected' : '' }}>
+                    {{ $c->display_name }}
+                </option>
+                    @endforeach
                     </select>
                     <button type="button" class="btn-search">&#128269;</button>
                     <button type="button" id="btn-cust-info" onclick="openCustPanelFromBtn()"
@@ -352,6 +353,7 @@ select {
                 </div>
             </div>
 
+            
             <div class="customer-addr-box" id="customer-addr-box">
                 <div class="customer-addr-inner">
                     <div>
@@ -365,6 +367,41 @@ select {
                 </div>
             </div>
 
+            {{-- USER CATEGORY LABEL (auto-filled, read-only display) --}}
+<div id="cat-label-box" style="display:none;margin-bottom:14px;margin-left:168px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                background:#eef4ff;border:0.5px solid #b5d4f4;border-radius:6px;">
+
+        {{-- Category avatar --}}
+        <div id="cat-avatar"
+             style="width:32px;height:32px;border-radius:50%;background:#4a90d9;
+                    display:flex;align-items:center;justify-content:center;
+                    color:#fff;font-size:14px;font-weight:600;flex-shrink:0;">
+            ?
+        </div>
+
+        {{-- Category name + sub --}}
+        <div>
+            <div id="cat-display-name"
+                 style="font-size:13px;font-weight:500;color:#0c447c;">—</div>
+            <div style="font-size:11px;color:#185fa5;margin-top:1px;">
+                User Category
+            </div>
+        </div>
+
+        {{-- Location count badge --}}
+        <div id="cat-loc-badge" style="margin-left:auto;display:none;">
+            <span id="cat-loc-badge-text"
+                  style="font-size:11px;border-radius:10px;padding:3px 10px;
+                         white-space:nowrap;">
+            </span>
+        </div>
+
+    </div>
+</div>
+
+{{-- hidden field — save category with invoice --}}
+<input type="hidden" name="user_category_id" id="user-category-id-input">
             <div class="frow">
                 <label>Location</label>
                 <select name="location_id" style="max-width:260px" id="location-select"
@@ -375,6 +412,17 @@ select {
                         {{ $loc->location_name }}
                         ({{ $loc->location_type === 'business' ? '🏢' : '🏭' }})
                     </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="frow">
+                <label>Price List</label>
+                <select id="price-list-select" name="price_list_id"
+                        style="max-width:260px" onchange="onPriceListChange(this.value)">
+                    <option value="">— No Price List —</option>
+                    @foreach($priceLists as $pl)
+                    <option value="{{ $pl->id }}">{{ $pl->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -460,6 +508,7 @@ select {
                         <th class="img-col"></th>
                         <th>Item Details</th>
                         <th style="width:80px;text-align:center">SKU</th>
+                        <th style="width:110px;text-align:center">Price List</th>
                         <th class="r" style="width:100px">Qty</th>
                         <th class="r" style="width:130px">GST</th>
                         <th class="r" style="width:120px">Rate (₹)</th>
@@ -490,26 +539,61 @@ select {
                                     $imgPath = $imgData['front_image'] ?? null;
                                     $sku     = $p->sku ?? '';
                                     $stock   = $p->opening_stock ?? 0;
+                                    $pVariants = $variants[$p->id] ?? collect();
                                 @endphp
-                                <option value="{{ $p->id }}"
-                                        data-name="{{ $p->name }}"
-                                        data-rate="{{ $p->selling_price ?? 0 }}"
-                                        data-sku="{{ $sku }}"
-                                        data-stock="{{ $stock }}"
-                                        data-unit="{{ $p->unit }}"
-                                        data-gst="{{ $pGst }}"
-                                        data-img="{{ $imgPath ? asset($imgPath) : '' }}">
-                                    {{ $p->name }}
-                                    @if($sku) [{{ $sku }}] @endif
-                                    — ₹{{ number_format($p->selling_price ?? 0, 2) }}
-                                    (Stock: {{ $stock }} {{ $p->unit }})
-                                </option>
+                                @if($pVariants->isNotEmpty())
+                                    <optgroup label="{{ $p->name }}">
+                                        @foreach($pVariants as $v)
+                                        <option value="{{ $p->id }}"
+                                                data-variant-id="{{ $v->id }}"
+                                                data-name="{{ $p->name }} - {{ $v->name }}"
+                                                data-rate="{{ $v->selling_price ?? 0 }}"
+                                                data-sku="{{ $v->sku ?? '' }}"
+                                                data-stock="{{ $stock }}"
+                                                data-unit="{{ $p->unit }}"
+                                                data-gst="{{ $pGst }}"
+                                                data-img="{{ $imgPath ? asset($imgPath) : '' }}">
+                                            {{ $v->name }}
+                                            @if($v->sku) [{{ $v->sku }}] @endif
+                                            — ₹{{ number_format($v->selling_price ?? 0, 2) }}
+                                        </option>
+                                        @endforeach
+                                    </optgroup>
+                                @else
+                                    <option value="{{ $p->id }}"
+                                            data-variant-id=""
+                                            data-name="{{ $p->name }}"
+                                            data-rate="{{ $p->selling_price ?? 0 }}"
+                                            data-sku="{{ $sku }}"
+                                            data-stock="{{ $stock }}"
+                                            data-unit="{{ $p->unit }}"
+                                            data-gst="{{ $pGst }}"
+                                            data-img="{{ $imgPath ? asset($imgPath) : '' }}">
+                                        {{ $p->name }}
+                                        @if($sku) [{{ $sku }}] @endif
+                                        — ₹{{ number_format($p->selling_price ?? 0, 2) }}
+                                        (Stock: {{ $stock }} {{ $p->unit }})
+                                    </option>
+                                @endif
                                 @endforeach
                             </select>
                             <div class="product-meta" id="imeta-0"></div>
                             <input type="hidden" name="items[0][item_name]" id="iname-0" value="">
+                            <input type="hidden" name="items[0][variant_id]" id="ivariantid-0" value="">
                         </td>
                         <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-0">—</td>
+                        <td style="text-align:center;vertical-align:middle">
+                            <div id="pl-btn-0" style="display:none;">
+                                <button type="button"
+                                        onclick="openRowPriceList(0)"
+                                        style="font-size:11px;padding:3px 8px;border:1px solid #4a90d9;
+                                               border-radius:4px;background:#e8f0fe;color:#4a90d9;
+                                               cursor:pointer;white-space:nowrap;">
+                                    📋 Apply
+                                </button>
+                                <div id="pl-label-0" style="font-size:10px;color:#27ae60;margin-top:2px;"></div>
+                            </div>
+                        </td>
                         <td class="r">
                             <input type="number" name="items[0][quantity]" id="iqty-0"
                                    value="1" min="0.01" step="0.01"
@@ -601,13 +685,23 @@ select {
                         <input type="hidden" name="tax_amount" id="tax-amt-val">
                     </div>
                     <div class="adj-row">
-                        <input type="text" value="Adjustment" style="width:120px;height:28px;background:#f8f9fa;font-size:13px">
+                        <label style="font-size:13px;color:#555;display:flex;align-items:center;gap:6px;">
+                            🚚 <span>Courier Charges</span>
+                        </label>
                         <div style="display:flex;align-items:center;gap:8px">
-                            <input type="number" name="adjustment" id="adj-input"
-                                   value="0" step="0.01"
-                                   style="width:80px;height:28px;text-align:right"
-                                   oninput="calcTotals()">
+                            <input type="number" name="courier_charges" id="courier-input"
+                                value="0" min="0" step="0.01"
+                                style="width:80px;height:28px;text-align:right"
+                                oninput="calcTotals()">
                         </div>
+                    </div>
+                    <div id="extra-charges-container"></div>
+                    <div style="padding:6px 0;">
+                        <button type="button" onclick="addExtraCharge()"
+                                style="background:none;border:none;color:#4a90d9;font-size:13px;
+                                    cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
+                            &#43; Add Charges
+                        </button>
                     </div>
                     <div class="tot-row grand">
                         <span>Total (₹)</span>
@@ -777,14 +871,12 @@ select {
     <div style="background:#fff;border-radius:10px;width:880px;max-height:88vh;
                 display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.2);
                 overflow:hidden;animation:modalIn 0.2s ease;">
-        {{-- Bulk Header --}}
         <div style="display:flex;align-items:center;justify-content:space-between;
                     padding:16px 20px;border-bottom:1px solid #e3e6ea;flex-shrink:0;">
             <h3 style="font-size:15px;font-weight:600;color:#1a1a2e;">&#128230; Add Items in Bulk</h3>
             <button onclick="closeBulkModal()" style="background:none;border:none;font-size:20px;
                     color:#888;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
         </div>
-        {{-- Bulk Toolbar --}}
         <div style="display:flex;gap:12px;align-items:center;padding:12px 20px;
                     border-bottom:1px solid #f0f2f4;flex-wrap:wrap;flex-shrink:0;">
             <input id="bulk-search" type="text" placeholder="Type to search or scan the barcode of the item"
@@ -795,7 +887,6 @@ select {
                 <input type="checkbox" id="bulk-subcategory"> Include sub-categories
             </label>
         </div>
-        {{-- Bulk Body --}}
         <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
             <div style="width:52%;border-right:1px solid #e3e6ea;overflow-y:auto;padding:10px 0;"
                  id="bulk-product-list">
@@ -823,7 +914,6 @@ select {
                 </div>
             </div>
         </div>
-        {{-- Bulk Footer --}}
         <div id="bulk-footer" style="display:none;padding:12px 20px;border-top:1px solid #e3e6ea;
                                      justify-content:flex-end;gap:10px;flex-shrink:0;">
             <button onclick="confirmBulkAdd()"
@@ -840,10 +930,48 @@ select {
     </div>
 </div>
 
+{{-- ROW PRICE LIST MODAL --}}
+<div id="row-pl-modal" style="display:none;position:fixed;inset:0;
+     background:rgba(0,0,0,0.35);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;width:420px;
+                box-shadow:0 8px 32px rgba(0,0,0,0.18);overflow:hidden;animation:modalIn 0.2s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:14px 18px;border-bottom:1px solid #e3e6ea;">
+            <h3 style="font-size:14px;font-weight:600;color:#1a1a2e;">📋 Apply Price List</h3>
+            <button onclick="closeRowPriceList()"
+                    style="background:none;border:none;font-size:18px;color:#888;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:16px 18px;">
+            <div style="font-size:12px;color:#888;margin-bottom:10px;" id="rpl-product-name"></div>
+            <div id="rpl-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;"></div>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid #e3e6ea;
+                    display:flex;justify-content:flex-end;gap:8px;">
+            <button onclick="clearRowPriceList()"
+                    style="background:none;border:1px solid #e05050;border-radius:6px;
+                           padding:7px 16px;font-size:12px;color:#e05050;cursor:pointer;">
+                Clear
+            </button>
+            <button onclick="closeRowPriceList()"
+                    style="background:#fff;border:1px solid #d0d5dd;border-radius:6px;
+                           padding:7px 16px;font-size:12px;cursor:pointer;">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- JAVASCRIPT --}}
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
+
+const CUSTOMER_CATEGORY_MAP = @json($customerCategoryMap);
+const ALL_LOCATIONS = [
+    @foreach($locations as $loc)
+    { id: {{ $loc->id }}, location_name: "{{ addslashes($loc->location_name) }}", location_type: "{{ $loc->location_type }}" },
+    @endforeach
+];
 // ══════════════════════════════════════════
 // PRODUCTS MAP
 // ══════════════════════════════════════════
@@ -872,7 +1000,25 @@ const PRODUCTS = {
     @endforeach
 };
 
+const VARIANTS = {
+    @foreach($variants as $productId => $pvariants)
+    {{ $productId }}: [
+        @foreach($pvariants as $v)
+        {
+            id: {{ $v->id }},
+            name: "{{ addslashes($v->name) }}",
+            sku: "{{ addslashes($v->sku ?? '') }}",
+            rate: {{ (float)($v->selling_price ?? 0) }},
+        },
+        @endforeach
+    ],
+    @endforeach
+};
+
 let rowCount = 1;
+let activePriceListRates = {};
+let _rplCurrentIdx = null;
+let extraChargeCount = 0;
 
 // ══════════════════════════════════════════
 // ADDRESS FORMAT
@@ -901,38 +1047,170 @@ function formatAddressLines(addr) {
 }
 
 // ══════════════════════════════════════════
-// CUSTOMER CHANGE — single authoritative function
+// CUSTOMER CHANGE
 // ══════════════════════════════════════════
 function onCustomerChange(customerId) {
     const sel      = document.getElementById('customer-select');
     const opt      = sel.options[sel.selectedIndex];
     const box      = document.getElementById('customer-addr-box');
-    const billing  = document.getElementById('billing-addr-display');
-    const shipping = document.getElementById('shipping-addr-display');
     const infoBtn  = document.getElementById('btn-cust-info');
 
     if (!customerId) {
         box.style.display     = 'none';
         infoBtn.style.display = 'none';
         closeCustPanel();
+        resetCategoryLabel();
         return;
     }
 
     infoBtn.style.display = 'flex';
 
+    // Show billing/shipping address
     let addrData = null;
     try { addrData = JSON.parse(opt.dataset.address || 'null'); } catch(e) {}
-
     if (addrData) {
-        billing.innerHTML  = formatAddress(addrData.billing);
-        shipping.innerHTML = formatAddress(addrData.shipping);
-        box.style.display  = 'block';
+        document.getElementById('billing-addr-display').innerHTML  = formatAddress(addrData.billing);
+        document.getElementById('shipping-addr-display').innerHTML = formatAddress(addrData.shipping);
+        box.style.display = 'block';
     } else {
         box.style.display = 'none';
     }
 
     window._selectedCustomerId   = customerId;
     window._selectedCustomerName = opt.textContent.trim();
+
+    // ── Fetch category + locations + series + price lists from server ──
+    fetch(`/invoices/customer-defaults?customer_id=${customerId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.category) {
+            resetCategoryLabel();
+            return;
+        }
+
+        // 1. Show category label
+        const labelBox = document.getElementById('cat-label-box');
+        labelBox.style.display = 'block';
+        document.getElementById('cat-avatar').textContent      = data.category.name[0]?.toUpperCase() || '?';
+        document.getElementById('cat-display-name').textContent = data.category.name;
+        document.getElementById('user-category-id-input').value = data.category.id;
+
+        // Badge
+        const badge     = document.getElementById('cat-loc-badge');
+        const badgeText = document.getElementById('cat-loc-badge-text');
+        badge.style.display = 'flex';
+        if (data.locations.length) {
+            badgeText.textContent  = data.locations.length + ' location' + (data.locations.length > 1 ? 's' : '');
+            badgeText.style.cssText = 'font-size:11px;color:#27ae60;background:#ecfdf5;border:0.5px solid #a7f3d0;border-radius:10px;padding:3px 10px;';
+        } else {
+            badgeText.textContent  = 'No locations assigned';
+            badgeText.style.cssText = 'font-size:11px;color:#e05050;background:#fef2f2;border:0.5px solid #fecaca;border-radius:10px;padding:3px 10px;';
+        }
+
+        // 2. Filter location dropdown to category locations
+        filterLocationDropdown(data.locations);
+
+        // 3. Auto-select first location & trigger invoice number fetch
+        if (data.locations.length > 0) {
+            const locSel = document.getElementById('location-select');
+            locSel.value = data.locations[0].id;
+            onLocationChange(data.locations[0].id);
+        }
+
+        // 4. Auto-select price list for this category
+        if (data.price_lists.length > 0) {
+            const plSel = document.getElementById('price-list-select');
+            plSel.value = data.price_lists[0].id;
+            onPriceListChange(data.price_lists[0].id);
+
+            // Show a small indicator if multiple price lists
+            if (data.price_lists.length > 1) {
+                console.info('Multiple price lists for category:', data.price_lists.map(p => p.name));
+            }
+        }
+    })
+    .catch(() => resetCategoryLabel());
+}
+
+// ── Category load + location filter ──
+function loadCategoryAndFilterLocations(categoryId) {
+    document.getElementById('user-category-id-input').value = categoryId;
+
+    fetch(`/invoices/category-locations?category_id=${categoryId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const name = data.category_name || '—';
+        const locs = data.locations     || [];
+
+        // Show label box
+        const labelBox = document.getElementById('cat-label-box');
+        labelBox.style.display = 'block';
+
+        // Avatar initial
+        document.getElementById('cat-avatar').textContent = name[0]?.toUpperCase() || '?';
+
+        // Name
+        document.getElementById('cat-display-name').textContent = name;
+
+        // Badge
+        const badge    = document.getElementById('cat-loc-badge');
+        const badgeText = document.getElementById('cat-loc-badge-text');
+        badge.style.display = 'flex';
+
+        if (locs.length) {
+            badgeText.textContent = locs.length + ' location' + (locs.length > 1 ? 's' : '');
+            badgeText.style.cssText =
+                'font-size:11px;color:#27ae60;background:#ecfdf5;' +
+                'border:0.5px solid #a7f3d0;border-radius:10px;padding:3px 10px;';
+        } else {
+            badgeText.textContent  = 'No locations assigned';
+            badgeText.style.cssText =
+                'font-size:11px;color:#e05050;background:#fef2f2;' +
+                'border:0.5px solid #fecaca;border-radius:10px;padding:3px 10px;';
+        }
+
+        // Filter location dropdown
+        filterLocationDropdown(locs);
+    })
+    .catch(() => resetCategoryLabel());
+}
+
+function filterLocationDropdown(filteredLocs) {
+    const locSel    = document.getElementById('location-select');
+    const currLocId = locSel.value;
+
+    locSel.innerHTML = '<option value="">— Select Location —</option>';
+
+    const list = filteredLocs.length ? filteredLocs : ALL_LOCATIONS;
+
+    list.forEach(loc => {
+        const icon   = (loc.location_type) === 'business' ? '🏢' : '🏭';  // ✅ முதலில் declare
+        const opt    = document.createElement('option');
+        opt.value    = loc.id;
+        opt.textContent = loc.location_name + ' (' + icon + ')';           // ✅ பிறகு use
+        if (String(loc.id) === String(currLocId)) opt.selected = true;
+        locSel.appendChild(opt);
+    });
+
+    // Current location still valid?
+    const stillValid = list.some(l => String(l.id) === String(currLocId));
+    if (!stillValid && currLocId) {
+        locSel.value = '';
+        document.getElementById('series_wrapper').style.display = 'none';
+        document.getElementById('invoice-number-input').value   = '{{ $invoiceNumber }}';
+    }
+}
+
+function resetCategoryLabel() {
+    document.getElementById('cat-label-box').style.display = 'none';
+    document.getElementById('cat-loc-badge').style.display = 'none';
+    document.getElementById('user-category-id-input').value = '';
+    // Reset locations to all
+    filterLocationDropdown(ALL_LOCATIONS);
 }
 
 function openCustPanelFromBtn() {
@@ -941,7 +1219,7 @@ function openCustPanelFromBtn() {
 }
 
 // ══════════════════════════════════════════
-// LOCATION-SPECIFIC STOCK FETCH (for single row)
+// LOCATION STOCK FETCH
 // ══════════════════════════════════════════
 function fetchLocationStock(idx, productId, locationId, unit) {
     fetch(`/invoices/location-stock?location_id=${locationId}`, {
@@ -950,7 +1228,7 @@ function fetchLocationStock(idx, productId, locationId, unit) {
     .then(r => r.json())
     .then(data => {
         const prod = (data.products || []).find(p => p.id == productId);
-        if (!prod) return; // ✅ not found-ஆ இருந்தா existing value மாத்தாதே
+        if (!prod) return;
         const stock = prod.stock_on_hand;
         const el = document.getElementById('stock-display-' + idx);
         if (el) {
@@ -965,27 +1243,35 @@ function fetchLocationStock(idx, productId, locationId, unit) {
 // PRODUCT FILL
 // ══════════════════════════════════════════
 function fillProduct(idx, sel) {
+    const opt       = sel.options[sel.selectedIndex];
     const pid       = parseInt(sel.value);
-    const nameInput = document.getElementById('iname-'     + idx);
-    const metaEl    = document.getElementById('imeta-'     + idx);
-    const skuCell   = document.getElementById('isku-cell-' + idx);
-    const imgBox    = document.getElementById('iimg-'      + idx);
+    const nameInput = document.getElementById('iname-'      + idx);
+    const varInput  = document.getElementById('ivariantid-' + idx);
+    const metaEl    = document.getElementById('imeta-'      + idx);
+    const skuCell   = document.getElementById('isku-cell-'  + idx);
+    const imgBox    = document.getElementById('iimg-'       + idx);
 
     if (pid && PRODUCTS[pid]) {
-        const p = PRODUCTS[pid];
+        const p         = PRODUCTS[pid];
+        const variantId = opt.dataset.variantId || '';
+        const dispName  = opt.dataset.name || p.name;
+        const rate      = parseFloat(opt.dataset.rate) || p.rate;
+        const sku       = opt.dataset.sku || p.sku;
 
-        nameInput.value = p.name;
+        nameInput.value = dispName;
+        if (varInput) varInput.value = variantId;
+
         document.getElementById('igstval-'  + idx).value = p.gst || 0;
         document.getElementById('igsttype-' + idx).value = '%';
-        document.getElementById('irate-'    + idx).value = parseFloat(p.rate).toFixed(2);
-        skuCell.textContent = p.sku || '—';
+        document.getElementById('irate-'    + idx).value = rate.toFixed(2);
+        skuCell.textContent = sku || '—';
 
         imgBox.innerHTML = p.img
-            ? `<img src="${p.img}" alt="${p.name}">`
+            ? `<img src="${p.img}" alt="${dispName}">`
             : '<span class="noimg">&#128247;</span>';
 
         metaEl.innerHTML = `
-            <span style="color:#666">SKU: <strong>${p.sku || '—'}</strong></span>
+            <span style="color:#666">SKU: <strong>${sku || '—'}</strong></span>
             &nbsp;|&nbsp;
             Stock: <span id="stock-display-${idx}" class="${p.stock > 0 ? 'stock-ok' : 'stock-low'}">
                 <strong>${p.stock}</strong> ${p.unit}
@@ -995,50 +1281,59 @@ function fillProduct(idx, sel) {
         `;
         metaEl.classList.add('show');
 
-        // ✅ FIX: optional chaining — crash ஆகாது
-        const warehouseId = document.querySelector('select[name="warehouse_location_id"]')?.value
-                         || document.getElementById('location-select')?.value;
+        const plBtn = document.getElementById('pl-btn-' + idx);
+        if (plBtn) plBtn.style.display = 'block';
+
+        const warehouseId = document.getElementById('location-select')?.value;
         if (warehouseId) {
             fetchLocationStock(idx, pid, warehouseId, p.unit);
         }
 
+        // Apply active price list if set
+        const rateData = activePriceListRates[pid] || activePriceListRates[String(pid)];
+        if (rateData) {
+            document.getElementById('irate-' + idx).value = parseFloat(rateData.rate).toFixed(2);
+        }
+
     } else {
         nameInput.value = '';
+        if (varInput) varInput.value = '';
         skuCell.textContent = '—';
         metaEl.classList.remove('show');
         imgBox.innerHTML = '<span class="noimg">&#128247;</span>';
         document.getElementById('irate-'   + idx).value = '0.00';
         document.getElementById('igstval-' + idx).value = '0';
+        const plBtn = document.getElementById('pl-btn-' + idx);
+        if (plBtn) plBtn.style.display = 'none';
     }
 
     calcRow(idx);
 }
 
 // ══════════════════════════════════════════
-// VALIDATE QTY — ✅ NEW (was missing, caused crash)
+// VALIDATE QTY
 // ══════════════════════════════════════════
 function validateQty(idx) {
     const qtyInput = document.getElementById('iqty-' + idx);
     const warnEl   = document.getElementById('stock-warn-' + idx);
     if (!qtyInput || !warnEl) return;
 
-    const qty     = parseFloat(qtyInput.value) || 0;
-    const metaEl  = document.getElementById('imeta-' + idx);
+    const qty    = parseFloat(qtyInput.value) || 0;
+    const metaEl = document.getElementById('imeta-' + idx);
     if (!metaEl || !metaEl.classList.contains('show')) return;
 
-    const stockEl = document.getElementById('stock-display-' + idx);
+    const stockEl  = document.getElementById('stock-display-' + idx);
     if (!stockEl) return;
 
-    // stock value — strong tag-ல் இருக்கு
     const strongEl = stockEl.querySelector('strong');
     const stock    = parseFloat(strongEl ? strongEl.textContent : '0') || 0;
 
     if (stock > 0 && qty > stock) {
-        warnEl.textContent   = `⚠ Only ${stock} available`;
-        warnEl.style.display = 'inline';
+        warnEl.textContent         = `⚠ Only ${stock} available`;
+        warnEl.style.display       = 'inline';
         qtyInput.style.borderColor = '#e05050';
     } else {
-        warnEl.style.display = 'none';
+        warnEl.style.display       = 'none';
         qtyInput.style.borderColor = '';
     }
 }
@@ -1066,6 +1361,180 @@ function calcRow(idx) {
     if (amtEl) amtEl.textContent = total.toFixed(2);
 
     validateQty(idx);
+    calcTotals();
+}
+
+// ══════════════════════════════════════════
+// PRICE LIST — PAGE LEVEL (header dropdown)
+// ══════════════════════════════════════════
+function onPriceListChange(priceListId) {
+    if (!priceListId) {
+        activePriceListRates = {};
+        document.querySelectorAll('#items-body tr').forEach(tr => {
+            const idx = tr.dataset.index;
+            const sel = tr.querySelector(`select[name="items[${idx}][product_id]"]`);
+            if (sel && sel.value) {
+                const pid = parseInt(sel.value);
+                if (PRODUCTS[pid]) {
+                    document.getElementById('irate-' + idx).value = PRODUCTS[pid].rate.toFixed(2);
+                    const lbl = document.getElementById('pl-label-' + idx);
+                    if (lbl) lbl.textContent = '';
+                    calcRow(idx);
+                }
+            }
+        });
+        return;
+    }
+
+    fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        activePriceListRates = data.rates || {};
+        document.querySelectorAll('#items-body tr').forEach(tr => {
+            const idx = tr.dataset.index;
+            const sel = tr.querySelector(`select[name="items[${idx}][product_id]"]`);
+            if (sel && sel.value) {
+                applyPriceListToRow(idx, parseInt(sel.value), data.name);
+            }
+        });
+    })
+    .catch(() => console.warn('Price list fetch failed'));
+}
+
+function applyPriceListToRow(idx, productId, listName) {
+    if (!productId) return;
+    const rateData = activePriceListRates[productId] || activePriceListRates[String(productId)];
+    if (!rateData) return;
+    const rateInput = document.getElementById('irate-' + idx);
+    if (rateInput) {
+        rateInput.value = parseFloat(rateData.rate).toFixed(2);
+        const lbl = document.getElementById('pl-label-' + idx);
+        if (lbl && listName) lbl.textContent = '✓ ' + listName;
+        calcRow(idx);
+    }
+}
+
+// ══════════════════════════════════════════
+// PRICE LIST — ROW LEVEL MODAL
+// ══════════════════════════════════════════
+function openRowPriceList(idx) {
+    _rplCurrentIdx = idx;
+    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+    const pid = sel ? parseInt(sel.value) : null;
+    const productName = pid && PRODUCTS[pid] ? PRODUCTS[pid].name : 'This item';
+
+    document.getElementById('rpl-product-name').textContent = 'Product: ' + productName;
+
+    const priceLists = @json($priceLists);
+    const container  = document.getElementById('rpl-list');
+
+    if (!priceLists.length) {
+        container.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px;font-size:13px;">No price lists found</div>';
+    } else {
+        container.innerHTML = priceLists.map(pl => `
+            <div onclick="applyRowPriceListById(${pl.id}, '${pl.name.replace(/'/g,"\\'")}', ${idx})"
+                 style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 12px;border:1px solid #e3e6ea;border-radius:6px;
+                        cursor:pointer;transition:background 0.1s;"
+                 onmouseover="this.style.background='#f0f4ff'"
+                 onmouseout="this.style.background='#fff'">
+                <div>
+                    <div style="font-size:13px;font-weight:500;color:#1a1a2e;">${pl.name}</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px;">
+                        ${pl.price_list_type === 'all_items' ? 'All Items' : 'Individual Items'}
+                        ${pl.markup_type ? ' · ' + pl.markup_type + ' ' + pl.percentage + '%' : ''}
+                    </div>
+                </div>
+                <span style="color:#4a90d9;font-size:18px;">›</span>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('row-pl-modal').style.display = 'flex';
+}
+
+function closeRowPriceList() {
+    document.getElementById('row-pl-modal').style.display = 'none';
+    _rplCurrentIdx = null;
+}
+
+function clearRowPriceList() {
+    const idx = _rplCurrentIdx;
+    if (idx === null) return;
+    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+    const pid = sel ? parseInt(sel.value) : null;
+    if (pid && PRODUCTS[pid]) {
+        document.getElementById('irate-' + idx).value = PRODUCTS[pid].rate.toFixed(2);
+        const lbl = document.getElementById('pl-label-' + idx);
+        if (lbl) lbl.textContent = '';
+        calcRow(idx);
+    }
+    closeRowPriceList();
+}
+
+function applyRowPriceListById(priceListId, listName, idx) {
+    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+    const pid = sel ? parseInt(sel.value) : null;
+    if (!pid) { closeRowPriceList(); return; }
+
+    fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const rates    = data.rates || {};
+        const rateData = rates[pid] || rates[String(pid)] || null;
+        if (rateData) {
+            document.getElementById('irate-' + idx).value = parseFloat(rateData.rate).toFixed(2);
+            const lbl = document.getElementById('pl-label-' + idx);
+            if (lbl) lbl.textContent = '✓ ' + listName;
+            calcRow(idx);
+        } else {
+            alert('This price list has no rate configured for this product.');
+        }
+        closeRowPriceList();
+    })
+    .catch(() => { alert('Failed to load rates.'); closeRowPriceList(); });
+}
+
+document.getElementById('row-pl-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeRowPriceList();
+});
+
+// ══════════════════════════════════════════
+// EXTRA CHARGES
+// ══════════════════════════════════════════
+function addExtraCharge() {
+    const idx = extraChargeCount++;
+    const container = document.getElementById('extra-charges-container');
+    const div = document.createElement('div');
+    div.id = 'extra-charge-row-' + idx;
+    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f2f4;gap:8px;';
+    div.innerHTML = `
+        <input type="text" name="extra_charges[${idx}][label]"
+               placeholder="Charge name (e.g. Packing)"
+               style="width:150px;height:28px;font-size:13px;background:#f8f9fa;"
+               oninput="calcTotals()">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" name="extra_charges[${idx}][amount]"
+                   id="extra-charge-amt-${idx}"
+                   value="0" step="0.01"
+                   style="width:80px;height:28px;text-align:right;"
+                   oninput="calcTotals()">
+            <button type="button" onclick="removeExtraCharge(${idx})"
+                    style="background:none;border:none;color:#e05050;
+                           cursor:pointer;font-size:16px;padding:0 4px;line-height:1;">✕</button>
+        </div>
+    `;
+    container.appendChild(div);
+    calcTotals();
+}
+
+function removeExtraCharge(idx) {
+    const el = document.getElementById('extra-charge-row-' + idx);
+    if (el) el.remove();
     calcTotals();
 }
 
@@ -1101,11 +1570,17 @@ function calcTotals() {
         discPct = subtotal > 0 ? (discAmt / subtotal * 100) : 0;
     }
 
-    const after  = subtotal - discAmt;
-    const taxPct = parseFloat(document.getElementById('tax-select').value) || 0;
-    const taxAmt = after * taxPct / 100;
-    const adj    = parseFloat(document.getElementById('adj-input').value)  || 0;
-    const grand  = after + taxAmt + adj;
+    const after   = subtotal - discAmt;
+    const taxPct  = parseFloat(document.getElementById('tax-select').value) || 0;
+    const taxAmt  = after * taxPct / 100;
+    const courier = parseFloat(document.getElementById('courier-input').value) || 0;
+
+    let extraTotal = 0;
+    document.querySelectorAll('[id^="extra-charge-amt-"]').forEach(el => {
+        extraTotal += parseFloat(el.value) || 0;
+    });
+
+    const grand = after + taxAmt + courier + extraTotal;
 
     document.getElementById('subtotal-display').textContent = subtotal.toFixed(2);
     document.getElementById('disc-display').textContent     = discAmt.toFixed(2);
@@ -1123,46 +1598,101 @@ function calcTotals() {
 }
 
 // ══════════════════════════════════════════
-// ADD NEW ROW
+// BUILD PRODUCT OPTIONS (helper for addRow / bulkAdd)
 // ══════════════════════════════════════════
-function addRow() {
-    const idx   = rowCount++;
-    const tbody = document.getElementById('items-body');
-    const tr    = document.createElement('tr');
-    tr.dataset.index = idx;
-
+function buildProductOptions() {
     let options = '<option value="">Type or click to select an item</option>';
     for (const [pid, pd] of Object.entries(PRODUCTS)) {
-        options += `<option value="${pid}"
-            data-name="${pd.name}" data-rate="${pd.rate}"
-            data-sku="${pd.sku}" data-stock="${pd.stock}"
-            data-unit="${pd.unit}" data-img="${pd.img}"
-            data-gst="${pd.gst || 0}">
-            ${pd.name} ${pd.sku ? '['+pd.sku+']' : ''} — ₹${parseFloat(pd.rate).toFixed(2)}
-            (Stock: ${pd.stock} ${pd.unit})
-        </option>`;
+        const pvariants = VARIANTS[pid] || [];
+        if (pvariants.length > 0) {
+            options += `<optgroup label="${pd.name}">`;
+            pvariants.forEach(v => {
+                options += `<option value="${pid}"
+                    data-variant-id="${v.id}"
+                    data-name="${pd.name} - ${v.name}"
+                    data-rate="${v.rate}"
+                    data-sku="${v.sku}"
+                    data-stock="${pd.stock}"
+                    data-unit="${pd.unit}"
+                    data-gst="${pd.gst || 0}"
+                    data-img="${pd.img}">
+                    ${v.name} ${v.sku ? '['+v.sku+']' : ''} — ₹${parseFloat(v.rate).toFixed(2)}
+                </option>`;
+            });
+            options += `</optgroup>`;
+        } else {
+            options += `<option value="${pid}"
+                data-variant-id=""
+                data-name="${pd.name}" data-rate="${pd.rate}"
+                data-sku="${pd.sku}" data-stock="${pd.stock}"
+                data-unit="${pd.unit}" data-img="${pd.img}"
+                data-gst="${pd.gst || 0}">
+                ${pd.name} ${pd.sku ? '['+pd.sku+']' : ''} — ₹${parseFloat(pd.rate).toFixed(2)}
+                (Stock: ${pd.stock} ${pd.unit})
+            </option>`;
+        }
     }
+    return options;
+}
 
-    tr.innerHTML = `
+// ══════════════════════════════════════════
+// BUILD ROW HTML (shared between addRow & confirmBulkAdd)
+// ══════════════════════════════════════════
+function buildRowHtml(idx, options, selectedProductId, qty, rate, gst, sku, stockOnHand, unit, img, itemName) {
+    const imgHtml = img
+        ? `<img src="${img}" alt="${itemName}">`
+        : '<span class="noimg">&#128247;</span>';
+
+    const stockClass = stockOnHand > 0 ? 'stock-ok' : 'stock-low';
+    const metaHtml   = itemName
+        ? `<div class="product-meta show" id="imeta-${idx}">
+            <span style="color:#666">SKU: <strong>${sku || '—'}</strong></span>
+            &nbsp;|&nbsp;
+            Stock: <span id="stock-display-${idx}" class="${stockClass}">
+                <strong>${parseFloat(stockOnHand)}</strong> ${unit}
+            </span>
+            <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;
+                  margin-left:6px;font-size:11px"></span>
+          </div>`
+        : `<div class="product-meta" id="imeta-${idx}"></div>`;
+
+    const plBtnDisplay = itemName ? 'block' : 'none';
+
+    return `
         <td class="drag-col">&#8942;&#8942;</td>
-        <td class="img-col"><div class="item-img-box" id="iimg-${idx}"><span class="noimg">&#128247;</span></div></td>
+        <td class="img-col">
+            <div class="item-img-box" id="iimg-${idx}">${imgHtml}</div>
+        </td>
         <td>
             <select name="items[${idx}][product_id]" onchange="fillProduct(${idx}, this)" style="width:100%">
                 ${options}
             </select>
-            <div class="product-meta" id="imeta-${idx}"></div>
-            <input type="hidden" name="items[${idx}][item_name]" id="iname-${idx}" value="">
+            ${metaHtml}
+            <input type="hidden" name="items[${idx}][item_name]" id="iname-${idx}" value="${itemName || ''}">
+            <input type="hidden" name="items[${idx}][variant_id]" id="ivariantid-${idx}" value="">
         </td>
-        <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-${idx}">—</td>
+        <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-${idx}">${sku || '—'}</td>
+        <td style="text-align:center;vertical-align:middle">
+            <div id="pl-btn-${idx}" style="display:${plBtnDisplay};">
+                <button type="button"
+                        onclick="openRowPriceList(${idx})"
+                        style="font-size:11px;padding:3px 8px;border:1px solid #4a90d9;
+                               border-radius:4px;background:#e8f0fe;color:#4a90d9;
+                               cursor:pointer;white-space:nowrap;">
+                    📋 Apply
+                </button>
+                <div id="pl-label-${idx}" style="font-size:10px;color:#27ae60;margin-top:2px;"></div>
+            </div>
+        </td>
         <td class="r">
             <input type="number" name="items[${idx}][quantity]" id="iqty-${idx}"
-                   value="1" min="0.01" step="0.01" style="width:80px;text-align:right"
+                   value="${qty}" min="0.01" step="0.01" style="width:80px;text-align:right"
                    oninput="calcRow(${idx})">
         </td>
         <td class="r">
             <div style="display:flex;align-items:center;justify-content:flex-end">
                 <input type="number" name="items[${idx}][gst_value]" id="igstval-${idx}"
-                       value="0" min="0" step="0.01"
+                       value="${gst || 0}" min="0" step="0.01"
                        style="width:55px;text-align:right;height:30px;border:1px solid #d0d5dd;
                               border-right:none;border-radius:4px 0 0 4px;padding:0 6px;font-size:13px"
                        oninput="calcRow(${idx})">
@@ -1180,12 +1710,24 @@ function addRow() {
         </td>
         <td class="r">
             <input type="number" name="items[${idx}][rate]" id="irate-${idx}"
-                   value="0.00" min="0" step="0.01" style="width:100px;text-align:right"
+                   value="${parseFloat(rate || 0).toFixed(2)}" min="0" step="0.01"
+                   style="width:100px;text-align:right"
                    oninput="calcRow(${idx})">
         </td>
         <td class="r" id="iamt-${idx}" style="font-weight:600;color:#1a1a2e">0.00</td>
         <td><button type="button" class="btn-del" onclick="delRow(this)">&#10005;</button></td>
     `;
+}
+
+// ══════════════════════════════════════════
+// ADD NEW ROW
+// ══════════════════════════════════════════
+function addRow() {
+    const idx   = rowCount++;
+    const tbody = document.getElementById('items-body');
+    const tr    = document.createElement('tr');
+    tr.dataset.index = idx;
+    tr.innerHTML = buildRowHtml(idx, buildProductOptions(), null, 1, 0, 0, '', 0, '', '', '');
     tbody.appendChild(tr);
     calcTotals();
 }
@@ -1219,20 +1761,18 @@ function calcDueDate() {
 function onLocationChange(locationId) {
     bulkProducts = [];
     bulkSelected = {};
-    
+
     if (!locationId) {
         document.getElementById('series_wrapper').style.display = 'none';
         return;
     }
 
-    // ✅ Bulk modal open-ஆ இருந்தா products reload பண்ணு
     if (document.getElementById('bulk-modal').style.display === 'flex') {
         loadBulkProducts(locationId);
     }
 
     fetch(`/invoices/invoice-number?location_id=${locationId}`, {
-
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
     .then(data => {
@@ -1294,10 +1834,7 @@ function openBulkModal() {
     bulkSelected = {};
     renderBulkSelected();
 
-    // ✅ FIX: optional chaining — warehouse_location_id இல்லன்னா location-select use பண்ணு
-    const warehouseId = document.querySelector('select[name="warehouse_location_id"]')?.value
-                     || document.getElementById('location-select')?.value;
-
+    const warehouseId = document.getElementById('location-select')?.value;
     if (warehouseId) {
         loadBulkProducts(warehouseId);
     } else {
@@ -1310,7 +1847,6 @@ function closeBulkModal() {
     document.getElementById('bulk-modal').style.display = 'none';
 }
 
-// ✅ FIX: backdrop click close
 document.getElementById('bulk-modal').addEventListener('click', function(e) {
     if (e.target === this) closeBulkModal();
 });
@@ -1389,7 +1925,7 @@ function toggleBulkProduct(productId) {
         bulkSelected[productId] = 1;
     }
     renderBulkSelected();
-    filterBulkProducts(); // re-render with current search
+    filterBulkProducts();
 }
 
 function renderBulkSelected() {
@@ -1483,7 +2019,7 @@ function confirmBulkAdd() {
         return;
     }
 
-    // Remove empty rows
+    // Remove empty rows first
     document.querySelectorAll('#items-body tr').forEach(tr => {
         const sel = tr.querySelector('select[name*="product_id"]');
         if (sel && !sel.value) tr.remove();
@@ -1499,10 +2035,11 @@ function confirmBulkAdd() {
         const tr    = document.createElement('tr');
         tr.dataset.index = idx;
 
+        // Build options with this product selected
         let options = '<option value="">Type or click to select an item</option>';
         for (const [pid, pd] of Object.entries(PRODUCTS)) {
-            const sel = parseInt(pid) === parseInt(id) ? 'selected' : '';
-            options += `<option value="${pid}" ${sel}
+            const isSelected = parseInt(pid) === parseInt(id) ? 'selected' : '';
+            options += `<option value="${pid}" ${isSelected}
                 data-name="${pd.name}" data-rate="${pd.rate}"
                 data-sku="${pd.sku}" data-stock="${pd.stock}"
                 data-unit="${pd.unit}" data-img="${pd.img}"
@@ -1512,62 +2049,11 @@ function confirmBulkAdd() {
             </option>`;
         }
 
-        tr.innerHTML = `
-            <td class="drag-col">&#8942;&#8942;</td>
-            <td class="img-col">
-                <div class="item-img-box" id="iimg-${idx}">
-                    ${p.img ? `<img src="${p.img}" alt="${p.name}">` : '<span class="noimg">&#128247;</span>'}
-                </div>
-            </td>
-            <td>
-                <select name="items[${idx}][product_id]" onchange="fillProduct(${idx}, this)" style="width:100%">
-                    ${options}
-                </select>
-                <div class="product-meta show" id="imeta-${idx}">
-                    <span style="color:#666">SKU: <strong>${p.sku || '—'}</strong></span>
-                    &nbsp;|&nbsp;
-                    Stock: <span id="stock-display-${idx}" class="${p.stock_on_hand > 0 ? 'stock-ok' : 'stock-low'}">
-                        <strong>${parseFloat(p.stock_on_hand)}</strong> ${p.unit}
-                    </span>
-                    <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;
-                          margin-left:6px;font-size:11px"></span>
-                </div>
-                <input type="hidden" name="items[${idx}][item_name]" id="iname-${idx}" value="${p.name}">
-            </td>
-            <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-${idx}">${p.sku || '—'}</td>
-            <td class="r">
-                <input type="number" name="items[${idx}][quantity]" id="iqty-${idx}"
-                       value="${qty}" min="0.01" step="0.01" style="width:80px;text-align:right"
-                       oninput="calcRow(${idx})">
-            </td>
-            <td class="r">
-                <div style="display:flex;align-items:center;justify-content:flex-end">
-                    <input type="number" name="items[${idx}][gst_value]" id="igstval-${idx}"
-                           value="${p.gst || 0}" min="0" step="0.01"
-                           style="width:55px;text-align:right;height:30px;border:1px solid #d0d5dd;
-                                  border-right:none;border-radius:4px 0 0 4px;padding:0 6px;font-size:13px"
-                           oninput="calcRow(${idx})">
-                    <select name="items[${idx}][gst_type]" id="igsttype-${idx}"
-                            onchange="calcRow(${idx})"
-                            style="width:40px;height:30px;border:1px solid #d0d5dd;
-                                   border-radius:0 4px 4px 0;font-size:12px;
-                                   background:#f8f9fa;padding:0 2px;appearance:none;text-align:center">
-                        <option value="%">%</option>
-                        <option value="₹">₹</option>
-                    </select>
-                </div>
-                <div style="font-size:10px;color:#27ae60;text-align:right;margin-top:2px" id="igstamt-${idx}">₹0.00</div>
-                <input type="hidden" name="items[${idx}][gst_amount]" id="igstamthidden-${idx}" value="0">
-            </td>
-            <td class="r">
-                <input type="number" name="items[${idx}][rate]" id="irate-${idx}"
-                       value="${parseFloat(p.rate).toFixed(2)}" min="0" step="0.01"
-                       style="width:100px;text-align:right"
-                       oninput="calcRow(${idx})">
-            </td>
-            <td class="r" id="iamt-${idx}" style="font-weight:600;color:#1a1a2e">0.00</td>
-            <td><button type="button" class="btn-del" onclick="delRow(this)">&#10005;</button></td>
-        `;
+        tr.innerHTML = buildRowHtml(
+            idx, options, parseInt(id), qty,
+            p.rate, p.gst || 0, p.sku || '', p.stock_on_hand,
+            p.unit, p.img, p.name
+        );
         tbody.appendChild(tr);
         calcRow(idx);
     }
@@ -1595,10 +2081,16 @@ document.getElementById('referral-modal').addEventListener('click', function(e) 
 });
 
 function loadReferrals() {
-    fetch('/referrals', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(r => r.json())
+    document.getElementById('ref-tbody').innerHTML =
+        `<tr><td colspan="5"><div class="ref-empty"><div class="icon">👥</div><div>Loading referrals...</div></div></td></tr>`;
+
+    fetch('/referrals', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
     .then(data => {
-        allReferrals = data.data || [];
+        allReferrals = data.data || data || [];
         renderReferrals(allReferrals);
     })
     .catch(() => {
@@ -1645,21 +2137,21 @@ function filterReferrals() {
 
 function selectReferral(id, name) {
     selectedReferral = { id, name };
-    document.getElementById('referral-id-input').value             = id;
-    document.getElementById('referral-placeholder').style.display  = 'none';
+    document.getElementById('referral-id-input').value            = id;
+    document.getElementById('referral-placeholder').style.display = 'none';
     const nameEl = document.getElementById('referral-selected-name');
     nameEl.textContent   = name;
     nameEl.style.display = 'inline';
-    document.getElementById('referral-clear-btn').style.display    = 'inline';
+    document.getElementById('referral-clear-btn').style.display   = 'inline';
     closeReferralModal();
 }
 
 function clearReferral() {
     selectedReferral = null;
-    document.getElementById('referral-id-input').value                    = '';
-    document.getElementById('referral-placeholder').style.display         = 'inline';
-    document.getElementById('referral-selected-name').style.display       = 'none';
-    document.getElementById('referral-clear-btn').style.display           = 'none';
+    document.getElementById('referral-id-input').value                  = '';
+    document.getElementById('referral-placeholder').style.display       = 'inline';
+    document.getElementById('referral-selected-name').style.display     = 'none';
+    document.getElementById('referral-clear-btn').style.display         = 'none';
 }
 
 function showRefForm(clearFields = true) {
@@ -1842,6 +2334,5 @@ function renderCustPanel(data) {
 // ══════════════════════════════════════════
 calcTotals();
 </script>
-
 </body>
 </html>

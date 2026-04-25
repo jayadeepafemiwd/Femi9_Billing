@@ -21,6 +21,8 @@ class PriceList extends Model
         'percentage',
         'round_off',
         'pricing_scheme',
+        'individual_items_unit',   // ← ADD
+        'individual_items_volume', // ← ADD
         'currency',
         'include_discount',
     ];
@@ -28,6 +30,8 @@ class PriceList extends Model
     protected $casts = [
         'include_discount' => 'boolean',
         'percentage'       => 'decimal:2',
+        'individual_items_unit'   => 'array',  // ← ADD
+        'individual_items_volume' => 'array', 
     ];
     public function histories()
 {

@@ -9,6 +9,8 @@ use App\Models\Customer;
 use App\Observers\CustomerObserver;
 use App\Models\PriceList;
 use App\Observers\PriceListObserver;
+use App\Models\Invoice;
+use App\Observers\InvoiceObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,5 +19,6 @@ class AppServiceProvider extends ServiceProvider
          Customer::observe(CustomerObserver::class);
         Product::observe(ProductObserver::class);
         PriceList::observe(PriceListObserver::class);
+         Invoice::observe(InvoiceObserver::class);
     }
 }

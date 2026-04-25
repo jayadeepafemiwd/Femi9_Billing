@@ -83,4 +83,10 @@ class UserCategory extends Model
             $child->recalculateDescendantLevels();
         }
     }
+    
+    public function locations()
+{
+    return $this->belongsToMany(Location::class, 'location_user_category');
+}
+
 }

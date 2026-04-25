@@ -257,18 +257,31 @@ Route::get('price-lists/{id}/history', [PriceListController::class, 'history'])
     Route::delete('/{id}',              [UserSubCategoryController::class, 'destroy'])    ->name('destroy');
     Route::get('/by-category/{id}',     [UserSubCategoryController::class, 'byCategory'])->name('byCategory');
 });
-Route::get('/invoices/location-stock', [InvoiceController::class, 'getLocationStock']);
-Route::get('/invoices/invoice-number', [InvoiceController::class, 'getInvoiceNumber']);
+// ── Invoice Routes ── (specific routes FIRST, dynamic {id} LAST)
+// ── Static routes FIRST (specific before dynamic) ──
+Route::get('/invoices/location-stock',     [InvoiceController::class, 'getLocationStock']);
+Route::get('/invoices/invoice-number',     [InvoiceController::class, 'getInvoiceNumber']);
+Route::get('/invoices/price-list-rates',   [InvoiceController::class, 'getPriceListRates']);
+Route::get('/invoices/category-locations', [InvoiceController::class, 'categoryLocations'])->name('invoices.category-locations');
+Route::get('/invoices/customer-defaults',  [InvoiceController::class, 'getCustomerDefaults']);
 
-Route::get('/', fn() => redirect()->route('invoices.index'));
-Route::get('/invoices/invoice-number', [InvoiceController::class, 'getInvoiceNumber']);
-// ── Invoice Routes ──
-Route::get('/invoices/create',   [InvoiceController::class, 'create'])->name('invoices.create');
-Route::post('/invoices',         [InvoiceController::class, 'store'])->name('invoices.store');
-Route::get('/invoices/{id}',     [InvoiceController::class, 'show'])->name('invoices.show');
-Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+// ── CRUD routes ──
+Route::get('/invoices',        [InvoiceController::class, 'index'])->name('invoices.index');
+Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+Route::post('/invoices',       [InvoiceController::class, 'store'])->name('invoices.store');
 
+// ── Dynamic route LAST ──
+Route::get('/invoices/{id}',           [InvoiceController::class, 'show'])->name('invoices.show');
+Route::post('/invoices/{id}/comment',  [InvoiceController::class, 'addComment'])->name('invoices.comment');
+
+// ── Other ──
 Route::get('/api/products/{id}', [InvoiceController::class, 'getProduct'])->name('products.get');
+
+
+Route::get('/referrals',         [ReferralController::class, 'index']);
+Route::post('/referrals',        [ReferralController::class, 'store']);
+Route::put('/referrals/{id}',    [ReferralController::class, 'update']);
+Route::delete('/referrals/{id}', [ReferralController::class, 'destroy']);
 
 Route::get('/referrals',          [ReferralController::class, 'index']);
 Route::post('/referrals',         [ReferralController::class, 'store']);
