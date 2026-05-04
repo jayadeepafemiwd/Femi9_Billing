@@ -19,7 +19,10 @@ use App\Http\Controllers\TransactionSeriesController;
 use App\Http\Controllers\UserSubCategoryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ReferralController;
-
+use App\Http\Controllers\PaymentsRecordController;
+use App\Http\Controllers\ItemStockLedgerController;
+use App\Http\Controllers\InvoiceSettingController;
+use App\Http\Controllers\CommentsController;
 
 // ===== HOME REDIRECT =====
 Route::get('/', function () {
@@ -131,10 +134,7 @@ Route::post('/customers/{customer}/contact-persons/{index}/primary',
     [CustomerController::class, 'markContactPersonPrimary']);
 Route::delete('/customers/{customer}/contact-persons/{index}', 
     [CustomerController::class, 'destroyContactPerson']);
-Route::post('/customers/{customer}/comments', 
-    [CustomerController::class, 'storeComment']);
-Route::delete('/customers/{customer}/comments/{commentId}', 
-    [CustomerController::class, 'destroyComment']);
+
 Route::get('customers/used-locations', [CustomerController::class, 'getUsedLocations']);
 Route::get('/admin/user-categories', function () {
     return view('admin.user-categories.index');
@@ -170,18 +170,23 @@ Route::prefix('price-lists')->name('price-lists.')->group(function () {
     Route::patch('/{id}/toggle-status', [PriceListController::class, 'toggleStatus'])->name('toggle-status');
 });
 
-Route::apiResource('price-list-categories', PriceListCategoryController::class)
+Route::apiResource('price-list-categories', PriceListController::class)
      ->except(['show','create','edit']);
 
-     Route::prefix('assign-location')->group(function () {
-        Route::get('/',              [LcLayerController::class, 'index']);
-        Route::get('/tree',          [LcLayerController::class, 'getTree']);
-        Route::post('/add-layer',    [LcLayerController::class, 'addLayer']);
-        Route::post('/add-value',    [LcLayerController::class, 'addValue']);
-        Route::post('/delete-value', [LcLayerController::class, 'deleteValue']);
-        Route::post('/delete-layer', [LcLayerController::class, 'deleteLayer']);
-        Route::get('location-layers/values', [LcLayerController::class, 'values']);
-    });
+Route::prefix('assign-location')->group(function () {
+    Route::get('/',           [LcLayerController::class, 'index']);
+    Route::get('/tree',       [LcLayerController::class, 'getTree']);
+ 
+    // Layer
+    Route::post('/add-layer',    [LcLayerController::class, 'addLayer']);
+    Route::post('/edit-layer',   [LcLayerController::class, 'editLayer']);   // NEW
+    Route::post('/delete-layer', [LcLayerController::class, 'deleteLayer']);
+ 
+    // Value
+    Route::post('/add-value',    [LcLayerController::class, 'addValue']);
+    Route::post('/edit-value',   [LcLayerController::class, 'editValue']);   // NEW
+    Route::post('/delete-value', [LcLayerController::class, 'deleteValue']);
+});
     // routes/api.php
 
 Route::prefix('composite-items')->name('composite-items.')->group(function () {
@@ -274,9 +279,19 @@ Route::post('/invoices',       [InvoiceController::class, 'store'])->name('invoi
 Route::get('/invoices/{id}',           [InvoiceController::class, 'show'])->name('invoices.show');
 Route::post('/invoices/{id}/comment',  [InvoiceController::class, 'addComment'])->name('invoices.comment');
 
+Route::get('/invoices/{id}/payment', [InvoiceController::class, 'showPaymentForm'])
+    ->name('invoices.payment.form');
+
+Route::post('/invoices/{id}/payment', [InvoiceController::class, 'storePayment'])
+    ->name('invoices.payment.store');
 // ── Other ──
 Route::get('/api/products/{id}', [InvoiceController::class, 'getProduct'])->name('products.get');
 
+Route::get('/invoices/{id}/edit',   [InvoiceController::class, 'edit'])  ->name('invoices.edit');
+Route::put('/invoices/{id}',        [InvoiceController::class, 'update'])->name('invoices.update');
+
+//important one
+Route::get('/stock-ledger', [ItemStockLedgerController::class, 'create']);
 
 Route::get('/referrals',         [ReferralController::class, 'index']);
 Route::post('/referrals',        [ReferralController::class, 'store']);
@@ -288,3 +303,38 @@ Route::post('/referrals',         [ReferralController::class, 'store']);
 Route::put('/referrals/{id}',     [ReferralController::class, 'update']);
 Route::delete('/referrals/{id}',  [ReferralController::class, 'destroy']);
 
+Route::prefix('payments-records')->name('payments_records.')->group(function () {
+    Route::get('/',                  [PaymentsRecordController::class, 'index'])               ->name('index');
+    Route::get('/create',            [PaymentsRecordController::class, 'create'])              ->name('create');
+    Route::post('/',                 [PaymentsRecordController::class, 'store'])               ->name('store');
+    Route::get('/customers',         [PaymentsRecordController::class, 'getCustomers'])        ->name('get_customers');
+    Route::get('/invoices',          [PaymentsRecordController::class, 'getInvoices'])         ->name('get_invoices');
+    Route::get('/customer-defaults', [PaymentsRecordController::class, 'getCustomerDefaults']) ->name('get_customer_defaults');
+    
+    // ✅ இங்கே prefix already 'payments-records' — மீண்டும் போடாதீங்க
+    Route::get('/customer-credit',   [PaymentsRecordController::class, 'getCustomerCredit'])   ->name('get_customer_credit');
+    Route::post('/apply-credit',     [PaymentsRecordController::class, 'applyCredit'])         ->name('apply_credit');
+    Route::post('/payments-records/apply-credit', [PaymentsRecordController::class, 'applyCredit']);
+    });
+    
+
+Route::get('/settings/invoice',  [InvoiceSettingController::class, 'create'])->name('invoice_setting.create');
+Route::post('/settings/invoice', [InvoiceSettingController::class, 'store'])->name('invoice_setting.store');
+Route::delete('/settings/invoice/reset', [InvoiceSettingController::class, 'destroy'])->name('invoice_setting.destroy');
+
+Route::get('/comments', [CommentsController::class, 'index'])
+     ->name('comments.index');
+
+Route::post('/{module}/{record_id}/comments', [CommentsController::class, 'store'])
+     ->where('module', 'customers|products|invoices')
+     ->where('record_id', '[0-9]+')
+     ->name('comments.store');
+
+Route::delete('/{module}/{record_id}/comments/{id}', [CommentsController::class, 'destroy'])
+     ->where('module', 'customers|products|invoices')
+     ->where('record_id', '[0-9]+')
+     ->where('id', '[0-9]+')
+     ->name('comments.destroy');
+
+Route::get('/comment-settings/{module}',  [CommentsController::class, 'getSettings']);
+Route::post('/comment-settings/{module}', [CommentsController::class, 'updateSettings']);

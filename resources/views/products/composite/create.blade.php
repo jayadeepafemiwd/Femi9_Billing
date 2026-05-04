@@ -1603,19 +1603,36 @@ function buildDropdownItems(products, query) {
     </div>`).join('');
 }
 
+// ================================================================
+//  ROW EVENTS — String compare use பண்ணு (v_ prefix support)
+// ================================================================
 function bindRowEvents(tableType, rowId, products) {
   const input    = document.getElementById(`selectorInput-${tableType}-${rowId}`);
   const dropdown = document.getElementById(`dropdown-${tableType}-${rowId}`);
   if (!input || !dropdown) return;
-  input.addEventListener('focus', () => { filterDropdown(tableType, rowId, input.value, products); dropdown.classList.add('open'); });
-  input.addEventListener('input', () => { filterDropdown(tableType, rowId, input.value, products); dropdown.classList.add('open'); });
+
+  input.addEventListener('focus', () => {
+    filterDropdown(tableType, rowId, input.value, products);
+    dropdown.classList.add('open');
+  });
+  input.addEventListener('input', () => {
+    filterDropdown(tableType, rowId, input.value, products);
+    dropdown.classList.add('open');
+  });
   document.addEventListener('click', (e) => {
-    if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('open');
+    if (!input.contains(e.target) && !dropdown.contains(e.target))
+      dropdown.classList.remove('open');
   }, { capture: true });
+
   dropdown.addEventListener('click', (e) => {
     const item = e.target.closest('.dropdown-item');
     if (!item) return;
-    const product = products.find(p => p.id === parseInt(item.dataset.productId));
+
+    const clickedId = item.dataset.productId; // ← String-ஆகவே எடு
+
+    // String comparison — "v_3" === "v_3" , "5" === "5" both work
+    const product = products.find(p => String(p.id) === String(clickedId));
+
     if (product) selectProduct(tableType, rowId, product);
     dropdown.classList.remove('open');
   });

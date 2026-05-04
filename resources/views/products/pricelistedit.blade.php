@@ -354,13 +354,13 @@ const SAVED_UNIT_ITEMS   = {!! json_encode($priceList->individual_items_unit   ?
 const SAVED_VOLUME_ITEMS = {!! json_encode($priceList->individual_items_volume ?? []) !!};
 
 @php
-$productJson = $items->map(function($p) {
+$productJson = collect($items)->map(function($p) {
     return [
-        'id'            => $p->id,
-        'name'          => $p->name,
-        'sku'           => $p->sku ?? '',
-        'selling_price' => (float)($p->selling_price ?? 0),
-        'cost_price'    => (float)($p->cost_price    ?? 0),
+        'id'            => $p['id'],
+        'name'          => $p['name'],
+        'sku'           => $p['sku'] ?? '',
+        'selling_price' => (float)($p['selling_price'] ?? 0),
+        'cost_price'    => (float)($p['cost_price']    ?? 0),
     ];
 })->values()->toJson();
 @endphp

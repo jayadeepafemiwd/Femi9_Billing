@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Invoice {{ $invoice->invoice_number }}</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,10 +54,7 @@ body {
     gap: 8px; padding: 0 12px;
 }
 .topbar-search span { font-size: 12px; color: #6b8097; }
-.topbar-right {
-    margin-left: auto;
-    display: flex; align-items: center; gap: 12px;
-}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .topbar-right .sub-text { color: #9ba8b8; font-size: 12px; white-space: nowrap; }
 .topbar-right .sub-text a { color: var(--blue); text-decoration: none; }
 .topbar-icons { display: flex; gap: 10px; align-items: center; color: #9ba8b8; font-size: 17px; }
@@ -127,16 +125,12 @@ body {
 .lp-btn {
     width: 28px; height: 28px; border-radius: 4px; border: none;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 16px; font-weight: 400;
+    cursor: pointer; font-size: 16px;
     background: var(--blue); color: #fff;
 }
 .lp-btn.sec { background: #e8f0fe; color: var(--blue); font-size: 12px; }
 .lp-btn.dots { background: none; color: #888; font-size: 18px; }
-.lp-search {
-    padding: 8px 12px;
-    border-bottom: 1px solid #f0f2f4;
-    flex-shrink: 0;
-}
+.lp-search { padding: 8px 12px; border-bottom: 1px solid #f0f2f4; flex-shrink: 0; }
 .lp-search input {
     width: 100%; height: 30px;
     border: 1px solid #d0d5dd; border-radius: 5px;
@@ -146,59 +140,51 @@ body {
 }
 .lp-scroll { flex: 1; overflow-y: auto; }
 
+/* ── LIST ITEM ── */
 .list-item {
-    padding: 11px 12px 11px 36px;
+    padding: 10px 12px 10px 36px;
     border-bottom: 1px solid #f0f2f4;
     cursor: pointer; transition: background 0.1s;
     position: relative;
 }
 .list-item:hover { background: #fafbff; }
 .list-item.active { background: #eef4ff; border-left: 3px solid var(--blue); padding-left: 33px; }
-.li-check {
-    position: absolute; left: 12px; top: 14px;
-    width: 14px; height: 14px;
-}
-.li-top {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 2px;
-}
+.li-check { position: absolute; left: 12px; top: 13px; width: 14px; height: 14px; }
+.li-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
 .li-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .li-amount { font-size: 13px; font-weight: 600; color: var(--text); }
 .li-meta { font-size: 11px; color: #888; display: flex; gap: 5px; }
 .li-meta .dot { color: #ccc; }
-.li-status { font-size: 10px; font-weight: 600; margin-top: 3px; letter-spacing: 0.3px; }
+.li-status { font-size: 10px; font-weight: 700; margin-top: 3px; letter-spacing: 0.3px; }
 .s-sent    { color: #1e40af; }
 .s-paid    { color: var(--green); }
 .s-draft   { color: #888; }
 .s-overdue { color: var(--red); }
+.s-partial { color: #92400e; }
 
 /* ── DETAIL AREA ── */
 .detail-area {
     flex: 1; min-width: 0;
     display: flex; flex-direction: column;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    height: 100%; overflow: hidden;
 }
 
 /* ── DETAIL TOOLBAR ── */
 .detail-toolbar {
     background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 6px 12px;
-    min-height: 50px;
+    padding: 6px 12px; min-height: 50px;
     flex-shrink: 0;
     display: flex; align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-wrap: wrap; gap: 6px;
 }
 .dt-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .dt-inv-num { font-size: 15px; font-weight: 700; color: var(--text); }
 .dt-loc { font-size: 10px; color: var(--muted); margin-bottom: 1px; }
 .dt-right { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
-/* ── Action Buttons ── */
+/* ── ACTION BUTTONS ── */
 .ab {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 0 10px; height: 30px;
@@ -224,21 +210,17 @@ body {
     display: inline-flex; align-items: center; justify-content: center;
 }
 .ab-group.primary .ab:first-child { border-right: 1px solid rgba(255,255,255,0.25); }
-.ab-group.primary .ab-caret {
-    background: var(--blue); color: #fff; border-color: var(--blue);
-}
+.ab-group.primary .ab-caret { background: var(--blue); color: #fff; border-color: var(--blue); }
 .ab-group.primary .ab-caret:hover { background: var(--blue2); }
 .ab-divider { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
 
-/* ── DETAIL SCROLL AREA ── */
+/* ── DETAIL SCROLL ── */
 .detail-scroll {
     flex: 1;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow-x: hidden; overflow-y: auto;
     padding: 14px 16px 40px;
     background: var(--bg);
-    min-width: 0;
-    width: 100%;
+    min-width: 0; width: 100%;
 }
 
 /* ── BANNERS ── */
@@ -267,7 +249,7 @@ body {
     display: flex; align-items: center; gap: 8px;
     margin-bottom: 12px;
 }
-.upi-row svg { width: 15px; height: 15px; color: var(--blue); flex-shrink: 0; }
+.upi-row svg { width: 15px; height: 15px; flex-shrink: 0; }
 .upi-row a { color: var(--blue); text-decoration: none; }
 
 /* ── INVOICE PAPER ── */
@@ -278,27 +260,10 @@ body {
     width: 100%;
     overflow: hidden;
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    position: relative;
 }
 
-/* Overdue ribbon */
-.ribbon-wrap {
-    position: relative; height: 0; overflow: visible;
-    pointer-events: none; z-index: 10;
-}
-.ribbon {
-    position: absolute; top: 18px; left: -28px;
-    background: #e8a800; color: #fff;
-    font-size: 10px; font-weight: 800;
-    padding: 5px 32px;
-    transform: rotate(-45deg);
-    letter-spacing: 0.5px; text-transform: uppercase;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
-}
-
-/* Paper inner - NO negative margins, padding handled per section */
-.paper-inner { padding: 0; }
-
-/* ── Paper Header (company + TAX INVOICE) ── */
+/* ── Paper Header ── */
 .paper-header {
     padding: 28px 36px 20px;
     display: flex; justify-content: space-between; align-items: flex-start;
@@ -325,10 +290,7 @@ body {
     padding: 16px 36px;
 }
 .addr-col + .addr-col { border-left: 1px solid #dde2e8; padding-left: 24px; }
-.addr-lbl {
-    font-size: 10px; font-weight: 700; color: #777;
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px;
-}
+.addr-lbl { font-size: 10px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
 .addr-cust-name { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
 .addr-lines { font-size: 12px; color: #444; line-height: 1.85; }
 
@@ -338,8 +300,7 @@ body {
 .items-tbl th {
     padding: 10px 12px; text-align: left;
     font-size: 11px; font-weight: 600; color: #555;
-    border-top: 1px solid #dde2e8;
-    border-bottom: 1px solid #dde2e8;
+    border-top: 1px solid #dde2e8; border-bottom: 1px solid #dde2e8;
     text-transform: uppercase; letter-spacing: 0.35px;
     white-space: nowrap; overflow: hidden;
 }
@@ -374,10 +335,6 @@ body {
     font-size: 13px; font-weight: 700; color: var(--text);
     border-top: 1px solid #dde2e8; padding-top: 9px; margin-top: 4px;
 }
-.tot-row.balance {
-    font-size: 14px; font-weight: 700; color: var(--text);
-    border-top: 2px solid var(--navy); padding-top: 9px; margin-top: 3px;
-}
 
 /* ── Notes + Signature ── */
 .notes-sig {
@@ -395,11 +352,7 @@ body {
 }
 
 /* ── BADGE ── */
-.badge {
-    display: inline-block; padding: 2px 10px;
-    border-radius: 10px; font-size: 11px; font-weight: 600;
-}
-
+.badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 .badge-sent    { background: #dbeafe; color: #1e40af; }
 .badge-paid    { background: #dcfce7; color: var(--green); }
 .badge-draft   { background: #f1f5f9; color: #64748b; }
@@ -456,8 +409,6 @@ body {
     display: flex; align-items: center; justify-content: center;
     font-size: 12px; font-weight: 600; flex-shrink: 0;
 }
-.cp-avatar.y { background: #ffe8c5; color: #92400e; }
-.cp-avatar.b { background: #dbeafe; color: #1e40af; }
 .cp-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .cp-name { font-size: 12px; font-weight: 600; color: var(--text); }
 .cp-time { font-size: 11px; color: #aaa; }
@@ -466,11 +417,17 @@ body {
 /* ── PRINT ── */
 @media print {
     .topbar, .sidenav, .list-panel, .detail-toolbar,
-    .next-banner, .upi-row, .comments-panel { display: none !important; }
+    .next-banner, .upi-row, .comments-panel,
+    .payments-received-section { display: none !important; }
     .root-layout { margin-top: 0; }
     .detail-area { height: auto; overflow: visible; }
     .detail-scroll { padding: 0; overflow: visible; }
     .invoice-paper { border: none; box-shadow: none; }
+}
+
+@keyframes modalIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
 }
 </style>
 </head>
@@ -499,7 +456,6 @@ body {
             <span>&#8635;</span>
             <span style="position:relative">&#128276;<span class="notif-dot">1</span></span>
             <span>&#9881;</span>
-            <span>&#9783;</span>
         </div>
         <div class="topbar-avatar">J</div>
     </div>
@@ -550,18 +506,16 @@ body {
                 <svg width="13" height="13" fill="none" stroke="#4a90d9" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
             </div>
             <div class="lp-actions">
-                <button class="lp-btn">+</button>
-                <button class="lp-btn sec">
-                    <svg width="11" height="11" fill="#4a90d9" viewBox="0 0 20 20"><path d="M10 3l7 7H3l7-7z"/></svg>
-                </button>
-                <button class="lp-btn dots" style="font-size:16px">···</button>
+                <button class="lp-btn" onclick="window.location='{{ route('invoices.create') }}'">+</button>
+                <button class="lp-btn dots">···</button>
             </div>
         </div>
         <div class="lp-search">
             <input type="text" placeholder="Search invoices...">
         </div>
         <div class="lp-scroll">
-            {{-- Active invoice --}}
+
+            {{-- ✅ Active invoice (current) --}}
             <div class="list-item active">
                 <input type="checkbox" class="li-check">
                 <div class="li-top">
@@ -573,15 +527,55 @@ body {
                     <span class="dot">•</span>
                     <span>{{ \Carbon\Carbon::parse($invoice->invoice_date)->format('d/m/Y') }}</span>
                 </div>
-                <div class="li-status s-{{ strtolower($invoice->status) }}">{{ strtoupper($invoice->status) }}</div>
+                {{-- ✅ Show payment status in list panel --}}
+                @php
+                    $curPayStatus = $invoice->payment_status ?? 'unpaid';
+                    if ($curPayStatus === 'paid') {
+                        $liStatusText  = 'PAID';
+                        $liStatusClass = 's-paid';
+                    } elseif ($curPayStatus === 'partial') {
+                        $liStatusText  = 'PARTIALLY PAID';
+                        $liStatusClass = 's-partial';
+                    } elseif ($invoice->status === 'Overdue') {
+                        $liStatusText  = 'OVERDUE';
+                        $liStatusClass = 's-overdue';
+                    } elseif ($invoice->status === 'Draft') {
+                        $liStatusText  = 'DRAFT';
+                        $liStatusClass = 's-draft';
+                    } else {
+                        $liStatusText  = 'SENT';
+                        $liStatusClass = 's-sent';
+                    }
+                @endphp
+                <div class="li-status {{ $liStatusClass }}">{{ $liStatusText }}</div>
             </div>
 
+            {{-- ✅ Other invoices with payment status --}}
             @php
                 $otherInvoices = \App\Models\Invoice::with('customer')
                     ->where('id', '!=', $invoice->id)
-                    ->latest()->take(12)->get();
+                    ->latest()->take(15)->get();
             @endphp
             @foreach($otherInvoices as $other)
+            @php
+                $otherPayStatus = $other->payment_status ?? 'unpaid';
+                if ($otherPayStatus === 'paid') {
+                    $otherStatusText  = 'PAID';
+                    $otherStatusClass = 's-paid';
+                } elseif ($otherPayStatus === 'partial') {
+                    $otherStatusText  = 'PARTIALLY PAID';
+                    $otherStatusClass = 's-partial';
+                } elseif ($other->status === 'Overdue') {
+                    $otherStatusText  = 'OVERDUE';
+                    $otherStatusClass = 's-overdue';
+                } elseif ($other->status === 'Draft') {
+                    $otherStatusText  = 'DRAFT';
+                    $otherStatusClass = 's-draft';
+                } else {
+                    $otherStatusText  = 'SENT';
+                    $otherStatusClass = 's-sent';
+                }
+            @endphp
             <div class="list-item" onclick="window.location='{{ route('invoices.show', $other->id) }}'">
                 <input type="checkbox" class="li-check" onclick="event.stopPropagation()">
                 <div class="li-top">
@@ -593,16 +587,17 @@ body {
                     <span class="dot">•</span>
                     <span>{{ \Carbon\Carbon::parse($other->invoice_date)->format('d/m/Y') }}</span>
                 </div>
-                <div class="li-status s-{{ strtolower($other->status) }}">{{ strtoupper($other->status) }}</div>
+                <div class="li-status {{ $otherStatusClass }}">{{ $otherStatusText }}</div>
             </div>
             @endforeach
+
         </div>
     </div>
 
     {{-- ── DETAIL AREA ── --}}
     <div class="detail-area">
 
-        {{-- Toolbar --}}
+        {{-- ── TOOLBAR ── --}}
         <div class="detail-toolbar">
             <div class="dt-left">
                 <div>
@@ -612,30 +607,24 @@ body {
                 <span class="badge badge-{{ strtolower($invoice->status) }}">{{ $invoice->status }}</span>
             </div>
             <div class="dt-right">
-                {{-- Attachment --}}
                 <button class="ab icon" title="Attachments">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="14" height="14">
                         <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
                     </svg>
                 </button>
-                {{-- Comments --}}
                 <button class="ab icon" title="Comments" onclick="toggleComments()">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="14" height="14">
                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                     </svg>
                 </button>
                 <div class="ab-divider"></div>
-
-                {{-- Edit --}}
                 <a href="#" class="ab">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
                         <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                     Edit
                 </a>
-
-<button class="ab-caret">▾</button>
-                {{-- Share --}}
+                <button class="ab-caret">▾</button>
                 <button class="ab">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
                         <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -643,8 +632,6 @@ body {
                     </svg>
                     Share
                 </button>
-
-                {{-- Remind --}}
                 <div class="ab-group">
                     <button class="ab">
                         <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
@@ -654,8 +641,6 @@ body {
                     </button>
                     <button class="ab-caret">▾</button>
                 </div>
-
-                {{-- PDF --}}
                 <div class="ab-group">
                     <button class="ab" onclick="window.print()">
                         <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
@@ -665,18 +650,16 @@ body {
                     </button>
                     <button class="ab-caret">▾</button>
                 </div>
-
-                {{-- Record Payment --}}
                 <div class="ab-group primary">
-                    <button class="ab primary">
-                        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
-                            <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
-                        </svg>
-                        Record Payment
-                    </button>
+                    {{-- NEW --}}
+<button class="ab primary" onclick="openPaymentModal()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="13" height="13">
+        <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
+    </svg>
+    Record Payment
+</button>
                     <button class="ab-caret">▾</button>
                 </div>
-
                 <button class="ab icon">···</button>
                 <button class="ab icon danger" onclick="history.back()">✕</button>
             </div>
@@ -686,26 +669,39 @@ body {
         <div class="detail-scroll">
 
             @if(session('success'))
-            <div style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;">
+            <div style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;
+                        padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;">
                 {{ session('success') }}
             </div>
             @endif
 
-            {{-- Next Steps Banner --}}
-            @if(in_array($invoice->status, ['Overdue','Sent']))
+            {{-- ✅ PHP variables — top-ல் ஒரே ஒரு முறை define --}}
+            @php
+                $amountReceived = floatval($invoice->amount_received ?? 0);
+                $balanceDue     = floatval($invoice->balance_due ?? $invoice->grand_total);
+                $payStatus      = $invoice->payment_status ?? 'unpaid';
+            @endphp
+
+            {{-- ✅ What's Next Banner — paid-ஆ இருந்தா காட்டாதே --}}
+            @if(in_array($invoice->status, ['Overdue','Sent']) && $payStatus !== 'paid')
             <div class="next-banner">
                 <div class="nb-left">
                     <div class="nb-icon">✦</div>
                     <div>
                         <div class="nb-title">WHAT'S NEXT?</div>
                         <div class="nb-body">
-                            Payment is {{ $invoice->status === 'Overdue' ? 'overdue' : 'pending' }}.
-                            Send a payment reminder or record the payment.
+                            @if($payStatus === 'partial')
+                                Invoice has been partially paid. Record payment for the remaining amount.
+                            @elseif($invoice->status === 'Overdue')
+                                Payment is overdue. Send a payment reminder or record the payment.
+                            @else
+                                Payment is pending. Send a payment reminder or record the payment.
+                            @endif
                             <a href="#">Learn More</a>
                         </div>
                     </div>
                 </div>
-                <button class="btn-record">Record Payment</button>
+              <button class="btn-record" onclick="openPaymentModal()">Record Payment</button>
             </div>
             @endif
 
@@ -714,17 +710,115 @@ body {
                 <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
                 </svg>
-                Get paid faster by <a href="#" style="margin:0 4px">setting up payment gateways</a> or <a href="#" style="margin:0 4px">display a UPI QR code</a>.
+                Get paid faster by
+                <a href="#" style="margin:0 4px">setting up payment gateways</a> or
+                <a href="#" style="margin:0 4px">display a UPI QR code</a>.
             </div>
+
+            {{-- ✅ Payments Received — invoice paper வெளியே, UPI-க்கு கீழே --}}
+           @if(isset($paymentRecords) && $paymentRecords->count() > 0)
+<div class="payments-received-section"
+     style="background:#fff;border:1px solid #e3e6ea;border-radius:8px;
+            margin-bottom:12px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:12px 16px;cursor:pointer;user-select:none;"
+         onclick="var p=this.nextElementSibling;
+                  p.style.display=p.style.display==='none'?'block':'none';
+                  this.querySelector('.pr-arrow').style.transform=
+                  p.style.display==='block'?'rotate(90deg)':'rotate(0deg)'">
+        <span style="font-size:13px;font-weight:600;color:#1a1a2e;">
+            Payments Received
+            <span style="display:inline-flex;align-items:center;justify-content:center;
+                         width:20px;height:20px;background:#e8f0fe;color:#4a90d9;
+                         border-radius:50%;font-size:11px;margin-left:6px;font-weight:700;">
+                {{ $paymentRecords->count() }}
+            </span>
+        </span>
+        <svg class="pr-arrow" width="12" height="12" fill="none" stroke="#888"
+             stroke-width="2" viewBox="0 0 24 24"
+             style="transition:transform 0.2s;flex-shrink:0;">
+            <path d="M9 18l6-6-6-6"/>
+        </svg>
+    </div>
+    <div style="display:none;border-top:1px solid #f0f2f4;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+                <tr style="background:#f8f9fa;">
+                    <th style="padding:9px 16px;text-align:left;color:#666;font-weight:600;
+                               font-size:11px;text-transform:uppercase;
+                               border-bottom:1px solid #e8eaed;">Date</th>
+                    <th style="padding:9px 12px;text-align:left;color:#666;font-weight:600;
+                               font-size:11px;text-transform:uppercase;
+                               border-bottom:1px solid #e8eaed;">Payment #</th>
+                    <th style="padding:9px 12px;text-align:left;color:#666;font-weight:600;
+                               font-size:11px;text-transform:uppercase;
+                               border-bottom:1px solid #e8eaed;">Mode</th>
+                    <th style="padding:9px 16px;text-align:right;color:#666;font-weight:600;
+                               font-size:11px;text-transform:uppercase;
+                               border-bottom:1px solid #e8eaed;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($paymentRecords as $pmt)
+                <tr>
+                    <td style="padding:10px 16px;color:#333;">
+                        {{ \Carbon\Carbon::parse($pmt->payment_date)->format('d/m/Y') }}
+                    </td>
+                    <td style="padding:10px 12px;">
+                        <span style="color:#4a90d9;font-weight:500;">
+                            {{ $pmt->payment_no }}
+                        </span>
+                    </td>
+                    <td style="padding:10px 12px;color:#555;text-transform:capitalize;">
+                        {{ $pmt->payment_mode ?? 'Cash' }}
+                    </td>
+                    <td style="padding:10px 16px;text-align:right;font-weight:600;color:#166534;">
+                        ₹{{ number_format($pmt->amount_received, 2) }}
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
 
             {{-- ── INVOICE PAPER ── --}}
             <div class="invoice-paper">
 
-                {{-- Overdue Ribbon --}}
-                @if($invoice->status === 'Overdue')
-                <div style="position:relative;height:0;overflow:visible;pointer-events:none;z-index:10;">
-                    <div style="position:absolute;top:0;left:0;width:80px;height:80px;overflow:hidden;">
-                        <div class="ribbon">Overdue</div>
+                {{-- ✅ Corner Ribbon — paid / partially paid / overdue --}}
+                @php
+                    $ribbonText  = null;
+                    $ribbonColor = null;
+                    if ($payStatus === 'paid') {
+                        $ribbonText  = 'Paid';
+                        $ribbonColor = '#22c55e';
+                    } elseif ($payStatus === 'partial') {
+                        $ribbonText  = 'Partially Paid';
+                        $ribbonColor = '#14b8a6';
+                    } elseif ($invoice->status === 'Overdue') {
+                        $ribbonText  = 'Overdue';
+                        $ribbonColor = '#f59e0b';
+                    }
+                @endphp
+
+                @if($ribbonText)
+                <div style="position:absolute;top:0;left:0;
+                            width:130px;height:130px;
+                            overflow:hidden;pointer-events:none;z-index:10;">
+                    <div style="position:absolute;
+                                top:30px;left:-35px;
+                                width:170px;
+                                background:{{ $ribbonColor }};
+                                color:#fff;
+                                font-size:10px;font-weight:800;
+                                padding:8px 0;
+                                text-align:center;
+                                transform:rotate(-45deg);
+                                letter-spacing:0.5px;
+                                text-transform:uppercase;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+                        {{ $ribbonText }}
                     </div>
                 </div>
                 @endif
@@ -779,17 +873,19 @@ body {
                     $billing  = $custAddr['billing']  ?? null;
                     $shipping = $custAddr['shipping'] ?? null;
 
-                    function formatAddrLines($addr) {
-                        if (!$addr) return '—';
-                        $parts = array_filter([
-                            $addr['attention'] ?? null,
-                            $addr['street1']   ?? null,
-                            $addr['street2']   ?? null,
-                            trim(($addr['city'] ?? '') . ' ' . ($addr['pincode'] ?? '')),
-                            $addr['state']     ?? null,
-                            $addr['country']   ?? null,
-                        ]);
-                        return implode('<br>', $parts) ?: '—';
+                    if (!function_exists('formatAddrLines')) {
+                        function formatAddrLines($addr) {
+                            if (!$addr) return '—';
+                            $parts = array_filter([
+                                $addr['attention'] ?? null,
+                                $addr['street1']   ?? null,
+                                $addr['street2']   ?? null,
+                                trim(($addr['city'] ?? '') . ' ' . ($addr['pincode'] ?? '')),
+                                $addr['state']     ?? null,
+                                $addr['country']   ?? null,
+                            ]);
+                            return implode('<br>', $parts) ?: '—';
+                        }
                     }
                 @endphp
                 <div class="addr-row">
@@ -804,243 +900,485 @@ body {
                     </div>
                 </div>
 
-               {{-- ④ Items Table --}}
-<table class="items-tbl">
-    <colgroup>
-        <col style="width:52px">
-        <col>
-        <col style="width:60px">
-        <col style="width:80px">
-        <col style="width:90px">
-        <col style="width:90px">
-        <col style="width:110px">
-    </colgroup>
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Item &amp; Description</th>
-            <th class="r">Qty</th>
-            <th class="r">Rate</th>
-            <th class="r">GST%</th>
-            <th class="r">GST Amt</th>
-            <th class="r">Amount</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($invoice->items as $i => $item)
-        @php
-            $gst = is_string($item->gst_data)
-                ? json_decode($item->gst_data, true)
-                : ($item->gst_data ?? []);
-            $gstValue  = $gst['value']  ?? 0;
-            $gstType   = $gst['type']   ?? '%';
-            $gstAmount = $gst['amount'] ?? 0;
-        @endphp
-        <tr>
-            <td class="num">{{ $i + 1 }}</td>
-            <td>
-                <div class="item-name">{{ $item->item_name }}</div>
-                @if($item->product && $item->product->unit)
-                <div class="item-sub">{{ $item->product->unit }}</div>
-                @endif
-            </td>
-            <td class="r">{{ number_format($item->quantity, 2) }}</td>
-            <td class="r">{{ number_format($item->rate, 2) }}</td>
-            <td class="r">
-                @if($gstValue > 0)
-                    {{ $gstValue }}{{ $gstType }}
-                @else
-                    —
-                @endif
-            </td>
-            <td class="r" style="color:#27ae60;font-size:11px">
-                @if($gstAmount > 0)
-                    ₹{{ number_format($gstAmount, 2) }}
-                @else
-                    —
-                @endif
-            </td>
-            <td class="r" style="font-weight:600">{{ number_format($item->amount, 2) }}</td>
-        </tr>
-        @endforeach
-    </tbody>
-</table>
+                {{-- ④ Items Table --}}
+                <table class="items-tbl">
+                    <colgroup>
+                        <col style="width:52px"><col>
+                        <col style="width:60px"><col style="width:80px">
+                        <col style="width:90px"><col style="width:90px">
+                        <col style="width:110px">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item &amp; Description</th>
+                            <th class="r">Qty</th>
+                            <th class="r">Rate</th>
+                            <th class="r">GST%</th>
+                            <th class="r">GST Amt</th>
+                            <th class="r">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($invoice->items as $i => $item)
+                        @php
+                            $gst = is_string($item->gst_data)
+                                ? json_decode($item->gst_data, true)
+                                : ($item->gst_data ?? []);
+                            $gstValue  = $gst['value']  ?? 0;
+                            $gstType   = $gst['type']   ?? '%';
+                            $gstAmount = $gst['amount'] ?? 0;
+                        @endphp
+                        <tr>
+                            <td class="num">{{ $i + 1 }}</td>
+                            <td>
+                                <div class="item-name">{{ $item->item_name }}</div>
+                                @if($item->product && $item->product->unit)
+                                <div class="item-sub">{{ $item->product->unit }}</div>
+                                @endif
+                            </td>
+                            <td class="r">{{ number_format($item->quantity, 2) }}</td>
+                            <td class="r">{{ number_format($item->rate, 2) }}</td>
+                            <td class="r">
+                                @if($gstValue > 0) {{ $gstValue }}{{ $gstType }} @else — @endif
+                            </td>
+                            <td class="r" style="color:#27ae60;font-size:11px">
+                                @if($gstAmount > 0) ₹{{ number_format($gstAmount, 2) }} @else — @endif
+                            </td>
+                            <td class="r" style="font-weight:600">{{ number_format($item->amount, 2) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
 
-             {{-- ⑤ Totals + Words --}}
-<div class="bottom-section">
-    <div class="words-block">
-        <div class="words-lbl">Total In Words</div>
-        <div class="words-val">{{ numberToWords($invoice->grand_total) }}</div>
-    </div>
-    <div class="totals-block">
-        <div class="tot-row">
-            <span class="tl">Sub Total</span>
-            <span>{{ number_format($invoice->subtotal, 2) }}</span>
-        </div>
-
-        @if(($invoice->discount_amount ?? 0) > 0)
-        <div class="tot-row">
-            <span class="tl">Discount</span>
-            <span>− {{ number_format($invoice->discount_amount, 2) }}</span>
-        </div>
-        @endif
-
-        @if(($invoice->tax_amount ?? 0) > 0)
-        <div class="tot-row">
-            <span class="tl">{{ $invoice->tax_type }} ({{ $invoice->tax_percent }}%)</span>
-            <span>{{ number_format($invoice->tax_amount, 2) }}</span>
-        </div>
-        @endif
-<!-- 
-        @if(($invoice->adjustment ?? 0) != 0)
-        <div class="tot-row">
-            <span class="tl">Adjustment</span>
-            <span>{{ number_format($invoice->adjustment, 2) }}</span>
-        </div>
-        @endif -->
-
-        {{-- ✅ COURIER CHARGES --}}
-        @if(($invoice->courier_charges ?? 0) > 0)
-        <div class="tot-row">
-            <span class="tl">🚚 Courier Charges</span>
-            <span>{{ number_format($invoice->courier_charges, 2) }}</span>
-        </div>
-        @endif
-
-            {{-- ✅ EXTRA CHARGES - DB format: {"vocher": 100, "Brochure": 100} --}}
-            @if(!empty($invoice->extra_charges))
-                @php
-                    $extraCharges = is_string($invoice->extra_charges)
-                        ? json_decode($invoice->extra_charges, true)
-                        : $invoice->extra_charges;
-                @endphp
-                @if(is_array($extraCharges))
-                  @foreach($extraCharges as $label => $amount)
-            @if($amount != 0)
-            <div class="tot-row">
-                <span class="tl">{{ $label }}</span>
-                <span style="{{ $amount < 0 ? 'color:#e05050' : '' }}">
-                    {{ $amount < 0 ? '− ' . number_format(abs($amount), 2) : number_format($amount, 2) }}
-                </span>
-            </div>
-            @endif
-        @endforeach
-                        @endif
-            @endif
-
-        <div class="tot-row grand">
-            <span>Total</span>
-            <span>₹{{ number_format($invoice->grand_total, 2) }}</span>
-        </div>
-        <div class="tot-row balance">
-            <span>Balance Due</span>
-            <span>₹{{ number_format($invoice->grand_total, 2) }}</span>
-        </div>
-    </div>
-</div>
-
-                {{-- ⑥ Notes + Signature --}}
-                <div class="notes-sig">
-                    <div>
+                {{-- ⑤ Totals + Words --}}
+                <div class="bottom-section">
+                    <div class="words-block">
+                        <div class="words-lbl">Total In Words</div>
+                        <div class="words-val">{{ numberToWords($invoice->grand_total) }}</div>
                         @if($invoice->customer_notes)
-                        <div class="notes-lbl">Notes</div>
-                        <div class="notes-text">{{ $invoice->customer_notes }}</div>
+                        <div style="margin-top:16px;">
+                            <div class="notes-lbl">Notes</div>
+                            <div class="notes-text">{{ $invoice->customer_notes }}</div>
+                        </div>
                         @endif
                     </div>
+                    <div class="totals-block">
+
+                        <div class="tot-row">
+                            <span class="tl">Sub Total</span>
+                            <span>{{ number_format($invoice->subtotal, 2) }}</span>
+                        </div>
+
+                        @if(($invoice->discount_amount ?? 0) > 0)
+                        <div class="tot-row">
+                            <span class="tl">Discount</span>
+                            <span>− {{ number_format($invoice->discount_amount, 2) }}</span>
+                        </div>
+                        @endif
+
+                        @if(($invoice->tax_amount ?? 0) > 0)
+                        <div class="tot-row">
+                            <span class="tl">{{ $invoice->tax_type }} ({{ $invoice->tax_percent }}%)</span>
+                            <span>{{ number_format($invoice->tax_amount, 2) }}</span>
+                        </div>
+                        @endif
+
+                        @if(($invoice->courier_charges ?? 0) > 0)
+                        <div class="tot-row">
+                            <span class="tl">🚚 Courier Charges</span>
+                            <span>{{ number_format($invoice->courier_charges, 2) }}</span>
+                        </div>
+                        @endif
+
+                        @if(!empty($invoice->extra_charges))
+                        @php
+                            $extraCharges = is_string($invoice->extra_charges)
+                                ? json_decode($invoice->extra_charges, true)
+                                : $invoice->extra_charges;
+                        @endphp
+                        @if(is_array($extraCharges))
+                            @foreach($extraCharges as $label => $amount)
+                            @if($amount != 0)
+                            <div class="tot-row">
+                                <span class="tl">{{ $label }}</span>
+                                <span>{{ $amount < 0 ? '− '.number_format(abs($amount),2) : number_format($amount,2) }}</span>
+                            </div>
+                            @endif
+                            @endforeach
+                        @endif
+                        @endif
+
+                        {{-- Grand Total --}}
+                        <div class="tot-row grand">
+                            <span>Total</span>
+                            <span>₹{{ number_format($invoice->grand_total, 2) }}</span>
+                        </div>
+
+                        {{-- ✅ Payment Made row --}}
+                        @if($amountReceived > 0)
+                        <div style="display:flex;justify-content:space-between;
+                                    padding:5px 0;font-size:12px;
+                                    border-top:1px solid #dde2e8;margin-top:4px;">
+                            <span style="color:#555;font-weight:500;">Payment Made</span>
+                            <span style="color:#e05050;font-weight:600;">
+                                (-) {{ number_format($amountReceived, 2) }}
+                            </span>
+                        </div>
+                        @endif
+
+                        {{-- ✅ Balance Due --}}
+                        <div style="display:flex;justify-content:space-between;align-items:center;
+                                    padding:9px 0 6px;margin-top:3px;
+                                    border-top:2px solid #1a2332;
+                                    font-size:14px;font-weight:800;
+                                    color:{{ $balanceDue == 0 ? '#166534' : '#1a1a2e' }};">
+                            <span>Balance Due</span>
+                            <span>₹{{ number_format($balanceDue, 2) }}</span>
+                        </div>
+
+                        {{-- ✅ Payment Status Badge --}}
+                        @if($payStatus === 'paid')
+                        <div style="text-align:right;margin-top:8px;">
+                            <span style="background:#dcfce7;color:#166534;
+                                         padding:4px 14px;border-radius:4px;
+                                         font-size:11px;font-weight:700;
+                                         border:1px solid #22c55e;">
+                                ✓ FULLY PAID
+                            </span>
+                        </div>
+                        @elseif($payStatus === 'partial')
+                        <div style="text-align:right;margin-top:8px;">
+                            <span style="background:#fef3c7;color:#92400e;
+                                         padding:4px 14px;border-radius:4px;
+                                         font-size:11px;font-weight:700;
+                                         border:1px solid #f59e0b;">
+                                ½ PARTIALLY PAID
+                            </span>
+                        </div>
+                        @endif
+
+                    </div>
+                </div>
+
+                {{-- ⑥ Signature --}}
+                <div class="notes-sig">
+                    <div></div>
                     <div class="sig-block">
                         <div class="sig-line">Authorized Signature</div>
                     </div>
                 </div>
 
-            </div>{{-- end invoice-paper --}}
-        </div>{{-- end detail-scroll --}}
-    </div>{{-- end detail-area --}}
+            </div>{{-- end .invoice-paper --}}
+
+        </div>{{-- end .detail-scroll --}}
+    </div>{{-- end .detail-area --}}
 
     {{-- ── COMMENTS PANEL ── --}}
-<div class="comments-panel" id="comments-panel">
-    <div class="cp-header">
-        <div class="cp-title">Comments &amp; History</div>
-        <button class="cp-close" onclick="toggleComments()">✕</button>
-    </div>
- 
-    {{-- Comment input --}}
-    <div class="cp-editor">
-        <div class="cp-toolbar">
-            <button class="cp-fmt"><strong>B</strong></button>
-            <button class="cp-fmt"><em>I</em></button>
-            <button class="cp-fmt"><u>U</u></button>
+    <div class="comments-panel" id="comments-panel">
+        <div class="cp-header">
+            <div class="cp-title">Comments &amp; History</div>
+            <button class="cp-close" onclick="toggleComments()">✕</button>
         </div>
-        <textarea class="cp-textarea" id="comment-input" placeholder="Write a comment..."></textarea>
-        <button class="cp-add" onclick="addComment()">Add Comment</button>
+        <div class="cp-editor">
+            <div class="cp-toolbar">
+                <button class="cp-fmt"><strong>B</strong></button>
+                <button class="cp-fmt"><em>I</em></button>
+                <button class="cp-fmt"><u>U</u></button>
+            </div>
+            <textarea class="cp-textarea" id="comment-input" placeholder="Write a comment..."></textarea>
+            <button class="cp-add" onclick="addComment()">Add Comment</button>
+        </div>
+        <div class="cp-section-lbl">
+            ALL COMMENTS &amp; HISTORY
+            <span class="cp-badge" id="history-count">{{ $histories->count() }}</span>
+        </div>
+        <div class="cp-scroll" id="history-scroll">
+            @forelse($histories as $h)
+            @php
+                $colorBg = [
+                    'green'  => '#dcfce7', 'blue'   => '#dbeafe',
+                    'orange' => '#fef3c7', 'red'    => '#fef2f2',
+                    'purple' => '#f3e8ff', 'teal'   => '#ccfbf1',
+                    'gray'   => '#f1f5f9',
+                ];
+                $colorFg = [
+                    'green'  => '#166534', 'blue'   => '#1e40af',
+                    'orange' => '#92400e', 'red'    => '#991b1b',
+                    'purple' => '#6b21a8', 'teal'   => '#0f766e',
+                    'gray'   => '#475569',
+                ];
+                $hBg = $colorBg[$h['color_class']] ?? '#f1f5f9';
+                $hFg = $colorFg[$h['color_class']] ?? '#475569';
+            @endphp
+            <div class="cp-item">
+                <div class="cp-avatar"
+                     style="background:{{ $hBg }};color:{{ $hFg }};
+                            width:28px;height:28px;border-radius:6px;
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:12px;font-weight:600;flex-shrink:0;">
+                    {{ $h['user_initials'] }}
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div class="cp-meta">
+                        <span class="cp-name">{{ $h['user'] }}</span>
+                        <span class="cp-time" title="{{ $h['time'] }}">• {{ $h['time_human'] }}</span>
+                    </div>
+                    @if($h['invoice_number'])
+                    <div style="font-size:10px;color:#4a90d9;font-weight:600;margin-bottom:3px;">
+                        📄 {{ $h['invoice_number'] }}
+                    </div>
+                    @endif
+                    <div class="cp-text">{!! $h['description'] !!}</div>
+                    <div style="font-size:10px;color:#bbb;margin-top:2px;">{{ $h['time'] }}</div>
+                </div>
+            </div>
+            @empty
+            <div id="empty-history" style="text-align:center;padding:30px;color:#aaa;font-size:13px;">
+                <div style="font-size:24px;margin-bottom:8px;">📋</div>
+                No history yet.
+            </div>
+            @endforelse
+        </div>
     </div>
- 
-   {{-- Section label --}}
-<div class="cp-section-lbl">
-    ALL COMMENTS &amp; HISTORY
-    <span class="cp-badge" id="history-count">{{ $histories->count() }}</span>
-</div>
 
-<div class="cp-scroll" id="history-scroll">
-    @forelse($histories as $h)
-<div class="cp-item">
-    <div class="cp-avatar ..." style="...">
-        {{ $h['user_initials'] }}
+    {{-- ── RECORD PAYMENT MODAL ── --}}
+<div id="payment-modal-overlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+            z-index:1000;align-items:center;justify-content:center;">
+<div style="background:#fff;border-radius:10px;width:580px;max-height:90vh;
+            overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2);
+            animation:modalIn 0.2s ease;">
+
+    {{-- Modal Header --}}
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 24px;border-bottom:1px solid #e3e6ea;">
+        <div>
+            <div style="font-size:16px;font-weight:700;color:#1a1a2e;">
+                Payment for {{ $invoice->invoice_number }}
+            </div>
+        </div>
+        <button onclick="closePaymentModal()"
+                style="background:none;border:none;font-size:20px;color:#888;
+                       cursor:pointer;line-height:1;">✕</button>
     </div>
-    <div>
-        <div class="cp-meta">
-            <span class="cp-name">{{ $h['user'] }}</span>
-            <span class="cp-time">• {{ $h['time_human'] }}</span>
+
+    {{-- Balance Due Banner --}}
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:10px 24px;background:#fefce8;border-bottom:1px solid #fef08a;">
+        <span style="font-size:12px;color:#92400e;font-weight:500;">Balance Due</span>
+        <span style="font-size:16px;font-weight:700;color:#92400e;" id="modal-balance-due">
+            ₹{{ number_format($balanceDue, 2) }}
+        </span>
+    </div>
+
+    {{-- Form Body --}}
+    <div style="padding:24px;" id="payment-modal-body">
+
+        <div id="modal-error" style="display:none;background:#fef2f2;color:#991b1b;
+             border:1px solid #fecaca;padding:10px 14px;border-radius:6px;
+             margin-bottom:16px;font-size:13px;"></div>
+
+        <div id="modal-success" style="display:none;background:#ecfdf5;color:#065f46;
+             border:1px solid #a7f3d0;padding:10px 14px;border-radius:6px;
+             margin-bottom:16px;font-size:13px;"></div>
+
+        {{-- Row 1: Customer | Payment # --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Customer Name</label>
+                <input type="text" value="{{ $invoice->customer->display_name ?? '' }}"
+                       readonly style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;background:#f8f9fa;color:#666;width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Payment #<span style="color:#e05050;margin-left:2px;">*</span></label>
+                <input type="text" id="modal-payment-number"
+                       value="{{ $paymentNumber }}"
+                       style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+            </div>
         </div>
 
-        {{-- Invoice number badge — எந்த invoice என்று தெரியும் --}}
-        @if($h['invoice_number'])
-        <div style="font-size:10px;color:#4a90d9;font-weight:600;margin-bottom:3px;">
-            📄 {{ $h['invoice_number'] }}
+        {{-- Row 2: Location --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Location</label>
+                <select id="modal-location"
+                        style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                        padding:0 10px;font-size:13px;width:100%;outline:none;">
+                    @foreach($locations as $loc)
+                    <option value="{{ $loc->id }}"
+                        {{ $loc->id == $invoice->location ? 'selected' : '' }}>
+                        {{ $loc->location_name }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            <div></div>
         </div>
-        @endif
 
-        <div class="cp-text">{!! $h['description'] !!}</div>
-        <div style="font-size:10px;color:#bbb;margin-top:2px;">{{ $h['time'] }}</div>
+        <hr style="border:none;border-top:1px solid #e3e6ea;margin:4px 0 20px;">
+
+        {{-- Row 3: Amount | Bank Charges --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#e05050;">Amount Received (INR)<span style="color:#e05050;margin-left:2px;">*</span></label>
+                <input type="number" id="modal-amount" step="0.01" min="0.01"
+                       value="{{ number_format($balanceDue, 2, '.', '') }}"
+                       style="height:36px;border:2px solid #4a90d9;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+                @if($invoice->customer->pan_number ?? null)
+                <span style="font-size:11px;color:#4a90d9;margin-top:3px;">
+                    PAN: {{ $invoice->customer->pan_number }}
+                </span>
+                @endif
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Bank Charges (if any)</label>
+                <input type="number" id="modal-bank-charges" step="0.01" min="0" value="0"
+                       style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+            </div>
+        </div>
+
+        {{-- Row 4: Tax deducted --}}
+        <div style="margin-bottom:20px;">
+            <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:8px;">Tax deducted?</label>
+            <div style="display:flex;align-items:center;gap:20px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                    <input type="radio" name="modal_tax" value="no" checked style="accent-color:#4a90d9;width:15px;height:15px;">
+                    No Tax deducted
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                    <input type="radio" name="modal_tax" value="tds" style="accent-color:#4a90d9;width:15px;height:15px;">
+                    Yes, TDS (Income Tax)
+                </label>
+            </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #e3e6ea;margin:4px 0 20px;">
+
+        {{-- Row 5: Payment Date | Payment Mode --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#e05050;">Payment Date<span style="color:#e05050;margin-left:2px;">*</span></label>
+                <input type="date" id="modal-payment-date" value="{{ date('Y-m-d') }}"
+                       style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Payment Mode</label>
+                <select id="modal-payment-mode"
+                        style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                        padding:0 10px;font-size:13px;width:100%;outline:none;">
+                    <option value="Cash" selected>Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Net Banking">Net Banking</option>
+                </select>
+            </div>
+        </div>
+
+        {{-- Row 6: Received On | Deposit To --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Payment Received On</label>
+                <input type="date" id="modal-received-on"
+                       style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#e05050;">Deposit To<span style="color:#e05050;margin-left:2px;">*</span></label>
+                <select id="modal-deposit-to"
+                        style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                        padding:0 10px;font-size:13px;width:100%;outline:none;">
+                    <option value="Petty Cash" selected>Petty Cash</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Savings Account">Savings Account</option>
+                    <option value="Current Account">Current Account</option>
+                </select>
+            </div>
+        </div>
+
+        {{-- Row 7: Reference | Notes --}}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Reference#</label>
+                <input type="text" id="modal-reference"
+                       style="height:36px;border:1px solid #e3e6ea;border-radius:5px;
+                       padding:0 10px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <label style="font-size:12px;font-weight:600;color:#6b7280;">Notes</label>
+                <textarea id="modal-notes"
+                          style="height:72px;border:1px solid #e3e6ea;border-radius:5px;
+                          padding:8px 10px;font-size:13px;width:100%;outline:none;resize:vertical;"></textarea>
+            </div>
+        </div>
+
+        {{-- Thank you checkbox --}}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <input type="checkbox" id="modal-thankyou" value="1"
+                   style="accent-color:#4a90d9;width:15px;height:15px;">
+            <label for="modal-thankyou" style="font-size:13px;color:#1a1a2e;cursor:pointer;">
+                Send a "Thank you" note for this payment
+            </label>
+        </div>
+
+    </div>{{-- end modal body --}}
+
+    {{-- Modal Footer --}}
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 24px;
+                border-top:1px solid #e3e6ea;background:#fafbfc;">
+        <button onclick="submitPayment('draft')"
+                style="height:36px;padding:0 20px;background:#fff;color:#444;
+                       border:1px solid #e3e6ea;border-radius:5px;font-size:13px;
+                       font-weight:500;cursor:pointer;"
+                id="modal-draft-btn">
+            Save as Draft
+        </button>
+        <button onclick="submitPayment('paid')"
+                style="height:36px;padding:0 20px;background:#4a90d9;color:#fff;
+                       border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;"
+                id="modal-paid-btn">
+            Save as Paid
+        </button>
+        <button onclick="closePaymentModal()"
+                style="height:36px;padding:0 16px;background:none;color:#e05050;
+                       border:none;font-size:13px;cursor:pointer;margin-left:auto;">
+            Cancel
+        </button>
     </div>
-</div>  
-@empty
-    <div id="empty-history" style="text-align:center;padding:30px;color:#aaa;font-size:13px;">
-        <div style="font-size:24px;margin-bottom:8px;">📋</div>
-        No history yet.
-    </div>
-    @endforelse
+
 </div>
 </div>
+</div>{{-- end .root-layout --}}
 
 <script>
-function toggleComments() {
-    document.getElementById('comments-panel').classList.toggle('open');
-}
 const INVOICE_ID = {{ $invoice->id }};
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
- 
-// ── Toggle Comments Panel ──
+const PAYMENT_STORE_URL = '{{ route("invoices.payment.store", $invoice->id) }}';
+
 function toggleComments() {
     document.getElementById('comments-panel').classList.toggle('open');
 }
- 
-// ── Add Comment ──
+
 function addComment() {
     const textarea = document.getElementById('comment-input');
     const text     = textarea.value.trim();
- 
-    if (!text) {
-        textarea.focus();
-        textarea.style.borderColor = '#e05050';
-        return;
-    }
+    if (!text) { textarea.focus(); textarea.style.borderColor = '#e05050'; return; }
     textarea.style.borderColor = '';
- 
+
     fetch(`/invoices/${INVOICE_ID}/comment`, {
         method: 'POST',
         headers: {
-            'Content-Type':  'application/json',
-            'X-CSRF-TOKEN':  CSRF_TOKEN,
+            'Content-Type':     'application/json',
+            'X-CSRF-TOKEN':     CSRF_TOKEN,
             'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({ comment: text }),
@@ -1050,10 +1388,10 @@ function addComment() {
         if (data.success) {
             prependHistoryItem({
                 action:        'comment',
-                user:          'You',
-                user_initials: 'Y',
+                user:          data.comment.user_name || 'You',
+                user_initials: (data.comment.user_name || 'U').charAt(0).toUpperCase(),
                 time_human:    'Just now',
-                time:          new Date().toLocaleString('en-IN'),
+                time:          data.comment.created_at,
                 description:   escapeHtml(text),
                 color_class:   'purple',
             });
@@ -1064,67 +1402,47 @@ function addComment() {
     })
     .catch(() => alert('Network error.'));
 }
- 
-// ── Prepend new history item to panel ──
+
 function prependHistoryItem(h) {
-    const scroll    = document.getElementById('history-scroll');
-    const emptyEl   = document.getElementById('empty-history');
-    const countEl   = document.getElementById('history-count');
- 
+    const scroll  = document.getElementById('history-scroll');
+    const emptyEl = document.getElementById('empty-history');
+    const countEl = document.getElementById('history-count');
     if (emptyEl) emptyEl.remove();
- 
-    const colorBg = {
-        green: '#dcfce7', blue: '#dbeafe', orange: '#fef3c7',
-        red: '#fef2f2', purple: '#f3e8ff', teal: '#ccfbf1', gray: '#f1f5f9',
-    };
-    const colorFg = {
-        green: '#166534', blue: '#1e40af', orange: '#92400e',
-        red: '#991b1b', purple: '#6b21a8', teal: '#0f766e', gray: '#475569',
-    };
- 
+
+    const colorBg = { green:'#dcfce7', blue:'#dbeafe', orange:'#fef3c7', red:'#fef2f2', purple:'#f3e8ff', teal:'#ccfbf1', gray:'#f1f5f9' };
+    const colorFg = { green:'#166534', blue:'#1e40af', orange:'#92400e', red:'#991b1b', purple:'#6b21a8', teal:'#0f766e', gray:'#475569' };
     const bg = colorBg[h.color_class] ?? colorBg.gray;
     const fg = colorFg[h.color_class] ?? colorFg.gray;
- 
+
     const div = document.createElement('div');
     div.className = 'cp-item';
-    div.dataset.action = h.action;
     div.innerHTML = `
-        <div class="cp-avatar"
-             style="background:${bg};color:${fg};width:28px;height:28px;
-                    border-radius:6px;display:flex;align-items:center;
-                    justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;">
+        <div style="background:${bg};color:${fg};width:28px;height:28px;border-radius:6px;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:12px;font-weight:600;flex-shrink:0;">
             ${h.user_initials}
         </div>
         <div style="flex:1;min-width:0;">
             <div class="cp-meta">
                 <span class="cp-name">${escapeHtml(h.user)}</span>
-                <span class="cp-time" title="${h.time}">• ${h.time_human}</span>
+                <span class="cp-time">• ${h.time_human}</span>
             </div>
             <div class="cp-text">${h.description}</div>
             <div style="font-size:10px;color:#bbb;margin-top:2px;">${h.time}</div>
-        </div>
-    `;
- 
-    // Animate in
-    div.style.opacity   = '0';
-    div.style.transform = 'translateY(-8px)';
+        </div>`;
+
+    div.style.cssText = 'display:flex;gap:9px;margin-bottom:14px;opacity:0;transform:translateY(-8px);';
     scroll.prepend(div);
     requestAnimationFrame(() => {
         div.style.transition = 'opacity 0.25s, transform 0.25s';
         div.style.opacity    = '1';
         div.style.transform  = 'translateY(0)';
     });
- 
-    // Count update
     if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
 }
- 
+
 function escapeHtml(str) {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 @php
@@ -1148,9 +1466,9 @@ function numberToWords(float $number): string {
 
     if ($rupees === 0) { $result = 'Zero'; }
     else {
-        $crore  = (int)($rupees / 10000000); $rupees %= 10000000;
-        $lakh   = (int)($rupees / 100000);   $rupees %= 100000;
-        $thou   = (int)($rupees / 1000);     $rupees %= 1000;
+        $crore = (int)($rupees / 10000000); $rupees %= 10000000;
+        $lakh  = (int)($rupees / 100000);   $rupees %= 100000;
+        $thou  = (int)($rupees / 1000);     $rupees %= 1000;
         $result = '';
         if ($crore)  $result .= trim(convertGroup($crore,  $ones, $tens)) . ' Crore ';
         if ($lakh)   $result .= trim(convertGroup($lakh,   $ones, $tens)) . ' Lakh ';
@@ -1161,12 +1479,103 @@ function numberToWords(float $number): string {
 
     $words = 'Indian Rupee ' . $result . ' Only';
     if ($paise > 0) {
-        $words = 'Indian Rupee ' . $result . ' and ' . trim(convertGroup($paise, $ones, $tens)) . 'Paise Only';
+        $words = 'Indian Rupee ' . $result . ' and ' .
+                 trim(convertGroup($paise, $ones, $tens)) . 'Paise Only';
     }
     return $words;
 }
 @endphp
 
+function openPaymentModal() {
+    document.getElementById('payment-modal-overlay').style.display = 'flex';
+    document.getElementById('modal-error').style.display   = 'none';
+    document.getElementById('modal-success').style.display = 'none';
+}
+
+function closePaymentModal() {
+    document.getElementById('payment-modal-overlay').style.display = 'none';
+}
+
+// Close on overlay click
+document.getElementById('payment-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closePaymentModal();
+});
+
+async function submitPayment(action) {
+    const amount      = document.getElementById('modal-amount').value;
+    const payDate     = document.getElementById('modal-payment-date').value;
+    const payMode     = document.getElementById('modal-payment-mode').value;
+    const depositTo   = document.getElementById('modal-deposit-to').value;
+    const payNumber   = document.getElementById('modal-payment-number').value;
+    const bankCharges = document.getElementById('modal-bank-charges').value;
+    const reference   = document.getElementById('modal-reference').value;
+    const notes       = document.getElementById('modal-notes').value;
+    const locationId  = document.getElementById('modal-location').value;
+    const taxDeducted = document.querySelector('input[name="modal_tax"]:checked')?.value || 'no';
+
+    if (!amount || parseFloat(amount) <= 0) { showModalError('Please enter a valid amount.'); return; }
+    if (!payDate)   { showModalError('Please select payment date.'); return; }
+    if (!payNumber) { showModalError('Please enter payment number.'); return; }
+
+    const paidBtn  = document.getElementById('modal-paid-btn');
+    const draftBtn = document.getElementById('modal-draft-btn');
+    paidBtn.disabled  = true;
+    draftBtn.disabled = true;
+    paidBtn.textContent = 'Saving...';
+
+    try {
+        const formData = new FormData();
+        formData.append('_token',          CSRF_TOKEN);
+        formData.append('action',          action);
+        formData.append('payment_number',  payNumber);
+        formData.append('amount_received', amount);
+        formData.append('payment_date',    payDate);
+        formData.append('payment_mode',    payMode);
+        formData.append('deposit_to',      depositTo);
+        formData.append('bank_charges',    bankCharges || '0');
+        formData.append('reference',       reference);
+        formData.append('notes',           notes);
+        formData.append('location_id',     locationId);
+        formData.append('tax_deducted',    taxDeducted);
+
+        const res = await fetch(PAYMENT_STORE_URL, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData,
+        });
+
+        // ✅ இங்கே தான் place பண்ணணும்
+        const data = await res.json();
+        if (data.success) {
+            showModalSuccess(data.message || 'Payment recorded successfully!');
+            setTimeout(() => window.location.reload(), 1200);
+        } else {
+            showModalError(data.message || 'Failed to save payment.');
+        }
+
+    } catch(e) {
+        showModalError('Network error. Please try again.');
+    } finally {
+        paidBtn.disabled    = false;
+        draftBtn.disabled   = false;
+        paidBtn.textContent = 'Save as Paid';
+    }
+}
+
+function showModalError(msg) {
+    const el = document.getElementById('modal-error');
+    el.textContent    = msg;
+    el.style.display  = 'block';
+    document.getElementById('modal-success').style.display = 'none';
+}
+
+function showModalSuccess(msg) {
+    const el = document.getElementById('modal-success');
+    el.textContent    = msg;
+    el.style.display  = 'block';
+    document.getElementById('modal-error').style.display = 'none';
+}
+
 </script>
- </body>
+</body>
 </html>

@@ -14,9 +14,56 @@ class PriceListController extends Controller
         return view('products.pricelistindex', compact('priceLists'));
     }
 
+    // ── Helper: Flatten products + variants into a single list ────────────────
+    private function getFlatItems()
+    {
+        $products = Product::all();
+        $flatItems = [];
+
+        foreach ($products as $product) {
+            $variantsRaw = $product->variants_data;
+
+            // Decode if it's a string
+            if (is_string($variantsRaw)) {
+                $variantsRaw = json_decode($variantsRaw, true);
+            }
+
+            $variants = $variantsRaw['variants'] ?? [];
+
+            if (!empty($variants)) {
+                // Product has variants → add each variant as a separate row
+                foreach ($variants as $variant) {
+                    $flatItems[] = [
+                        'id'            => $product->id . '__' . ($variant['sku'] ?? $variant['name']),
+                        'name'          => $product->name . ' - ' . $variant['name'],
+                        'sku'           => $variant['sku'] ?? '',
+                        'selling_price' => (float)($variant['selling_price'] ?? 0),
+                        'cost_price'    => (float)($variant['cost_price'] ?? 0),
+                        'variant_name'  => $variant['name'],
+                        'parent_id'     => $product->id,
+                    ];
+                }
+            } else {
+                // No variants → add product directly
+                $flatItems[] = [
+                    'id'            => $product->id,
+                    'name'          => $product->name,
+                    'sku'           => $product->sku ?? '',
+                    'selling_price' => (float)($product->selling_price ?? 0),
+                    'cost_price'    => (float)($product->cost_price ?? 0),
+                    'variant_name'  => null,
+                    'parent_id'     => null,
+                ];
+            }
+        }
+
+        return $flatItems;
+    }
+
     public function create()
     {
-        $items = Product::all();
+        $items = $this->getFlatItems();
+
         $categories = \App\Models\UserCategory::whereNull('deleted_at')
             ->orderBy('sort_order')
             ->get(['id', 'name', 'location_label', 'assign_fix_location', 'country_id']);
@@ -25,12 +72,12 @@ class PriceListController extends Controller
     }
 
     // ── Helper: items[] array → JSON structure ────────────────────────────────
-    private function buildItemsJson(Request $request, $allProducts): array
+    private function buildItemsJson(Request $request, $allFlatItems): array
     {
         $unit       = [];
         $volume     = [];
         $items      = $request->input('items', []);
-        $productMap = collect($allProducts)->keyBy('id');
+        $productMap = collect($allFlatItems)->keyBy('id');
         $txn        = $request->input('transaction_type', 'sales');
 
         foreach ($items as $row) {
@@ -39,16 +86,18 @@ class PriceListController extends Controller
 
             $product   = $productMap->get($itemId);
             $salesRate = $product
-                ? ($txn === 'purchase' ? (float)$product->cost_price : (float)$product->selling_price)
+                ? ($txn === 'purchase'
+                    ? (float)($product['cost_price'] ?? 0)
+                    : (float)($product['selling_price'] ?? 0))
                 : null;
 
             $range = [
-                'sales_rate'  => $salesRate,
-                'start_qty'   => (isset($row['start_quantity']) && $row['start_quantity'] !== '')
+                'sales_rate'   => $salesRate,
+                'start_qty'    => (isset($row['start_quantity']) && $row['start_quantity'] !== '')
                                     ? (int)$row['start_quantity'] : null,
-                'end_qty'     => (isset($row['end_quantity']) && $row['end_quantity'] !== '')
+                'end_qty'      => (isset($row['end_quantity']) && $row['end_quantity'] !== '')
                                     ? (int)$row['end_quantity'] : null,
-                'custom_rate' => (isset($row['custom_rate']) && $row['custom_rate'] !== '')
+                'custom_rate'  => (isset($row['custom_rate']) && $row['custom_rate'] !== '')
                                     ? (float)$row['custom_rate'] : 0,
             ];
 
@@ -57,14 +106,18 @@ class PriceListController extends Controller
             if ($scheme === 'volume') {
                 if (!isset($volume[$itemId])) {
                     $volume[$itemId] = [
-                        'product_name' => $product?->name ?? '',
+                        'product_name' => $product['name'] ?? '',
+                        'variant_name' => $product['variant_name'] ?? null,
+                        'parent_id'    => $product['parent_id'] ?? null,
                         'ranges'       => [],
                     ];
                 }
                 $volume[$itemId]['ranges'][] = $range;
             } else {
                 $unit[$itemId] = [
-                    'product_name' => $product?->name ?? '',
+                    'product_name' => $product['name'] ?? '',
+                    'variant_name' => $product['variant_name'] ?? null,
+                    'parent_id'    => $product['parent_id'] ?? null,
                     'ranges'       => [$range],
                 ];
             }
@@ -91,10 +144,9 @@ class PriceListController extends Controller
             'include_discount'  => 'nullable|boolean',
         ]);
 
-        // ── Build JSON only for individual_items ──────────────────────────────
         $unitJson = $volumeJson = null;
         if ($request->input('price_list_type') === 'individual_items') {
-            [$unitJson, $volumeJson] = $this->buildItemsJson($request, Product::all());
+            [$unitJson, $volumeJson] = $this->buildItemsJson($request, $this->getFlatItems());
         }
 
         PriceList::create([
@@ -122,7 +174,7 @@ class PriceListController extends Controller
     public function show($id)
     {
         $priceList  = PriceList::findOrFail($id);
-        $items      = Product::all();
+        $items      = $this->getFlatItems();
         $categories = \App\Models\UserCategory::whereNull('deleted_at')
             ->orderBy('sort_order')
             ->get(['id', 'name', 'location_label', 'assign_fix_location', 'country_id']);
@@ -133,7 +185,7 @@ class PriceListController extends Controller
     public function edit($id)
     {
         $priceList  = PriceList::findOrFail($id);
-        $items      = Product::all();
+        $items      = $this->getFlatItems();
         $categories = \App\Models\UserCategory::whereNull('deleted_at')
             ->orderBy('sort_order')
             ->get(['id', 'name', 'location_label', 'assign_fix_location', 'country_id']);
@@ -161,10 +213,9 @@ class PriceListController extends Controller
             'include_discount'  => 'nullable|boolean',
         ]);
 
-        // ── Build JSON only for individual_items ──────────────────────────────
         $unitJson = $volumeJson = null;
         if ($request->input('price_list_type') === 'individual_items') {
-            [$unitJson, $volumeJson] = $this->buildItemsJson($request, Product::all());
+            [$unitJson, $volumeJson] = $this->buildItemsJson($request, $this->getFlatItems());
         }
 
         $priceList->update([

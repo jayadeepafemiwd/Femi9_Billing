@@ -17,6 +17,7 @@ class InvoiceItem extends Model
         'rate',
         'gst_data',
         'amount',
+        'additional_data',
     ];
 
     // Relationships
@@ -31,6 +32,7 @@ class InvoiceItem extends Model
     }
 
 protected $casts = [
-    'gst_data' => 'array',  // ✅ auto JSON encode/decode
+    'gst_data' => 'array',  
+    'additional_data' => 'array',
 ];
 }

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('company_name', 255)->nullable();
             $table->string('display_name', 255);
             $table->string('email', 255)->nullable();
+            $table->decimal('unused_credits', 15, 2)->default(0);
             $table->string('phone_number', 20)->nullable();
 
             // Other Details

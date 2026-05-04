@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Cache;
 class CompositeItemController extends Controller
 {
     // ================================================================
-    //  SCHEMA — composite item ஒரே fields, extra associate_item_details
+    //  SCHEMA
     // ================================================================
 
     const SCHEMA = [
@@ -161,68 +161,62 @@ class CompositeItemController extends Controller
     // ================================================================
 
     private function uploadImage($file): string
-{
-    $publicFolder = public_path('image/product_img');
-    if (!is_dir($publicFolder)) {
-        mkdir($publicFolder, 0755, true);
-    }
+    {
+        $publicFolder = public_path('image/product_img');
+        if (!is_dir($publicFolder)) {
+            mkdir($publicFolder, 0755, true);
+        }
 
-    // ── Compress using GD ──
-    $mime    = $file->getMimeType();
-    $srcPath = $file->getRealPath();
+        $mime    = $file->getMimeType();
+        $srcPath = $file->getRealPath();
 
-    $src = match(true) {
-        str_contains($mime, 'png')  => imagecreatefrompng($srcPath),
-        str_contains($mime, 'gif')  => imagecreatefromgif($srcPath),
-        default                     => imagecreatefromjpeg($srcPath),
-    };
+        $src = match(true) {
+            str_contains($mime, 'png')  => imagecreatefrompng($srcPath),
+            str_contains($mime, 'gif')  => imagecreatefromgif($srcPath),
+            default                     => imagecreatefromjpeg($srcPath),
+        };
 
-    if (!$src) {
-        // GD fail ஆனா original file save பண்ணு
-        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-        $file->move($publicFolder, $filename);
-        return 'image/product_img/' . $filename;
-    }
+        if (!$src) {
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $file->move($publicFolder, $filename);
+            return 'image/product_img/' . $filename;
+        }
 
-    // Resize if > 1920
-    $origW = imagesx($src);
-    $origH = imagesy($src);
-    $maxDim = 1920;
+        $origW  = imagesx($src);
+        $origH  = imagesy($src);
+        $maxDim = 1920;
 
-    if ($origW > $maxDim || $origH > $maxDim) {
-        $ratio  = min($maxDim / $origW, $maxDim / $origH);
-        $newW   = (int) round($origW * $ratio);
-        $newH   = (int) round($origH * $ratio);
-        $resized = imagecreatetruecolor($newW, $newH);
-        // PNG transparency
-        imagefill($resized, 0, 0, imagecolorallocate($resized, 255, 255, 255));
-        imagecopyresampled($resized, $src, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
-        imagedestroy($src);
-        $src = $resized;
-    }
+        if ($origW > $maxDim || $origH > $maxDim) {
+            $ratio   = min($maxDim / $origW, $maxDim / $origH);
+            $newW    = (int) round($origW * $ratio);
+            $newH    = (int) round($origH * $ratio);
+            $resized = imagecreatetruecolor($newW, $newH);
+            imagefill($resized, 0, 0, imagecolorallocate($resized, 255, 255, 255));
+            imagecopyresampled($resized, $src, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+            imagedestroy($src);
+            $src = $resized;
+        }
 
-    // Save as JPEG with quality 85
-    $filename = time() . '_' . uniqid() . '.jpg';
-    $destPath = $publicFolder . DIRECTORY_SEPARATOR . $filename;
+        $filename = time() . '_' . uniqid() . '.jpg';
+        $destPath = $publicFolder . DIRECTORY_SEPARATOR . $filename;
 
-    // Try quality 85 first, reduce if > 800KB
-    $quality = 85;
-    ob_start();
-    imagejpeg($src, null, $quality);
-    $imgData = ob_get_clean();
-
-    while (strlen($imgData) > 800 * 1024 && $quality > 50) {
-        $quality -= 5;
+        $quality = 85;
         ob_start();
         imagejpeg($src, null, $quality);
         $imgData = ob_get_clean();
+
+        while (strlen($imgData) > 800 * 1024 && $quality > 50) {
+            $quality -= 5;
+            ob_start();
+            imagejpeg($src, null, $quality);
+            $imgData = ob_get_clean();
+        }
+
+        file_put_contents($destPath, $imgData);
+        imagedestroy($src);
+
+        return 'image/product_img/' . $filename;
     }
-
-    file_put_contents($destPath, $imgData);
-    imagedestroy($src);
-
-    return 'image/product_img/' . $filename;
-}
 
     private function deleteImage(string $path): void
     {
@@ -237,18 +231,92 @@ class CompositeItemController extends Controller
             $this->logError('IMAGE_DELETE', 'Failed to delete image', $e, ['path' => $path]);
         }
     }
+private function getAvailableItems(): \Illuminate\Support\Collection
+{
+    return Product::where('item_type', 'item')
+        ->where('type', 'goods')
+        ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image', 'variants_data', 'item_variant_type')
+        ->orderBy('name')
+        ->get()
+        ->flatMap(function ($product) {
+            $imageData = is_string($product->product_image)
+                ? json_decode($product->product_image, true)
+                : ($product->product_image ?? []);
+
+            if ($product->item_variant_type === 'contains_variants') {
+                $variantsData = is_string($product->variants_data)
+                    ? json_decode($product->variants_data, true)
+                    : ($product->variants_data ?? []);
+
+                $variants = $variantsData['variants'] ?? [];
+
+                if (!empty($variants)) {
+                    return collect($variants)->map(function ($variant) use ($product, $imageData) {
+                        // ItemVariant table-ல் DB id எடு
+                        $dbVariantId = \App\Models\ItemVariant::where('item_id', $product->id)
+                            ->where('name', $variant['name'] ?? '')
+                            ->value('id');
+
+                        return [
+                            // ── KEY FIX: "v_{id}" prefix use பண்ணு overlap தவிர்க்க ──
+                            'id'            => $dbVariantId ? 'v_' . $dbVariantId : 'vp_' . $product->id . '_' . ($variant['name'] ?? ''),
+                            'name'          => $product->name . ' (' . ($variant['name'] ?? '') . ')',
+                            'sku'           => $variant['sku'] ?? $product->sku,
+                            'unit'          => $product->unit,
+                            'selling_price' => (float) ($variant['selling_price'] ?? 0),
+                            'cost_price'    => (float) ($variant['cost_price'] ?? 0),
+                            'product_image' => $imageData,
+                            'is_variant'    => true,
+                            'variant_db_id' => $dbVariantId,
+                            'parent_id'     => $product->id,
+                        ];
+                    });
+                }
+            }
+
+            return [[
+                'id'            => $product->id,  // plain integer — no prefix
+                'name'          => $product->name,
+                'sku'           => $product->sku,
+                'unit'          => $product->unit,
+                'selling_price' => (float) ($product->selling_price ?? 0),
+                'cost_price'    => (float) ($product->cost_price ?? 0),
+                'product_image' => $imageData,
+                'is_variant'    => false,
+                'variant_db_id' => null,
+                'parent_id'     => null,
+            ]];
+        })
+        ->values();
+}
+    private function getAvailableServices(): \Illuminate\Support\Collection
+    {
+        return Product::where('item_type', 'item')
+            ->where('type', 'service')
+            ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($p) {
+                $imageData = is_string($p->product_image)
+                    ? json_decode($p->product_image, true)
+                    : ($p->product_image ?? []);
+                return [
+                    'id'            => $p->id,
+                    'name'          => $p->name,
+                    'sku'           => $p->sku,
+                    'unit'          => $p->unit,
+                    'selling_price' => (float) ($p->selling_price ?? 0),
+                    'cost_price'    => (float) ($p->cost_price ?? 0),
+                    'product_image' => $imageData,
+                ];
+            });
+    }
 
     // ================================================================
     //  ASSOCIATE ITEMS PARSER
-    //  ─────────────────────────────────────────────────────────────
-    //  Frontend JSON format:
-    //  {
-    //    "items":    [{ "product_id":1, "quantity":2, "selling_price":79, "cost_price":50 }],
-    //    "services": [{ "product_id":5, "quantity":1, "selling_price":0,  "cost_price":0  }]
-    //  }
     // ================================================================
 
-    private function parseAssociateItems(Request $request, array $existing = []): array
+   private function parseAssociateItems(Request $request, array $existing = []): array
     {
         $raw = $request->input('associate_items_json');
 
@@ -269,35 +337,58 @@ class CompositeItemController extends Controller
         $items    = [];
         $services = [];
 
-        foreach (($decoded['items'] ?? []) as $row) {
-            $productId = (int) ($row['product_id'] ?? 0);
-            if (!$productId) continue;
+        // ── Items ──
+       foreach (($decoded['items'] ?? []) as $row) {
+    $rawId     = $row['product_id'] ?? 0;
+    $isVariant = is_string($rawId) && str_starts_with($rawId, 'v_');
 
-            $product = Product::select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')->find($productId);
-            if (!$product) continue;
+    if ($isVariant) {
+        // v_123 → 123
+        $variantDbId = (int) str_replace('v_', '', $rawId);
+        $itemVariant = \App\Models\ItemVariant::find($variantDbId);
+        if (!$itemVariant) continue;
 
-            $qty = max(0, (float) ($row['quantity']      ?? 1));
-            $sp  = max(0, (float) ($row['selling_price'] ?? $product->selling_price ?? 0));
-            $cp  = max(0, (float) ($row['cost_price']    ?? $product->cost_price    ?? 0));
+        $parent  = Product::find($itemVariant->item_id);
+        $product = (object) [
+            'id'            => $rawId,
+            'name'          => ($parent->name ?? '') . ' (' . ($itemVariant->name ?? '') . ')',
+            'sku'           => $itemVariant->sku,
+            'unit'          => $parent->unit ?? null,
+            'selling_price' => (float) ($itemVariant->selling_price ?? 0),
+            'cost_price'    => (float) ($itemVariant->cost_price    ?? 0),
+        ];
+    } else {
+        $productId = (int) $rawId;
+        if (!$productId) continue;
 
-            $items[] = [
-                'product_id'         => $productId,
-                'name'               => $product->name,
-                'sku'                => $product->sku,
-                'unit'               => $product->unit,
-                'quantity'           => $qty,
-                'selling_price'      => $sp,
-                'cost_price'         => $cp,
-                'line_total_selling' => round($qty * $sp, 2),
-                'line_total_cost'    => round($qty * $cp, 2),
-            ];
-        }
+        $product = Product::select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')
+                           ->find($productId);
+        if (!$product) continue;
+    }
 
+    $qty = max(0, (float) ($row['quantity']      ?? 1));
+    $sp  = max(0, (float) ($row['selling_price'] ?? $product->selling_price ?? 0));
+    $cp  = max(0, (float) ($row['cost_price']    ?? $product->cost_price    ?? 0));
+
+    $items[] = [
+        'product_id'         => $rawId,   // v_123 or plain int
+        'name'               => $product->name,
+        'sku'                => $product->sku,
+        'unit'               => $product->unit,
+        'quantity'           => $qty,
+        'selling_price'      => $sp,
+        'cost_price'         => $cp,
+        'line_total_selling' => round($qty * $sp, 2),
+        'line_total_cost'    => round($qty * $cp, 2),
+    ];
+}
+        // ── Services ──
         foreach (($decoded['services'] ?? []) as $row) {
             $productId = (int) ($row['product_id'] ?? 0);
             if (!$productId) continue;
 
-            $service = Product::select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')->find($productId);
+            $service = Product::select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')
+                               ->find($productId);
             if (!$service) continue;
 
             $qty = max(0, (float) ($row['quantity']      ?? 1));
@@ -331,7 +422,7 @@ class CompositeItemController extends Controller
     }
 
     // ================================================================
-    //  VALIDATION RULES (DRY — shared by store & update)
+    //  VALIDATION RULES
     // ================================================================
 
     private function validationRules(?int $ignoreId = null): array
@@ -371,7 +462,6 @@ class CompositeItemController extends Controller
             'preferred_vendor_id'         => 'nullable|string',
             'category_id'                 => 'nullable|integer',
             'category_name'               => 'nullable|string|max:255',
-           
         ];
     }
 
@@ -380,40 +470,38 @@ class CompositeItemController extends Controller
     // ================================================================
 
     public function index(Request $request)
-{
-    try {
-        $query = Product::where('item_type', 'composite_item');
+    {
+        try {
+            $query = Product::where('item_type', 'composite_item');
 
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $query->where(fn($q) => $q->where('name', 'LIKE', "%{$s}%")
-                                      ->orWhere('sku', 'LIKE', "%{$s}%"));
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $query->where(fn($q) => $q->where('name', 'LIKE', "%{$s}%")
+                                          ->orWhere('sku', 'LIKE', "%{$s}%"));
+            }
+
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
+            }
+
+            $products = $query->latest()->paginate($request->per_page ?? 15);
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'data' => $products]);
+            }
+
+            $customFields = collect();
+
+            return view('products.composite.index', compact('products', 'customFields'));
+
+        } catch (\Exception $e) {
+            \Log::error('Composite index error: ' . $e->getMessage());
+
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $e->getMessage()], 500)
+                : redirect()->back()->with('error', $e->getMessage());
         }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        $products = $query->latest()->paginate($request->per_page ?? 15);
-
-        if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'data' => $products]);
-        }
-
-        // AdditionalSetting இல்லன்னா empty collection கொடு
-        $customFields = collect();
-
-        return view('products.composite.index', compact('products', 'customFields'));
-
-    } catch (\Exception $e) {
-        // Real error-ஐ log-ல பாருங்க
-        \Log::error('Composite index error: ' . $e->getMessage());
-
-        return $request->expectsJson()
-            ? response()->json(['success' => false, 'message' => $e->getMessage()], 500)
-            : redirect()->back()->with('error', $e->getMessage()); // ← real error show பண்றோம்
     }
-}
 
     // ================================================================
     //  CREATE
@@ -429,15 +517,9 @@ class CompositeItemController extends Controller
             $settingRow = \App\Models\SettingHandle::where('category_name', 'products')->first();
             $settings   = $settingRow?->config ?? [];
 
-        $availableItems = Product::where('item_type', 'item')
-    ->where('type', 'goods')
-    ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image')
-    ->orderBy('name')->get();
-
-$availableServices = Product::where('item_type', 'item')
-    ->where('type', 'service')
-    ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image')
-    ->orderBy('name')->get();
+            // ── Shared helpers — variants flatten included ──
+            $availableItems    = $this->getAvailableItems();
+            $availableServices = $this->getAvailableServices();
 
             return view('products.composite.create',
                 compact('brands', 'customFields', 'settings', 'availableItems', 'availableServices'));
@@ -468,17 +550,14 @@ $availableServices = Product::where('item_type', 'item')
 
             DB::beginTransaction();
 
-            // Image
             if ($request->hasFile('front_image')) {
                 $frontImagePath = $this->uploadImage($request->file('front_image'));
             }
 
-            // Brand name
             $brandName = $request->brand_id
                 ? Brand::find($request->brand_id)?->name
                 : null;
 
-            // Sanitize core fields
             $sanitized = $this->sanitizeData([
                 'name'                       => $request->name,
                 'type'                       => $request->type,
@@ -494,17 +573,15 @@ $availableServices = Product::where('item_type', 'item')
                 'is_returnable'              => $request->boolean('is_returnable', true),
             ]);
 
-            // Associate items (the key difference)
             $associateItemDetails = $this->parseAssociateItems($request);
 
-            // Additional data — same structure as ProductController
             $additionalData = array_merge(
                 $this->sanitizeCustomField($request->input('custom_field', [])),
                 [
-                    'upc'          => $request->upc,
-                    'mpn'          => $request->mpn,
-                    'ean'          => $request->ean,
-                    'isbn'         => $request->isbn,
+                    'upc'  => $request->upc,
+                    'mpn'  => $request->mpn,
+                    'ean'  => $request->ean,
+                    'isbn' => $request->isbn,
                 ],
                 [
                     'account_details' => [
@@ -522,14 +599,14 @@ $availableServices = Product::where('item_type', 'item')
                 ]
             );
 
-          $product = Product::create(array_merge($sanitized, [
-    'item_type'              => 'composite_item',
-    'item_variant_type'      => 'single',
-    'brand'                  => $brandName,
-    'product_image'          => json_encode(['front_image' => $frontImagePath]), // string column
-    'associate_item_details' => $associateItemDetails,  // array → cast handle பண்ணும்
-    'additional_data'        => $additionalData,        // array → cast handle பண்ணும்
-]));
+            $product = Product::create(array_merge($sanitized, [
+                'item_type'              => 'composite_item',
+                'item_variant_type'      => 'single',
+                'brand'                  => $brandName,
+                'product_image'          => json_encode(['front_image' => $frontImagePath]),
+                'associate_item_details' => $associateItemDetails,
+                'additional_data'        => $additionalData,
+            ]));
 
             DB::commit();
             $this->clearCache();
@@ -570,13 +647,13 @@ $availableServices = Product::where('item_type', 'item')
                 $stock = \App\Models\Stock::where('product_id', $product->id)
                     ->where('location_id', $loc->id)->whereNull('deleted_at')->first();
                 return [
-                    'id'            => $loc->id,
-                    'location_name' => $loc->location_name,
-                    'location_type' => $loc->location_type,
-                    'stock_on_hand' => $stock?->stock_on_hand  ?? 0,
-                    'committed'     => $stock?->committed_stock ?? 0,
-                    'available'     => $stock?->available_stock ?? 0,
-                    'value_per_unit'=> $stock?->value_per_unit  ?? 0,
+                    'id'             => $loc->id,
+                    'location_name'  => $loc->location_name,
+                    'location_type'  => $loc->location_type,
+                    'stock_on_hand'  => $stock?->stock_on_hand  ?? 0,
+                    'committed'      => $stock?->committed_stock ?? 0,
+                    'available'      => $stock?->available_stock ?? 0,
+                    'value_per_unit' => $stock?->value_per_unit  ?? 0,
                 ];
             });
 
@@ -600,157 +677,173 @@ $availableServices = Product::where('item_type', 'item')
     //  EDIT
     // ================================================================
 
-   public function edit($id)
-{
-    $product = Product::where('item_type', 'composite_item')->findOrFail($id);
+    public function edit($id)
+    {
+        try {
+            $product = Product::where('item_type', 'composite_item')->findOrFail($id);
 
-    // associate_item_details JSON-ல் இருந்து எடு
-    $associateData    = $product->associate_item_details ?? [];
-    $existingItems    = collect($associateData['items']    ?? []);
-    $existingServices = collect($associateData['services'] ?? []);
+            $associateData    = $product->associate_item_details ?? [];
+            $existingItems    = collect($associateData['items']    ?? []);
+            $existingServices = collect($associateData['services'] ?? []);
 
-    $availableItems = Product::where('item_type', 'item')
-        ->where('type', 'goods')
-        ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image')
-        ->orderBy('name')->get();
+            // ── Shared helpers — variants flatten included ──
+            $availableItems    = $this->getAvailableItems();
+            $availableServices = $this->getAvailableServices();
 
-    $availableServices = Product::where('item_type', 'item')
-        ->where('type', 'service')
-        ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price', 'product_image')
-        ->orderBy('name')->get();
+            $brands       = Brand::orderBy('name')->get();
+            $customFields = \App\Models\AdditionalSetting::where('status', 'active')
+                              ->where('category_name', 'products')->get();
 
-    $brands       = \App\Models\Brand::orderBy('name')->get();
-    $customFields = \App\Models\AdditionalSetting::where('status', 'active')
-                      ->where('category_name', 'products')->get();
+            $settingRow = \App\Models\SettingHandle::where('category_name', 'products')->first();
+            $settings   = $settingRow?->config ?? [];
 
-    $settingRow = \App\Models\SettingHandle::where('category_name', 'products')->first();
-    $settings   = $settingRow?->config ?? [];
+            $additionalData = is_string($product->additional_data)
+                ? json_decode($product->additional_data, true)
+                : ($product->additional_data ?? []);
 
-    // additional_data JSON parse
-    $additionalData = is_string($product->additional_data)
-        ? json_decode($product->additional_data, true)
-        : ($product->additional_data ?? []);
+            $productImageData = is_string($product->product_image)
+                ? json_decode($product->product_image, true)
+                : ($product->product_image ?? []);
 
-    // product_image JSON parse
-    $productImageData = is_string($product->product_image)
-        ? json_decode($product->product_image, true)
-        : ($product->product_image ?? []);
+            $product->parsed_image      = $productImageData;
+            $product->parsed_additional = $additionalData;
 
-    $product->parsed_image     = $productImageData;
-    $product->parsed_additional = $additionalData;
+            return view('products.composite.edit', compact(
+                'product',
+                'availableItems',
+                'availableServices',
+                'brands',
+                'customFields',
+                'settings',
+                'existingItems',
+                'existingServices'
+            ));
 
-    return view('products.composite.edit', compact(
-        'product',
-        'availableItems',
-        'availableServices',
-        'brands',
-        'customFields',
-        'settings',
-        'existingItems',
-        'existingServices'
-    ));
-}
+        } catch (\Exception $e) {
+            $this->logError('EDIT_VIEW', 'Failed to load edit form', $e, ['id' => $id]);
+            return redirect()->route('composite-items.index')->with('error', 'Failed to load edit form');
+        }
+    }
 
     // ================================================================
     //  UPDATE
     // ================================================================
 
     public function update(Request $request, $id)
-{
-    $product = Product::findOrFail($id);
+    {
+        try {
+            $product = Product::findOrFail($id);
 
-    // ── existing additional_data decode ──
-    $existingAdditional = $product->additional_data;
-    
-    // Cast handle பண்றதா இல்லன்னு check பண்ணி decode
-    if (is_string($existingAdditional)) {
-        $existingAdditional = json_decode($existingAdditional, true) ?? [];
-    }
-    if (!is_array($existingAdditional)) {
-        $existingAdditional = [];
-    }
+            $validator = Validator::make($request->all(), $this->validationRules($id));
+            if ($validator->fails()) {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'errors' => $validator->errors()], 422)
+                    : redirect()->back()->withErrors($validator)->withInput();
+            }
 
-    // custom_field
-    $cf = $request->input('custom_field', []);
-    $additionalData = array_merge($existingAdditional, [
-        'length'         => $cf['length']         ?? null,
-        'width'          => $cf['width']          ?? null,
-        'height'         => $cf['height']         ?? null,
-        'weight'         => $cf['weight']         ?? null,
-        'dimension_unit' => $cf['dimension_unit'] ?? 'cm',
-        'weight_unit'    => $cf['weight_unit']    ?? 'kg',
-        'category'    => [
-            'id'   => $request->category_id,
-            'name' => $request->category_name,
-        ],
-        'description' => [
-            'sales_description'    => $request->sales_description,
-            'purchase_description' => $request->purchase_description,
-        ],
-        'upc'  => $request->upc,
-        'mpn'  => $request->mpn,
-        'ean'  => $request->ean,
-        'isbn' => $request->isbn,
-        'account_details' => [
-            'inventory_account' => $request->inventory_account_id,
-            'preferred_vendor'  => $request->preferred_vendor_id,
-        ],
-    ]);
+            DB::beginTransaction();
 
-    // ── Image handle ──
-    $imageData = $product->product_image;
-    if (is_string($imageData)) {
-        $imageData = json_decode($imageData, true) ?? [];
-    }
+            // ── existing additional_data decode ──
+            $existingAdditional = $product->additional_data;
+            if (is_string($existingAdditional)) {
+                $existingAdditional = json_decode($existingAdditional, true) ?? [];
+            }
+            if (!is_array($existingAdditional)) {
+                $existingAdditional = [];
+            }
 
-    if ($request->input('remove_image') == '1') {
-        if (!empty($imageData['front_image'])) {
-            $this->deleteImage($imageData['front_image']);
+            $cf = $request->input('custom_field', []);
+
+            $additionalData = array_merge($existingAdditional, [
+                'length'         => $cf['length']         ?? null,
+                'width'          => $cf['width']          ?? null,
+                'height'         => $cf['height']         ?? null,
+                'weight'         => $cf['weight']         ?? null,
+                'dimension_unit' => $cf['dimension_unit'] ?? 'cm',
+                'weight_unit'    => $cf['weight_unit']    ?? 'kg',
+                'category' => [
+                    'id'   => $request->category_id,
+                    'name' => $request->category_name,
+                ],
+                'description' => [
+                    'sales_description'    => $request->sales_description,
+                    'purchase_description' => $request->purchase_description,
+                ],
+                'upc'  => $request->upc,
+                'mpn'  => $request->mpn,
+                'ean'  => $request->ean,
+                'isbn' => $request->isbn,
+                'account_details' => [
+                    'inventory_account' => $request->inventory_account_id,
+                    'preferred_vendor'  => $request->preferred_vendor_id,
+                ],
+            ]);
+
+            // ── Image handle ──
+            $imageData = $product->product_image;
+            if (is_string($imageData)) {
+                $imageData = json_decode($imageData, true) ?? [];
+            }
+
+            if ($request->input('remove_image') == '1') {
+                if (!empty($imageData['front_image'])) {
+                    $this->deleteImage($imageData['front_image']);
+                }
+                $imageData['front_image'] = null;
+            }
+
+            if ($request->hasFile('front_image')) {
+                if (!empty($imageData['front_image'])) {
+                    $this->deleteImage($imageData['front_image']);
+                }
+                $imageData['front_image'] = $this->uploadImage($request->file('front_image'));
+            }
+
+            // ── Associate items — variant support included ──
+            $associateItemDetails = $this->parseAssociateItems($request,
+                $product->associate_item_details ?? []
+            );
+
+            $brandName = $request->brand_id
+                ? Brand::find($request->brand_id)?->name
+                : null;
+
+            $product->update([
+                'name'                       => $request->name,
+                'type'                       => $request->type,
+                'sku'                        => $request->sku,
+                'unit'                       => $request->unit,
+                'selling_price'              => $request->selling_price,
+                'cost_price'                 => $request->cost_price,
+                'is_returnable'              => $request->boolean('is_returnable'),
+                'brand_id'                   => $request->brand_id,
+                'brand'                      => $brandName,
+                'bin_location_tracking'      => $request->boolean('bin_location_tracking'),
+                'inventory_valuation_method' => $request->inventory_valuation_method,
+                'reorder_point'              => $request->reorder_point,
+                'product_image'              => json_encode($imageData),
+                'associate_item_details'     => $associateItemDetails,
+                'additional_data'            => $additionalData,
+            ]);
+
+            DB::commit();
+            $this->clearCache($id);
+
+            $this->logOp('UPDATE', 'Composite item updated', ['product_id' => $id]);
+
+            return $request->expectsJson()
+                ? response()->json(['success' => true, 'message' => 'Updated successfully'])
+                : redirect()->route('composite-items.index')->with('success', 'Updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->logError('UPDATE', 'Failed to update', $e, ['id' => $id]);
+
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => 'Failed to update'], 500)
+                : redirect()->back()->with('error', 'Failed to update: ' . $e->getMessage())->withInput();
         }
-        $imageData['front_image'] = null;
     }
-
-    if ($request->hasFile('front_image')) {
-        if (!empty($imageData['front_image'])) {
-            $this->deleteImage($imageData['front_image']);
-        }
-        $imageData['front_image'] = $this->uploadImage($request->file('front_image'));
-    }
-
-    // ── Associate items ──
-    $associateItemDetails = $this->parseAssociateItems($request, 
-        $product->associate_item_details ?? []
-    );
-
-    // ── Brand name ──
-    $brandName = $request->brand_id
-        ? Brand::find($request->brand_id)?->name
-        : null;
-
-    // ── Update — additional_data array-ஆகவே pass பண்ணு (cast handle பண்ணும்) ──
-    $product->update([
-        'name'                       => $request->name,
-        'type'                       => $request->type,
-        'sku'                        => $request->sku,
-        'unit'                       => $request->unit,
-        'selling_price'              => $request->selling_price,
-        'cost_price'                 => $request->cost_price,
-        'is_returnable'              => $request->boolean('is_returnable'),
-        'brand_id'                   => $request->brand_id,
-        'brand'                      => $brandName,
-        'bin_location_tracking'      => $request->boolean('bin_location_tracking'),
-        'inventory_valuation_method' => $request->inventory_valuation_method,
-        'reorder_point'              => $request->reorder_point,
-        'product_image'              => json_encode($imageData),
-        'associate_item_details'     => $associateItemDetails,
-        'additional_data'            => $additionalData, // ← array pass, cast handle பண்ணும்
-    ]);
-
-    $this->clearCache($id);
-
-    return redirect()->route('composite-items.index')
-        ->with('success', 'Updated successfully!');
-}
 
     // ================================================================
     //  DESTROY
@@ -763,7 +856,10 @@ $availableServices = Product::where('item_type', 'item')
 
             DB::beginTransaction();
 
-            $frontImage = ($product->product_image ?? [])['front_image'] ?? null;
+            $imageData  = is_string($product->product_image)
+                ? json_decode($product->product_image, true)
+                : ($product->product_image ?? []);
+            $frontImage = $imageData['front_image'] ?? null;
             if ($frontImage) $this->deleteImage($frontImage);
 
             $product->delete();
@@ -822,21 +918,54 @@ $availableServices = Product::where('item_type', 'item')
         $q    = $request->input('q', '');
         $type = $request->input('type', 'goods');
 
-        $results = Product::where('item_type', 'item')
-            ->where('type', $type)
-            ->where(fn($q2) => $q2->where('name', 'LIKE', "%{$q}%")->orWhere('sku', 'LIKE', "%{$q}%"))
-            ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')
-            ->orderBy('name')
-            ->limit(30)
-            ->get()
-            ->map(fn($p) => [
-                'id'            => $p->id,
-                'name'          => $p->name,
-                'sku'           => $p->sku,
-                'unit'          => $p->unit,
-                'selling_price' => (float) ($p->selling_price ?? 0),
-                'cost_price'    => (float) ($p->cost_price    ?? 0),
-            ]);
+        // goods type-க்கு variants-உம் include பண்ணு
+        if ($type === 'goods') {
+            $results = Product::where('item_type', 'item')
+                ->where('type', 'goods')
+                ->with('variants')
+                ->where(fn($q2) => $q2->where('name', 'LIKE', "%{$q}%")->orWhere('sku', 'LIKE', "%{$q}%"))
+                ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')
+                ->orderBy('name')
+                ->limit(30)
+                ->get()
+                ->flatMap(function ($p) {
+                    if ($p->variants && $p->variants->count() > 0) {
+                        return $p->variants->map(fn($v) => [
+                            'id'            => $v->id,
+                            'name'          => $p->name . ' (' . $v->name . ')',
+                            'sku'           => $v->sku ?? $p->sku,
+                            'unit'          => $p->unit,
+                            'selling_price' => (float) ($v->selling_price ?? 0),
+                            'cost_price'    => (float) ($v->cost_price    ?? 0),
+                        ]);
+                    }
+                    return [[
+                        'id'            => $p->id,
+                        'name'          => $p->name,
+                        'sku'           => $p->sku,
+                        'unit'          => $p->unit,
+                        'selling_price' => (float) ($p->selling_price ?? 0),
+                        'cost_price'    => (float) ($p->cost_price    ?? 0),
+                    ]];
+                })
+                ->values();
+        } else {
+            $results = Product::where('item_type', 'item')
+                ->where('type', $type)
+                ->where(fn($q2) => $q2->where('name', 'LIKE', "%{$q}%")->orWhere('sku', 'LIKE', "%{$q}%"))
+                ->select('id', 'name', 'sku', 'unit', 'selling_price', 'cost_price')
+                ->orderBy('name')
+                ->limit(30)
+                ->get()
+                ->map(fn($p) => [
+                    'id'            => $p->id,
+                    'name'          => $p->name,
+                    'sku'           => $p->sku,
+                    'unit'          => $p->unit,
+                    'selling_price' => (float) ($p->selling_price ?? 0),
+                    'cost_price'    => (float) ($p->cost_price    ?? 0),
+                ]);
+        }
 
         return response()->json(['success' => true, 'data' => $results]);
     }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>New Invoice | Invoices</title>
+<title>Edit Invoice #{{ $invoice->invoice_number }} | Invoices</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 body { background: #f5f6f8; font-size: 13px; color: #333; }
@@ -269,7 +269,6 @@ select {
 </head>
 <body>
 
-{{-- ── Topbar ── --}}
 <div class="topbar">
     <div class="topbar-logo">
         <svg viewBox="0 0 20 20"><rect x="1" y="1" width="8" height="8" rx="1.5"/><rect x="11" y="1" width="8" height="8" rx="1.5"/><rect x="1" y="11" width="8" height="8" rx="1.5"/><rect x="11" y="11" width="8" height="8" rx="1.5"/></svg>
@@ -317,11 +316,13 @@ select {
             <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            New Invoice
+            Edit Invoice #{{ $invoice->invoice_number }}
         </div>
 
-        <form action="{{ route('invoices.store') }}" method="POST" id="invoice-form">
+        {{-- PUT method spoofing for update --}}
+        <form action="{{ route('invoices.update', $invoice->id) }}" method="POST" id="invoice-form">
         @csrf
+        @method('PUT')
 
         {{-- CARD 1 — Invoice Header --}}
         <div class="card">
@@ -333,18 +334,18 @@ select {
                             onchange="onCustomerChange(this.value)">
                         <option value="">Select or add a customer</option>
                         @foreach($customers as $c)
-                  <option value="{{ $c->id }}"
-                    data-address="{{ json_encode($c->common_address) }}"
-                    data-category-id="{{ $userCategories[$c->customer_category] ?? '' }}"
-                    {{ old('customer_id') == $c->id ? 'selected' : '' }}>
-                    {{ $c->display_name }}
-                </option>
-                    @endforeach
+                        <option value="{{ $c->id }}"
+                            data-address="{{ json_encode($c->common_address) }}"
+                            data-category-id="{{ $userCategories[$c->customer_category] ?? '' }}"
+                            {{ $invoice->customer_id == $c->id ? 'selected' : '' }}>
+                            {{ $c->display_name }}
+                        </option>
+                        @endforeach
                     </select>
                     <button type="button" class="btn-search">&#128269;</button>
                     <button type="button" id="btn-cust-info" onclick="openCustPanelFromBtn()"
                             title="View Customer Details"
-                            style="display:none;background:#e8f0fe;border:1px solid #4a90d9;
+                            style="{{ $invoice->customer_id ? 'display:flex' : 'display:none' }};background:#e8f0fe;border:1px solid #4a90d9;
                                    border-radius:6px;width:34px;height:34px;color:#4a90d9;
                                    font-size:15px;cursor:pointer;flex-shrink:0;
                                    align-items:center;justify-content:center;">
@@ -353,8 +354,7 @@ select {
                 </div>
             </div>
 
-            
-            <div class="customer-addr-box" id="customer-addr-box">
+            <div class="customer-addr-box" id="customer-addr-box" style="{{ $invoice->customer_id ? 'display:block' : 'display:none' }}">
                 <div class="customer-addr-inner">
                     <div>
                         <div class="addr-block-title">📦 Billing Address</div>
@@ -367,48 +367,35 @@ select {
                 </div>
             </div>
 
-            {{-- USER CATEGORY LABEL (auto-filled, read-only display) --}}
-<div id="cat-label-box" style="display:none;margin-bottom:14px;margin-left:168px;">
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-                background:#eef4ff;border:0.5px solid #b5d4f4;border-radius:6px;">
-
-        {{-- Category avatar --}}
-        <div id="cat-avatar"
-             style="width:32px;height:32px;border-radius:50%;background:#4a90d9;
-                    display:flex;align-items:center;justify-content:center;
-                    color:#fff;font-size:14px;font-weight:600;flex-shrink:0;">
-            ?
-        </div>
-
-        {{-- Category name + sub --}}
-        <div>
-            <div id="cat-display-name"
-                 style="font-size:13px;font-weight:500;color:#0c447c;">—</div>
-            <div style="font-size:11px;color:#185fa5;margin-top:1px;">
-                User Category
+            {{-- USER CATEGORY LABEL --}}
+            <div id="cat-label-box" style="display:none;margin-bottom:14px;margin-left:168px;">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                            background:#eef4ff;border:0.5px solid #b5d4f4;border-radius:6px;">
+                    <div id="cat-avatar"
+                         style="width:32px;height:32px;border-radius:50%;background:#4a90d9;
+                                display:flex;align-items:center;justify-content:center;
+                                color:#fff;font-size:14px;font-weight:600;flex-shrink:0;">
+                        ?
+                    </div>
+                    <div>
+                        <div id="cat-display-name" style="font-size:13px;font-weight:500;color:#0c447c;">—</div>
+                        <div style="font-size:11px;color:#185fa5;margin-top:1px;">User Category</div>
+                    </div>
+                    <div id="cat-loc-badge" style="margin-left:auto;display:none;">
+                        <span id="cat-loc-badge-text"
+                              style="font-size:11px;border-radius:10px;padding:3px 10px;white-space:nowrap;"></span>
+                    </div>
+                </div>
             </div>
-        </div>
+            <input type="hidden" name="user_category_id" id="user-category-id-input" value="{{ $invoice->user_category_id ?? '' }}">
 
-        {{-- Location count badge --}}
-        <div id="cat-loc-badge" style="margin-left:auto;display:none;">
-            <span id="cat-loc-badge-text"
-                  style="font-size:11px;border-radius:10px;padding:3px 10px;
-                         white-space:nowrap;">
-            </span>
-        </div>
-
-    </div>
-</div>
-
-{{-- hidden field — save category with invoice --}}
-<input type="hidden" name="user_category_id" id="user-category-id-input">
             <div class="frow">
                 <label>Location</label>
                 <select name="location_id" style="max-width:260px" id="location-select"
                         onchange="onLocationChange(this.value)">
                     <option value="">— Select Location —</option>
                     @foreach($locations as $loc)
-                    <option value="{{ $loc->id }}" {{ old('location_id') == $loc->id ? 'selected' : '' }}>
+                    <option value="{{ $loc->id }}" {{ $invoice->location == $loc->id ? 'selected' : '' }}>
                         {{ $loc->location_name }}
                         ({{ $loc->location_type === 'business' ? '🏢' : '🏭' }})
                     </option>
@@ -422,7 +409,9 @@ select {
                         style="max-width:260px" onchange="onPriceListChange(this.value)">
                     <option value="">— No Price List —</option>
                     @foreach($priceLists as $pl)
-                    <option value="{{ $pl->id }}">{{ $pl->name }}</option>
+                    <option value="{{ $pl->id }}" {{ ($invoice->price_list_id ?? '') == $pl->id ? 'selected' : '' }}>
+                        {{ $pl->name }}
+                    </option>
                     @endforeach
                 </select>
             </div>
@@ -441,141 +430,150 @@ select {
             <div class="frow">
                 <label class="req">Invoice #</label>
                 <div style="display:flex;align-items:center;max-width:260px">
+                    {{-- Invoice number is read-only on edit --}}
                     <input type="text" name="invoice_number" id="invoice-number-input"
-                           value="{{ $invoiceNumber }}" required>
-                    <span class="gear">&#9881;</span>
-                    <small id="invoice-format-hint" style="color:#888;font-size:11px;margin-top:3px;display:block;"></small>
+                           value="{{ $invoice->invoice_number }}" required readonly
+                           style="background:#f8f9fa;cursor:not-allowed;">
+                    <span class="gear" title="Invoice number cannot be changed">&#9881;</span>
                 </div>
             </div>
 
             <div class="frow">
                 <label>Order Number</label>
-                <input type="text" name="order_number" value="{{ old('order_number') }}" style="max-width:260px">
+                <input type="text" name="order_number" value="{{ old('order_number', $invoice->order_number) }}" style="max-width:260px">
             </div>
 
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
                 <label class="req" style="min-width:130px;font-size:13px;color:#555">
                     Invoice Date <span style="color:#e05050">*</span>
                 </label>
-                <input type="date" name="invoice_date" value="{{ old('invoice_date', date('Y-m-d')) }}" required style="width:170px">
+                <input type="date" name="invoice_date"
+                       value="{{ old('invoice_date', \Carbon\Carbon::parse($invoice->invoice_date)->format('Y-m-d')) }}"
+                       required style="width:170px">
                 <label style="font-size:13px;color:#555;margin-left:10px">Terms</label>
                 <select name="terms" id="terms-select" style="width:160px" onchange="calcDueDate()">
-                    <option value="Due on Receipt">Due on Receipt</option>
-                    <option value="Net 15">Net 15</option>
-                    <option value="Net 30">Net 30</option>
-                    <option value="Net 45">Net 45</option>
-                    <option value="Net 60">Net 60</option>
+                    @foreach(['Due on Receipt','Net 15','Net 30','Net 45','Net 60'] as $term)
+                    <option value="{{ $term }}" {{ $invoice->terms == $term ? 'selected' : '' }}>{{ $term }}</option>
+                    @endforeach
                 </select>
                 <label style="font-size:13px;color:#555">Due Date</label>
-                <input type="date" name="due_date" id="due-date" value="{{ old('due_date', date('Y-m-d')) }}" required style="width:170px">
+                <input type="date" name="due_date" id="due-date"
+                       value="{{ old('due_date', \Carbon\Carbon::parse($invoice->due_date)->format('Y-m-d')) }}"
+                       required style="width:170px">
             </div>
 
             <div class="frow">
                 <label>Referral / Reference</label>
                 <div class="referral-wrap">
                     <div class="referral-display" id="referral-display" onclick="openReferralModal()">
-                        <span class="placeholder" id="referral-placeholder">Select or Add Referral</span>
-                        <span id="referral-selected-name" style="display:none;color:#333;font-weight:500;"></span>
+                        <span class="placeholder" id="referral-placeholder"
+                              style="{{ $invoice->referral_id ? 'display:none' : '' }}">Select or Add Referral</span>
+                        <span id="referral-selected-name"
+                              style="{{ $invoice->referral_id ? '' : 'display:none' }};color:#333;font-weight:500;">
+                            {{ $invoice->referral?->name ?? '' }}
+                        </span>
                     </div>
-                    <input type="hidden" name="referral_id" id="referral-id-input">
-                    <button type="button" class="referral-clear" id="referral-clear-btn" onclick="clearReferral()">✕</button>
+                    <input type="hidden" name="referral_id" id="referral-id-input" value="{{ $invoice->referral_id ?? '' }}">
+                    <button type="button" class="referral-clear" id="referral-clear-btn"
+                            onclick="clearReferral()"
+                            style="{{ $invoice->referral_id ? 'display:inline' : 'display:none' }}">✕</button>
                     <button type="button" class="btn-referral-manage" onclick="openReferralModal()">⊞ Manage</button>
                 </div>
             </div>
-              
-            {{-- ── Custom Fields (category_name = invoice) ── --}}
-@foreach($invoiceCustomFields as $cf)
-@php
-    $config      = json_decode($cf->additional_config ?? '{}', true);
-    $placeholder = $config['help_text'] ?? '';
-    $mandatory   = $cf->mandatory === 'yes';
-    $label       = str_replace('_', ' ', $cf->name);
-@endphp
-<div class="frow">
-    <label @if($mandatory) class="req" @endif>{{ $label }}</label>
 
-    @if(in_array($cf->data_type, ['datetime','timestamp']))
-        <input type="datetime-local"
-               name="custom_fields[{{ $cf->id }}]"
-               value="{{ old('custom_fields.'.$cf->id) }}"
-               @if($mandatory) required @endif
-               style="max-width:260px">
+            {{-- ── Custom Fields ── --}}
+            @foreach($invoiceCustomFields as $cf)
+            @php
+                $config      = json_decode($cf->additional_config ?? '{}', true);
+                $placeholder = $config['help_text'] ?? '';
+                $mandatory   = $cf->mandatory === 'yes';
+                $label       = str_replace('_', ' ', $cf->name);
+                $savedValue  = $invoice->additional_data[$cf->name] ?? '';
+            @endphp
+            <div class="frow">
+                <label @if($mandatory) class="req" @endif>{{ $label }}</label>
 
-    @elseif($cf->data_type === 'date')
-        <input type="date"
-               name="custom_fields[{{ $cf->id }}]"
-               value="{{ old('custom_fields.'.$cf->id) }}"
-               @if($mandatory) required @endif
-               style="max-width:260px">
+                @if(in_array($cf->data_type, ['datetime','timestamp']))
+                    <input type="datetime-local"
+                           name="custom_fields[{{ $cf->id }}]"
+                           value="{{ old('custom_fields.'.$cf->id, $savedValue) }}"
+                           @if($mandatory) required @endif
+                           style="max-width:260px">
 
-    @elseif($cf->data_type === 'time')
-        <input type="time"
-               name="custom_fields[{{ $cf->id }}]"
-               value="{{ old('custom_fields.'.$cf->id) }}"
-               @if($mandatory) required @endif
-               style="max-width:260px">
+                @elseif($cf->data_type === 'date')
+                    <input type="date"
+                           name="custom_fields[{{ $cf->id }}]"
+                           value="{{ old('custom_fields.'.$cf->id, $savedValue) }}"
+                           @if($mandatory) required @endif
+                           style="max-width:260px">
 
-    @elseif(in_array($cf->data_type, ['integer','biginteger','smallinteger','tinyinteger','decimal','float','double']))
-        <input type="number"
-               name="custom_fields[{{ $cf->id }}]"
-               value="{{ old('custom_fields.'.$cf->id) }}"
-               placeholder="{{ $placeholder }}"
-               @if($mandatory) required @endif
-               style="max-width:260px">
+                @elseif($cf->data_type === 'time')
+                    <input type="time"
+                           name="custom_fields[{{ $cf->id }}]"
+                           value="{{ old('custom_fields.'.$cf->id, $savedValue) }}"
+                           @if($mandatory) required @endif
+                           style="max-width:260px">
 
-    @elseif($cf->data_type === 'boolean')
-        <div style="display:flex;align-items:center;gap:10px;padding-top:6px;">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                <input type="radio" name="custom_fields[{{ $cf->id }}]" value="yes"> Yes
-            </label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                <input type="radio" name="custom_fields[{{ $cf->id }}]" value="no" checked> No
-            </label>
-        </div>
+                @elseif(in_array($cf->data_type, ['integer','biginteger','smallinteger','tinyinteger','decimal','float','double']))
+                    <input type="number"
+                           name="custom_fields[{{ $cf->id }}]"
+                           value="{{ old('custom_fields.'.$cf->id, $savedValue) }}"
+                           placeholder="{{ $placeholder }}"
+                           @if($mandatory) required @endif
+                           style="max-width:260px">
 
-    @elseif($cf->data_type === 'text' || $cf->data_type === 'longtext')
-        <textarea name="custom_fields[{{ $cf->id }}]"
-                  placeholder="{{ $placeholder }}"
-                  @if($mandatory) required @endif
-                  style="max-width:500px">{{ old('custom_fields.'.$cf->id) }}</textarea>
+                @elseif($cf->data_type === 'boolean')
+                    <div style="display:flex;align-items:center;gap:10px;padding-top:6px;">
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                            <input type="radio" name="custom_fields[{{ $cf->id }}]" value="yes"
+                                   {{ $savedValue === 'yes' ? 'checked' : '' }}> Yes
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                            <input type="radio" name="custom_fields[{{ $cf->id }}]" value="no"
+                                   {{ ($savedValue !== 'yes') ? 'checked' : '' }}> No
+                        </label>
+                    </div>
 
-    @elseif($cf->data_type === 'array')
-        @php $options = array_filter(array_map('trim', explode(',', $config['options'] ?? ''))); @endphp
-        <select name="custom_fields[{{ $cf->id }}]"
-                @if($mandatory) required @endif
-                style="max-width:260px">
-            <option value="">— Select —</option>
-            @foreach($options as $opt)
-                <option value="{{ $opt }}" {{ old('custom_fields.'.$cf->id) === $opt ? 'selected' : '' }}>
-                    {{ $opt }}
-                </option>
+                @elseif($cf->data_type === 'text' || $cf->data_type === 'longtext')
+                    <textarea name="custom_fields[{{ $cf->id }}]"
+                              placeholder="{{ $placeholder }}"
+                              @if($mandatory) required @endif
+                              style="max-width:500px">{{ old('custom_fields.'.$cf->id, $savedValue) }}</textarea>
+
+                @elseif($cf->data_type === 'array')
+                    @php $options = array_filter(array_map('trim', explode(',', $config['options'] ?? ''))); @endphp
+                    <select name="custom_fields[{{ $cf->id }}]"
+                            @if($mandatory) required @endif
+                            style="max-width:260px">
+                        <option value="">— Select —</option>
+                        @foreach($options as $opt)
+                            <option value="{{ $opt }}"
+                                    {{ old('custom_fields.'.$cf->id, $savedValue) === $opt ? 'selected' : '' }}>
+                                {{ $opt }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                @else
+                    <input type="text"
+                           name="custom_fields[{{ $cf->id }}]"
+                           value="{{ old('custom_fields.'.$cf->id, $savedValue) }}"
+                           placeholder="{{ $placeholder }}"
+                           @if($mandatory) required @endif
+                           style="max-width:260px">
+                @endif
+            </div>
             @endforeach
-        </select>
-
-    @else
-        {{-- string, email, phone, url, etc. --}}
-        <input type="text"
-               name="custom_fields[{{ $cf->id }}]"
-               value="{{ old('custom_fields.'.$cf->id) }}"
-               placeholder="{{ $placeholder }}"
-               @if($mandatory) required @endif
-               style="max-width:260px">
-    @endif
-</div>
-@endforeach
-
-
 
             <div class="frow">
                 <label>Subject</label>
-                <textarea name="subject" placeholder="Let your customer know what this Invoice is for" style="max-width:500px">{{ old('subject') }}</textarea>
+                <textarea name="subject" placeholder="Let your customer know what this Invoice is for"
+                          style="max-width:500px">{{ old('subject', $invoice->subject) }}</textarea>
             </div>
-               
 
         </div>{{-- end card 1 --}}
 
 
-        
         {{-- CARD 2 — Item Table --}}
         <div class="card">
 
@@ -603,29 +601,43 @@ select {
                     </tr>
                 </thead>
                 <tbody id="items-body">
-                    <tr data-index="0">
+                    {{-- Existing invoice items pre-filled --}}
+                    @foreach($invoice->items as $i => $item)
+                    @php
+                        $product    = $item->product;
+                        $gstData    = is_array($item->gst_data) ? $item->gst_data : (json_decode($item->gst_data ?? '{}', true) ?? []);
+                        $gstValue   = $gstData['value'] ?? 0;
+                        $gstType    = $gstData['type']  ?? '%';
+                        $gstAmt     = $gstData['amount'] ?? 0;
+                        $imgData    = $product ? (is_string($product->product_image) ? json_decode($product->product_image, true) : ($product->product_image ?? [])) : [];
+                        $imgPath    = $imgData['front_image'] ?? null;
+                        $sku        = $product->sku ?? '';
+                        $stockOnHand= $product->opening_stock ?? 0;
+                        $unit       = $product->unit ?? '';
+                    @endphp
+                    <tr data-index="{{ $i }}">
                         <td class="drag-col">&#8942;&#8942;</td>
                         <td class="img-col">
-                            <div class="item-img-box" id="iimg-0">
-                                <span class="noimg">&#128247;</span>
+                            <div class="item-img-box" id="iimg-{{ $i }}">
+                                @if($imgPath)
+                                    <img src="{{ asset($imgPath) }}" alt="{{ $item->item_name }}">
+                                @else
+                                    <span class="noimg">&#128247;</span>
+                                @endif
                             </div>
                         </td>
                         <td>
-                            <select name="items[0][product_id]" onchange="fillProduct(0, this)" style="width:100%">
+                            <select name="items[{{ $i }}][product_id]" onchange="fillProduct({{ $i }}, this)" style="width:100%">
                                 <option value="">Type or click to select an item</option>
                                 @foreach($products as $p)
                                 @php
-                                    $additionalData = is_string($p->additional_data)
-                                        ? json_decode($p->additional_data, true)
-                                        : ($p->additional_data ?? []);
-                                    $pGst    = (float)($additionalData['gst'] ?? 0);
-                                    $imgData = is_string($p->product_image)
-                                        ? json_decode($p->product_image, true)
-                                        : ($p->product_image ?? []);
-                                    $imgPath = $imgData['front_image'] ?? null;
-                                    $sku     = $p->sku ?? '';
-                                    $stock   = $p->opening_stock ?? 0;
-                                    $pVariants = $variants[$p->id] ?? collect();
+                                    $pAdditional = is_string($p->additional_data) ? json_decode($p->additional_data, true) : ($p->additional_data ?? []);
+                                    $pGst        = (float)($pAdditional['gst'] ?? 0);
+                                    $pImgData    = is_string($p->product_image) ? json_decode($p->product_image, true) : ($p->product_image ?? []);
+                                    $pImgPath    = $pImgData['front_image'] ?? null;
+                                    $pSku        = $p->sku ?? '';
+                                    $pStock      = $p->opening_stock ?? 0;
+                                    $pVariants   = $variants[$p->id] ?? collect();
                                 @endphp
                                 @if($pVariants->isNotEmpty())
                                     <optgroup label="{{ $p->name }}">
@@ -635,10 +647,11 @@ select {
                                                 data-name="{{ $p->name }} - {{ $v->name }}"
                                                 data-rate="{{ $v->selling_price ?? 0 }}"
                                                 data-sku="{{ $v->sku ?? '' }}"
-                                                data-stock="{{ $stock }}"
+                                                data-stock="{{ $pStock }}"
                                                 data-unit="{{ $p->unit }}"
                                                 data-gst="{{ $pGst }}"
-                                                data-img="{{ $imgPath ? asset($imgPath) : '' }}">
+                                                data-img="{{ $pImgPath ? asset($pImgPath) : '' }}"
+                                                {{ $item->product_id == $p->id ? 'selected' : '' }}>
                                             {{ $v->name }}
                                             @if($v->sku) [{{ $v->sku }}] @endif
                                             — ₹{{ number_format($v->selling_price ?? 0, 2) }}
@@ -650,71 +663,85 @@ select {
                                             data-variant-id=""
                                             data-name="{{ $p->name }}"
                                             data-rate="{{ $p->selling_price ?? 0 }}"
-                                            data-sku="{{ $sku }}"
-                                            data-stock="{{ $stock }}"
+                                            data-sku="{{ $pSku }}"
+                                            data-stock="{{ $pStock }}"
                                             data-unit="{{ $p->unit }}"
                                             data-gst="{{ $pGst }}"
-                                            data-img="{{ $imgPath ? asset($imgPath) : '' }}">
+                                            data-img="{{ $pImgPath ? asset($pImgPath) : '' }}"
+                                            {{ $item->product_id == $p->id ? 'selected' : '' }}>
                                         {{ $p->name }}
-                                        @if($sku) [{{ $sku }}] @endif
+                                        @if($pSku) [{{ $pSku }}] @endif
                                         — ₹{{ number_format($p->selling_price ?? 0, 2) }}
-                                        (Stock: {{ $stock }} {{ $p->unit }})
+                                        (Stock: {{ $pStock }} {{ $p->unit }})
                                     </option>
                                 @endif
                                 @endforeach
                             </select>
-                            <div class="product-meta" id="imeta-0"></div>
-                            <input type="hidden" name="items[0][item_name]" id="iname-0" value="">
-                            <input type="hidden" name="items[0][variant_id]" id="ivariantid-0" value="">
+
+                            {{-- Product meta shown immediately since product is already selected --}}
+                            <div class="product-meta show" id="imeta-{{ $i }}">
+                                <span style="color:#666">SKU: <strong>{{ $sku ?: '—' }}</strong></span>
+                                &nbsp;|&nbsp;
+                                Stock: <span id="stock-display-{{ $i }}" class="{{ $stockOnHand > 0 ? 'stock-ok' : 'stock-low' }}">
+                                    <strong>{{ $stockOnHand }}</strong> {{ $unit }}
+                                </span>
+                                <span id="stock-warn-{{ $i }}" style="display:none;color:#e05050;font-weight:600;margin-left:6px;font-size:11px"></span>
+                            </div>
+
+                            <input type="hidden" name="items[{{ $i }}][item_name]" id="iname-{{ $i }}" value="{{ $item->item_name }}">
+                            <input type="hidden" name="items[{{ $i }}][variant_id]" id="ivariantid-{{ $i }}" value="{{ $item->variant_id ?? '' }}">
                         </td>
-                        <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-0">—</td>
+                        <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-{{ $i }}">{{ $sku ?: '—' }}</td>
                         <td style="text-align:center;vertical-align:middle">
-                            <div id="pl-btn-0" style="display:none;">
+                            <div id="pl-btn-{{ $i }}" style="{{ $item->product_id ? 'display:block' : 'display:none' }};">
                                 <button type="button"
-                                        onclick="openRowPriceList(0)"
+                                        onclick="openRowPriceList({{ $i }})"
                                         style="font-size:11px;padding:3px 8px;border:1px solid #4a90d9;
                                                border-radius:4px;background:#e8f0fe;color:#4a90d9;
                                                cursor:pointer;white-space:nowrap;">
                                     📋 Apply
                                 </button>
-                                <div id="pl-label-0" style="font-size:10px;color:#27ae60;margin-top:2px;"></div>
+                                <div id="pl-label-{{ $i }}" style="font-size:10px;color:#27ae60;margin-top:2px;"></div>
                             </div>
                         </td>
                         <td class="r">
-                            <input type="number" name="items[0][quantity]" id="iqty-0"
-                                   value="1" min="0.01" step="0.01"
+                            <input type="number" name="items[{{ $i }}][quantity]" id="iqty-{{ $i }}"
+                                   value="{{ $item->quantity }}" min="0.01" step="0.01"
                                    style="width:80px;text-align:right"
-                                   oninput="calcRow(0)">
+                                   oninput="calcRow({{ $i }})">
                         </td>
                         <td class="r">
                             <div style="display:flex;align-items:center;justify-content:flex-end">
-                                <input type="number" name="items[0][gst_value]" id="igstval-0"
-                                       value="0" min="0" step="0.01"
+                                <input type="number" name="items[{{ $i }}][gst_value]" id="igstval-{{ $i }}"
+                                       value="{{ $gstValue }}" min="0" step="0.01"
                                        style="width:55px;text-align:right;height:30px;
                                               border:1px solid #d0d5dd;border-right:none;
                                               border-radius:4px 0 0 4px;padding:0 6px;font-size:13px"
-                                       oninput="calcRow(0)">
-                                <select name="items[0][gst_type]" id="igsttype-0"
-                                        onchange="calcRow(0)"
+                                       oninput="calcRow({{ $i }})">
+                                <select name="items[{{ $i }}][gst_type]" id="igsttype-{{ $i }}"
+                                        onchange="calcRow({{ $i }})"
                                         style="width:40px;height:30px;border:1px solid #d0d5dd;
                                                border-radius:0 4px 4px 0;font-size:12px;
                                                background:#f8f9fa;padding:0 2px;appearance:none;text-align:center">
-                                    <option value="%">%</option>
-                                    <option value="₹">₹</option>
+                                    <option value="%" {{ $gstType === '%' ? 'selected' : '' }}>%</option>
+                                    <option value="₹" {{ $gstType === '₹' ? 'selected' : '' }}>₹</option>
                                 </select>
                             </div>
-                            <div style="font-size:10px;color:#27ae60;text-align:right;margin-top:2px" id="igstamt-0">₹0.00</div>
-                            <input type="hidden" name="items[0][gst_amount]" id="igstamthidden-0" value="0">
+                            <div style="font-size:10px;color:#27ae60;text-align:right;margin-top:2px" id="igstamt-{{ $i }}">₹{{ number_format($gstAmt, 2) }}</div>
+                            <input type="hidden" name="items[{{ $i }}][gst_amount]" id="igstamthidden-{{ $i }}" value="{{ $gstAmt }}">
                         </td>
                         <td class="r">
-                            <input type="number" name="items[0][rate]" id="irate-0"
-                                   value="0.00" min="0" step="0.01"
+                            <input type="number" name="items[{{ $i }}][rate]" id="irate-{{ $i }}"
+                                   value="{{ number_format($item->rate, 2, '.', '') }}" min="0" step="0.01"
                                    style="width:100px;text-align:right"
-                                   oninput="calcRow(0)">
+                                   oninput="calcRow({{ $i }})">
                         </td>
-                        <td class="r" id="iamt-0" style="font-weight:600;color:#1a1a2e">0.00</td>
+                        <td class="r" id="iamt-{{ $i }}" style="font-weight:600;color:#1a1a2e">
+                            {{ number_format($item->amount, 2) }}
+                        </td>
                         <td><button type="button" class="btn-del" onclick="delRow(this)">&#10005;</button></td>
                     </tr>
+                    @endforeach
                 </tbody>
             </table>
 
@@ -728,19 +755,19 @@ select {
                 <button type="button" class="btn-addrow" onclick="openBulkModal()">&#43; Add Items in Bulk</button>
             </div>
 
-            {{-- Totals --}}
+            {{-- Totals (pre-filled from invoice) --}}
             <div class="totals-wrap">
                 <div class="totals-box">
                     <div class="tot-row">
                         <span>Sub Total</span>
-                        <span id="subtotal-display">0.00</span>
-                        <input type="hidden" name="subtotal" id="subtotal-val">
+                        <span id="subtotal-display">{{ number_format($invoice->subtotal, 2) }}</span>
+                        <input type="hidden" name="subtotal" id="subtotal-val" value="{{ $invoice->subtotal }}">
                     </div>
                     <div class="tot-row">
                         <span>Discount</span>
                         <div class="disc-wrap">
                             <input type="number" name="discount_value" id="disc-pct"
-                                   value="0" min="0" step="0.01" oninput="calcTotals()">
+                                   value="{{ $invoice->discount_percent ?? 0 }}" min="0" step="0.01" oninput="calcTotals()">
                             <select id="disc-type" onchange="calcTotals()"
                                     style="width:46px;height:28px;font-size:12px;border:1px solid #d0d5dd;
                                            border-radius:4px;background:#f8f9fa;padding:0 2px;
@@ -748,27 +775,37 @@ select {
                                 <option value="%">%</option>
                                 <option value="₹">₹</option>
                             </select>
-                            <span id="disc-display" style="min-width:55px;text-align:right">0.00</span>
+                            <span id="disc-display" style="min-width:55px;text-align:right">
+                                {{ number_format($invoice->discount_amount ?? 0, 2) }}
+                            </span>
                         </div>
-                        <input type="hidden" name="discount_percent" id="disc-pct-val">
-                        <input type="hidden" name="discount_amount"  id="disc-amt-val">
+                        <input type="hidden" name="discount_percent" id="disc-pct-val" value="{{ $invoice->discount_percent ?? 0 }}">
+                        <input type="hidden" name="discount_amount"  id="disc-amt-val" value="{{ $invoice->discount_amount ?? 0 }}">
                     </div>
                     <div class="tax-row">
                         <div class="radio-grp">
-                            <label><input type="radio" name="tax_type" value="TDS" checked onchange="calcTotals()"> TDS</label>
-                            <label><input type="radio" name="tax_type" value="TCS" onchange="calcTotals()"> TCS</label>
+                            <label>
+                                <input type="radio" name="tax_type" value="TDS"
+                                       {{ ($invoice->tax_type ?? 'TDS') === 'TDS' ? 'checked' : '' }}
+                                       onchange="calcTotals()"> TDS
+                            </label>
+                            <label>
+                                <input type="radio" name="tax_type" value="TCS"
+                                       {{ ($invoice->tax_type ?? '') === 'TCS' ? 'checked' : '' }}
+                                       onchange="calcTotals()"> TCS
+                            </label>
                         </div>
                         <div class="tax-right">
                             <select name="tax_percent" id="tax-select" onchange="calcTotals()">
-                                <option value="0">Select a Tax</option>
-                                <option value="5">GST 5%</option>
-                                <option value="12">GST 12%</option>
-                                <option value="18">GST 18%</option>
-                                <option value="28">GST 28%</option>
+                                <option value="0" {{ ($invoice->tax_percent ?? 0) == 0 ? 'selected' : '' }}>Select a Tax</option>
+                                <option value="5"  {{ ($invoice->tax_percent ?? 0) == 5  ? 'selected' : '' }}>GST 5%</option>
+                                <option value="12" {{ ($invoice->tax_percent ?? 0) == 12 ? 'selected' : '' }}>GST 12%</option>
+                                <option value="18" {{ ($invoice->tax_percent ?? 0) == 18 ? 'selected' : '' }}>GST 18%</option>
+                                <option value="28" {{ ($invoice->tax_percent ?? 0) == 28 ? 'selected' : '' }}>GST 28%</option>
                             </select>
-                            <span id="tax-display">0.00</span>
+                            <span id="tax-display">{{ number_format($invoice->tax_amount ?? 0, 2) }}</span>
                         </div>
-                        <input type="hidden" name="tax_amount" id="tax-amt-val">
+                        <input type="hidden" name="tax_amount" id="tax-amt-val" value="{{ $invoice->tax_amount ?? 0 }}">
                     </div>
                     <div class="adj-row">
                         <label style="font-size:13px;color:#555;display:flex;align-items:center;gap:6px;">
@@ -776,12 +813,42 @@ select {
                         </label>
                         <div style="display:flex;align-items:center;gap:8px">
                             <input type="number" name="courier_charges" id="courier-input"
-                                value="0" min="0" step="0.01"
-                                style="width:80px;height:28px;text-align:right"
-                                oninput="calcTotals()">
+                                   value="{{ $invoice->courier_charges ?? 0 }}" min="0" step="0.01"
+                                   style="width:80px;height:28px;text-align:right"
+                                   oninput="calcTotals()">
                         </div>
                     </div>
-                    <div id="extra-charges-container"></div>
+
+                    {{-- Extra charges (pre-fill from invoice->extra_charges JSON) --}}
+                    <div id="extra-charges-container">
+                        @if($invoice->extra_charges)
+                        @php
+                            $extraCharges = is_array($invoice->extra_charges)
+                                ? $invoice->extra_charges
+                                : (json_decode($invoice->extra_charges, true) ?? []);
+                        @endphp
+                        @foreach($extraCharges as $ecLabel => $ecAmount)
+                        <div id="extra-charge-row-{{ $loop->index }}"
+                             style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f2f4;gap:8px;">
+                            <input type="text" name="extra_charges[{{ $loop->index }}][label]"
+                                   value="{{ $ecLabel }}"
+                                   style="width:150px;height:28px;font-size:13px;background:#f8f9fa;"
+                                   oninput="calcTotals()">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <input type="number" name="extra_charges[{{ $loop->index }}][amount]"
+                                       id="extra-charge-amt-{{ $loop->index }}"
+                                       value="{{ $ecAmount }}" step="0.01"
+                                       style="width:80px;height:28px;text-align:right;"
+                                       oninput="calcTotals()">
+                                <button type="button" onclick="removeExtraCharge({{ $loop->index }})"
+                                        style="background:none;border:none;color:#e05050;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;">✕</button>
+                            </div>
+                        </div>
+                        @php $extraChargeCount = $loop->index + 1; @endphp
+                        @endforeach
+                        @endif
+                    </div>
+
                     <div style="padding:6px 0;">
                         <button type="button" onclick="addExtraCharge()"
                                 style="background:none;border:none;color:#4a90d9;font-size:13px;
@@ -791,8 +858,8 @@ select {
                     </div>
                     <div class="tot-row grand">
                         <span>Total (₹)</span>
-                        <span id="grand-display">0.00</span>
-                        <input type="hidden" name="grand_total" id="grand-val">
+                        <span id="grand-display">{{ number_format($invoice->grand_total, 2) }}</span>
+                        <input type="hidden" name="grand_total" id="grand-val" value="{{ $invoice->grand_total }}">
                     </div>
                 </div>
             </div>
@@ -803,160 +870,23 @@ select {
         <div class="bottom-grid">
             <div class="card">
                 <div class="section-lbl">Customer Notes</div>
-                <textarea name="customer_notes" placeholder="Thanks for your business.">{{ old('customer_notes') }}</textarea>
+                <textarea name="customer_notes" placeholder="Thanks for your business.">{{ old('customer_notes', $invoice->customer_notes) }}</textarea>
                 <p style="font-size:11px;color:#aaa;margin-top:6px">Will be displayed on the invoice</p>
             </div>
             <div class="card">
                 <div class="section-lbl">Terms &amp; Conditions</div>
-                <textarea name="terms_conditions" placeholder="Enter the terms and conditions of your business to be displayed in your transaction">{{ old('terms_conditions') }}</textarea>
+                <textarea name="terms_conditions" placeholder="Enter the terms and conditions of your business to be displayed in your transaction">{{ old('terms_conditions', $invoice->terms_conditions) }}</textarea>
             </div>
         </div>
 
-        {{-- ✅ Credit Banner — moved here, just above payment section --}}
-<div id="credit-banner" style="display:none; margin-bottom:16px;">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
-                background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;">
-        <div style="font-size:18px;">💰</div>
-        <div>
-            <div style="font-size:13px;font-weight:600;color:#166534;">
-                Customer has ₹<span id="credit-amount-display">0.00</span> unused credit
-            </div>
-            <div style="font-size:11px;color:#15803d;margin-top:2px;">
-                Click checkbox to auto-apply credit to this invoice
-            </div>
-        </div>
-        <div style="margin-left:auto;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#166534;">
-                <input type="checkbox" id="apply-credit-checkbox" 
-                       style="width:14px;height:14px;accent-color:#27ae60;">
-                Apply credit to this invoice
-            </label>
-        </div>
-    </div>
-    <div id="credit-apply-section" style="display:none;margin-top:8px;
-         padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
-        <div style="font-size:13px;color:#166534;display:flex;align-items:center;gap:8px;">
-            <span>✅</span>
-            <span>₹<span id="credit-will-apply-display">0.00</span> credit will be auto-applied from advance balance</span>
-        </div>
-    </div>
-    <input type="hidden" name="apply_credit_amount" id="apply-credit-amount-hidden" value="0">
-</div>
-
-
-
-   {{-- Payment Received Section --}}
-<div class="card" id="payment-received-card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0;" id="payment-toggle-row">
-        <input type="checkbox" id="payment-received-chk" name="payment_received" value="1"
-               onchange="togglePaymentSection(this)"
-               style="width:16px;height:16px;cursor:pointer;accent-color:#4a90d9">
-        <label for="payment-received-chk" 
-               style="font-size:14px;font-weight:500;color:#1a1a2e;cursor:pointer;">
-            I have received the payment
-        </label>
-    </div>
-
-    {{-- Payment Details (hidden by default) --}}
-    <div id="payment-details-section" style="display:none;margin-top:16px;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-                <tr style="background:#f8f9fa;">
-                    <th style="padding:9px 12px;text-align:left;font-weight:600;font-size:12px;
-                                color:#666;border-top:1px solid #e8eaed;border-bottom:1px solid #e8eaed;
-                                width:35%">PAYMENT MODE</th>
-                    <th style="padding:9px 12px;text-align:left;font-weight:600;font-size:12px;
-                                color:#666;border-top:1px solid #e8eaed;border-bottom:1px solid #e8eaed;
-                                width:35%">DEPOSIT TO</th>
-                    <th style="padding:9px 12px;text-align:right;font-weight:600;font-size:12px;
-                                color:#666;border-top:1px solid #e8eaed;border-bottom:1px solid #e8eaed;
-                                width:30%">AMOUNT RECEIVED</th>
-                </tr>
-            </thead>
-            <tbody id="payment-rows-body">
-                <tr id="payment-row-0">
-                    <td style="padding:8px 12px;">
-                        <select name="payment_mode" style="width:100%;height:34px;">
-    <option value="cash">Cash</option>
-    <option value="bank_transfer">Bank Transfer</option>
-    <option value="cheque">Cheque</option>
-    <option value="upi">UPI</option>
-    <option value="card">Card</option>
-    <option value="advance">Advance Payment</option>  {{-- ADD THIS --}}
-</select>
-                    </td>
-                    <td style="padding:8px 12px;">
-                        <select name="deposit_to" style="width:100%;height:34px;">
-                            <option value="petty_cash">Petty Cash</option>
-                            <option value="bank">Bank</option>
-                        </select>
-                    </td>
-                    <td style="padding:8px 12px;">
-                        <input type="number" name="amount_received" id="amount-received-input"
-                               min="0" step="0.01" value="0"
-                               style="width:100%;height:34px;text-align:right;"
-                               oninput="updatePaymentTotals()">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        {{-- Split Payment + Totals --}}
-        <div style="display:flex;justify-content:space-between;align-items:center;
-                    padding:10px 12px;border-top:1px solid #f0f2f4;margin-top:4px;">
-            <button type="button" onclick="addSplitPayment()"
-                    style="background:none;border:none;color:#4a90d9;font-size:13px;
-                           cursor:pointer;display:flex;align-items:center;gap:4px;">
-                ⊕ Add Split Payment
-            </button>
-            <div style="text-align:right;">
-                <div style="display:flex;justify-content:space-between;gap:40px;
-                            font-size:13px;color:#555;padding:4px 0;">
-                    <span>Total (₹) :</span>
-                    <span id="payment-total-display" style="font-weight:600;color:#1a1a2e;">0.00</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;gap:40px;
-                            font-size:13px;padding:4px 0;">
-                    <span style="color:#e05050;">Balance Amount (₹) :</span>
-                    <span id="payment-balance-display" style="color:#e05050;font-weight:600;">0.00</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Email Communications --}}
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f0f2f4;">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-                <span style="font-size:13px;font-weight:500;color:#1a1a2e;">Email Communications</span>
-                <a href="#" onclick="selectAllEmails(event)"
-                   style="font-size:12px;color:#4a90d9;text-decoration:none;">Select All</a>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-                <button type="button"
-                        style="background:none;border:1px dashed #4a90d9;border-radius:16px;
-                               padding:4px 12px;font-size:12px;color:#4a90d9;cursor:pointer;">
-                    ⊕ Add New
-                </button>
-                <label style="display:flex;align-items:center;gap:6px;
-                               border:1px solid #e3e6ea;border-radius:16px;
-                               padding:4px 12px;cursor:pointer;font-size:12px;color:#555;">
-                    <input type="checkbox" name="notify_emails[]" value="customer"
-                           style="accent-color:#4a90d9;">
-                    <span>👤</span>
-                    <span id="customer-email-label">Customer Email</span>
-                </label>
-            </div>
-        </div>
-    </div>
-</div>
-        
         {{-- Footer Buttons --}}
         <div class="footer-bar">
             <button type="submit" name="action" value="draft" class="btn-draft">Save as Draft</button>
-            <button type="submit" name="action" value="send"  class="btn-primary">Save and Send &#9660;</button>
-            <a href="{{ route('invoices.index') }}" class="btn-cancel">Cancel</a>
+            <button type="submit" name="action" value="send"  class="btn-primary">Update &amp; Send &#9660;</button>
+            <a href="{{ route('invoices.show', $invoice->id) }}" class="btn-cancel">Cancel</a>
             <div class="footer-totals">
-                <span>Total Amount: <strong id="footer-amount">₹ 0.00</strong></span>
-                <span>Total Quantity: <strong id="footer-qty">0</strong></span>
+                <span>Total Amount: <strong id="footer-amount">₹ {{ number_format($invoice->grand_total, 2) }}</strong></span>
+                <span>Total Quantity: <strong id="footer-qty">{{ $invoice->items->sum('quantity') }}</strong></span>
             </div>
         </div>
 
@@ -1098,7 +1028,7 @@ select {
                     padding:16px 20px;border-bottom:1px solid #e3e6ea;flex-shrink:0;">
             <h3 style="font-size:15px;font-weight:600;color:#1a1a2e;">&#128230; Add Items in Bulk</h3>
             <button onclick="closeBulkModal()" style="background:none;border:none;font-size:20px;
-                    color:#888;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
+                    color:#888;cursor:pointer;">&#10005;</button>
         </div>
         <div style="display:flex;gap:12px;align-items:center;padding:12px 20px;
                     border-bottom:1px solid #f0f2f4;flex-wrap:wrap;flex-shrink:0;">
@@ -1106,9 +1036,6 @@ select {
                    style="flex:1;min-width:240px;height:34px;border:1px solid #d0d5dd;border-radius:6px;
                           padding:0 10px;font-size:13px;"
                    oninput="filterBulkProducts()">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;">
-                <input type="checkbox" id="bulk-subcategory"> Include sub-categories
-            </label>
         </div>
         <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
             <div style="width:52%;border-right:1px solid #e3e6ea;overflow-y:auto;padding:10px 0;"
@@ -1126,9 +1053,7 @@ select {
                                      width:22px;height:22px;background:#e8f0fe;color:#4a90d9;
                                      border-radius:50%;font-size:12px;margin-left:4px;">0</span>
                     </span>
-                    <span style="font-size:12px;color:#888;">
-                        Total Quantity: <strong id="bulk-total-qty">0</strong>
-                    </span>
+                    <span style="font-size:12px;color:#888;">Total Quantity: <strong id="bulk-total-qty">0</strong></span>
                 </div>
                 <div id="bulk-selected-list">
                     <div style="color:#aaa;font-size:13px;text-align:center;padding:40px;">
@@ -1141,14 +1066,10 @@ select {
                                      justify-content:flex-end;gap:10px;flex-shrink:0;">
             <button onclick="confirmBulkAdd()"
                     style="background:#4a90d9;color:#fff;border:none;border-radius:6px;
-                           padding:9px 22px;font-size:13px;font-weight:500;cursor:pointer;">
-                Add Items
-            </button>
+                           padding:9px 22px;font-size:13px;font-weight:500;cursor:pointer;">Add Items</button>
             <button onclick="closeBulkModal()"
                     style="background:#fff;color:#333;border:1px solid #d0d5dd;border-radius:6px;
-                           padding:9px 22px;font-size:13px;cursor:pointer;">
-                Cancel
-            </button>
+                           padding:9px 22px;font-size:13px;cursor:pointer;">Cancel</button>
         </div>
     </div>
 </div>
@@ -1168,18 +1089,13 @@ select {
             <div style="font-size:12px;color:#888;margin-bottom:10px;" id="rpl-product-name"></div>
             <div id="rpl-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;"></div>
         </div>
-        <div style="padding:12px 18px;border-top:1px solid #e3e6ea;
-                    display:flex;justify-content:flex-end;gap:8px;">
+        <div style="padding:12px 18px;border-top:1px solid #e3e6ea;display:flex;justify-content:flex-end;gap:8px;">
             <button onclick="clearRowPriceList()"
                     style="background:none;border:1px solid #e05050;border-radius:6px;
-                           padding:7px 16px;font-size:12px;color:#e05050;cursor:pointer;">
-                Clear
-            </button>
+                           padding:7px 16px;font-size:12px;color:#e05050;cursor:pointer;">Clear</button>
             <button onclick="closeRowPriceList()"
                     style="background:#fff;border:1px solid #d0d5dd;border-radius:6px;
-                           padding:7px 16px;font-size:12px;cursor:pointer;">
-                Cancel
-            </button>
+                           padding:7px 16px;font-size:12px;cursor:pointer;">Cancel</button>
         </div>
     </div>
 </div>
@@ -1188,26 +1104,19 @@ select {
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
-
 const CUSTOMER_CATEGORY_MAP = @json($customerCategoryMap);
 const ALL_LOCATIONS = [
     @foreach($locations as $loc)
     { id: {{ $loc->id }}, location_name: "{{ addslashes($loc->location_name) }}", location_type: "{{ $loc->location_type }}" },
     @endforeach
 ];
-// ══════════════════════════════════════════
-// PRODUCTS MAP
-// ══════════════════════════════════════════
+
 const PRODUCTS = {
     @foreach($products as $p)
     @php
-        $additionalData = is_string($p->additional_data)
-            ? json_decode($p->additional_data, true)
-            : ($p->additional_data ?? []);
+        $additionalData = is_string($p->additional_data) ? json_decode($p->additional_data, true) : ($p->additional_data ?? []);
         $pGst    = (float)($additionalData['gst'] ?? 0);
-        $imgData = is_string($p->product_image)
-            ? json_decode($p->product_image, true)
-            : ($p->product_image ?? []);
+        $imgData = is_string($p->product_image) ? json_decode($p->product_image, true) : ($p->product_image ?? []);
         $imgPath = $imgData['front_image'] ?? null;
         $pStock  = $p->opening_stock ?? 0;
     @endphp
@@ -1227,22 +1136,17 @@ const VARIANTS = {
     @foreach($variants as $productId => $pvariants)
     {{ $productId }}: [
         @foreach($pvariants as $v)
-        {
-            id: {{ $v->id }},
-            name: "{{ addslashes($v->name) }}",
-            sku: "{{ addslashes($v->sku ?? '') }}",
-            rate: {{ (float)($v->selling_price ?? 0) }},
-            stock: {{ (float)($v->opening_stock ?? 0) }},
-        },
+        { id: {{ $v->id }}, name: "{{ addslashes($v->name) }}", sku: "{{ addslashes($v->sku ?? '') }}", rate: {{ (float)($v->selling_price ?? 0) }} },
         @endforeach
     ],
     @endforeach
 };
 
-let rowCount = 1;
+// rowCount starts AFTER existing items so new rows don't clash
+let rowCount       = {{ $invoice->items->count() }};
 let activePriceListRates = {};
 let _rplCurrentIdx = null;
-let extraChargeCount = 0;
+let extraChargeCount = {{ isset($extraCharges) ? count($extraCharges) : 0 }};
 
 // ══════════════════════════════════════════
 // ADDRESS FORMAT
@@ -1255,9 +1159,7 @@ function formatAddress(addr) {
         addr.state, addr.country,
         addr.phone ? '📞 ' + addr.phone : null,
     ].filter(Boolean);
-    return lines.length
-        ? lines.map(l => `<div>${l}</div>`).join('')
-        : '<span style="color:#ccc">No address</span>';
+    return lines.length ? lines.map(l => `<div>${l}</div>`).join('') : '<span style="color:#ccc">No address</span>';
 }
 
 function formatAddressLines(addr) {
@@ -1266,24 +1168,18 @@ function formatAddressLines(addr) {
         [addr.city, addr.pincode].filter(Boolean).join(' - '),
         addr.state, addr.country,
         addr.phone ? '📞 ' + addr.phone : null,
-        addr.fax   ? 'Fax: ' + addr.fax : null,
+        addr.fax   ? 'Fax: ' + addr.fax   : null,
     ].filter(Boolean).map(l => `<div>${l}</div>`).join('');
 }
+
 // ══════════════════════════════════════════
-// CUSTOMER CHANGE — FIXED VERSION
+// CUSTOMER CHANGE
 // ══════════════════════════════════════════
 function onCustomerChange(customerId) {
-    const sel     = document.getElementById('customer-select');
-    const opt     = sel.options[sel.selectedIndex];
-    const box     = document.getElementById('customer-addr-box');
-    const infoBtn = document.getElementById('btn-cust-info');
-
-    // Reset credit banner
-    document.getElementById('credit-banner').style.display = 'none';
-    window._customerUnusedCredit = 0;
-    document.getElementById('apply-credit-checkbox').checked = false;
-    document.getElementById('credit-apply-section').style.display = 'none';
-    document.getElementById('apply-credit-amount-hidden').value = '0';
+    const sel      = document.getElementById('customer-select');
+    const opt      = sel.options[sel.selectedIndex];
+    const box      = document.getElementById('customer-addr-box');
+    const infoBtn  = document.getElementById('btn-cust-info');
 
     if (!customerId) {
         box.style.display     = 'none';
@@ -1295,7 +1191,6 @@ function onCustomerChange(customerId) {
 
     infoBtn.style.display = 'flex';
 
-    // Show billing/shipping address
     let addrData = null;
     try { addrData = JSON.parse(opt.dataset.address || 'null'); } catch(e) {}
     if (addrData) {
@@ -1309,258 +1204,59 @@ function onCustomerChange(customerId) {
     window._selectedCustomerId   = customerId;
     window._selectedCustomerName = opt.textContent.trim();
 
-    // ── 1. Fetch category + locations + series + price lists ──
     fetch(`/invoices/customer-defaults?customer_id=${customerId}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
     .then(data => {
         if (!data.category) { resetCategoryLabel(); return; }
-
-        // ── Category label ──
         const labelBox = document.getElementById('cat-label-box');
         labelBox.style.display = 'block';
-        document.getElementById('cat-avatar').textContent       = data.category.name[0]?.toUpperCase() || '?';
+        document.getElementById('cat-avatar').textContent      = data.category.name[0]?.toUpperCase() || '?';
         document.getElementById('cat-display-name').textContent = data.category.name;
         document.getElementById('user-category-id-input').value = data.category.id;
-
         const badge     = document.getElementById('cat-loc-badge');
         const badgeText = document.getElementById('cat-loc-badge-text');
         badge.style.display = 'flex';
-
         if (data.locations.length) {
-            badgeText.textContent   = data.locations.length + ' location' + (data.locations.length > 1 ? 's' : '');
+            badgeText.textContent  = data.locations.length + ' location' + (data.locations.length > 1 ? 's' : '');
             badgeText.style.cssText = 'font-size:11px;color:#27ae60;background:#ecfdf5;border:0.5px solid #a7f3d0;border-radius:10px;padding:3px 10px;';
         } else {
-            badgeText.textContent   = 'No locations assigned';
+            badgeText.textContent  = 'No locations assigned';
             badgeText.style.cssText = 'font-size:11px;color:#e05050;background:#fef2f2;border:0.5px solid #fecaca;border-radius:10px;padding:3px 10px;';
         }
-
-        // ── FIXED: Category locations மட்டும் dropdown-ல் show பண்ணு ──
         filterLocationDropdown(data.locations);
-
-        // ── Store locations data with series info for later use ──
-        window._categoryLocations = data.locations; // each has .series[]
-
-        // ── Price list auto-select ──
-        if (data.price_lists && data.price_lists.length > 0) {
+        if (data.price_lists.length > 0) {
             const plSel = document.getElementById('price-list-select');
-            plSel.value = data.price_lists[0].id;
-            onPriceListChange(data.price_lists[0].id);
-        }
-
-        // ── FIXED: First location auto-select + series + invoice number ──
-        if (data.locations.length > 0) {
-            const firstLoc = data.locations[0];
-            const locSel   = document.getElementById('location-select');
-            locSel.value   = firstLoc.id;
-
-            // Build series dropdown from this location's series
-            buildSeriesDropdown(firstLoc.series, firstLoc.default_series_id);
-
-            // Auto-select first/default series and set invoice number
-            const defaultSeriesId = firstLoc.default_series_id
-                || (firstLoc.series[0]?.id ?? null);
-
-            if (defaultSeriesId) {
-                const seriesSel = document.getElementById('series_id');
-                seriesSel.value = defaultSeriesId;
-                setInvoiceNumberFromSeries(firstLoc.series, defaultSeriesId);
-            } else {
-                // No series — fallback fetch
-                onLocationChange(firstLoc.id);
+            if (!plSel.value) {
+                plSel.value = data.price_lists[0].id;
+                onPriceListChange(data.price_lists[0].id);
             }
         }
     })
     .catch(() => resetCategoryLabel());
-
-    // ── 2. Customer credit check ──
-    fetch(`/payments-records/customer-credit?customer_id=${customerId}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        const banner = document.getElementById('credit-banner');
-        if (data.success && data.unused_credits > 0) {
-            document.getElementById('credit-amount-display').textContent = parseFloat(data.unused_credits).toFixed(2);
-            banner.style.display = 'block';
-            window._customerUnusedCredit = data.unused_credits;
-            document.getElementById('cp-credits').textContent = '₹' + parseFloat(data.unused_credits).toFixed(2);
-        } else {
-            banner.style.display = 'none';
-            window._customerUnusedCredit = 0;
-            document.getElementById('cp-credits').textContent = '₹0.00';
-        }
-    })
-    .catch(() => { document.getElementById('credit-banner').style.display = 'none'; });
 }
 
-// ══════════════════════════════════════════
-// FIXED: Build series dropdown from location's series array
-// ══════════════════════════════════════════
-function buildSeriesDropdown(seriesList, defaultSeriesId) {
-    const wrapper      = document.getElementById('series_wrapper');
-    const seriesSelect = document.getElementById('series_id');
-    seriesSelect.innerHTML = '';
-
-    if (!seriesList || seriesList.length === 0) {
-        wrapper.style.display = 'none';
-        return;
-    }
-
-    seriesList.forEach(series => {
-        const opt = document.createElement('option');
-        opt.value = series.id;
-        // Preview: next invoice number for this series
-        opt.textContent = series.name + '  (' + series.preview + ')';
-        if (series.id === defaultSeriesId) opt.selected = true;
-        seriesSelect.appendChild(opt);
-    });
-
-    wrapper.style.display = 'block';
-}
-
-// ══════════════════════════════════════════
-// FIXED: Set invoice number directly from series data (no extra fetch needed)
-// ══════════════════════════════════════════
-function setInvoiceNumberFromSeries(seriesList, seriesId) {
-    if (!seriesList || !seriesId) return;
-
-    const series = seriesList.find(s => s.id == seriesId);
-    if (!series) return;
-
-    // preview இல்லே இருந்தா calculate பண்ணு
-    const invNumber = series.preview || (series.prefix + series.start);
-    document.getElementById('invoice-number-input').value = invNumber;
-
-    const hint = document.getElementById('invoice-format-hint');
-    if (hint) {
-        const x = '0'.repeat((series.start || '000001').length);
-        hint.textContent = 'Format: ' + (series.prefix || 'INV-') + x;
-    }
-}
-
-// ══════════════════════════════════════════
-// FIXED: onLocationChange — category locations context aware
-// ══════════════════════════════════════════
-function onLocationChange(locationId) {
-    bulkProducts = [];
-    bulkSelected = {};
-
-    if (!locationId) {
-        document.getElementById('series_wrapper').style.display = 'none';
-        return;
-    }
-
-    if (document.getElementById('bulk-modal').style.display === 'flex') {
-        loadBulkProducts(locationId);
-    }
-
-    // ── If we have category location data (from customer select), use it directly ──
-    const categoryLocs = window._categoryLocations || [];
-    const matchedLoc   = categoryLocs.find(l => l.id == locationId);
-
-    if (matchedLoc && matchedLoc.series && matchedLoc.series.length > 0) {
-        // Series data already available — no need to fetch
-        buildSeriesDropdown(matchedLoc.series, matchedLoc.default_series_id);
-        const defaultSeriesId = matchedLoc.default_series_id
-            || matchedLoc.series[0].id;
-        document.getElementById('series_id').value = defaultSeriesId;
-        setInvoiceNumberFromSeries(matchedLoc.series, defaultSeriesId);
-        return;
-    }
-
-    // ── Fallback: fetch from server (manual location select without customer) ──
-    fetch(`/invoices/invoice-number?location_id=${locationId}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('invoice-number-input').value = data.invoice_number ?? '';
-
-        const hint = document.getElementById('invoice-format-hint');
-        if (hint && data.format_preview) hint.textContent = `Format: ${data.format_preview}`;
-
-        const wrapper      = document.getElementById('series_wrapper');
-        const seriesSelect = document.getElementById('series_id');
-        seriesSelect.innerHTML = '';
-
-        if (data.series_list && data.series_list.length > 0) {
-            data.series_list.forEach(series => {
-                const opt     = document.createElement('option');
-                opt.value     = series.id;
-                const preview = series.prefix + String(
-                    series.last_number
-                        ? (parseInt(series.last_number) + 1)
-                        : series.start
-                ).padStart(String(series.start).length, '0');
-                opt.textContent = series.name + '  (' + preview + ')';
-                seriesSelect.appendChild(opt);
-            });
-            wrapper.style.display = 'block';
-            updateInvoiceNumberBySeries(locationId, data.series_list[0].id);
-        } else {
-            wrapper.style.display = 'none';
-        }
-    })
-    .catch(() => console.warn('Invoice number fetch failed'));
-}
-
-// ══════════════════════════════════════════
-// FIXED: onSeriesChange — use cached data if available
-// ══════════════════════════════════════════
-function onSeriesChange(seriesId) {
-    const locationId = document.getElementById('location-select').value;
-    if (!locationId || !seriesId) return;
-
-    // Category location data இருந்தா அதை use பண்ணு
-    const categoryLocs = window._categoryLocations || [];
-    const matchedLoc   = categoryLocs.find(l => l.id == locationId);
-
-    if (matchedLoc && matchedLoc.series) {
-        setInvoiceNumberFromSeries(matchedLoc.series, parseInt(seriesId));
-        return;
-    }
-
-    // Fallback fetch
-    updateInvoiceNumberBySeries(locationId, seriesId);
-}
-
-// ══════════════════════════════════════════
-// filterLocationDropdown — category locations மட்டும்
-// ══════════════════════════════════════════
 function filterLocationDropdown(filteredLocs) {
     const locSel    = document.getElementById('location-select');
     const currLocId = locSel.value;
-
     locSel.innerHTML = '<option value="">— Select Location —</option>';
-
-    // filteredLocs empty-ஆ இருந்தா ALL_LOCATIONS காட்டு (fallback)
-    const list = (filteredLocs && filteredLocs.length > 0) ? filteredLocs : ALL_LOCATIONS;
-
+    const list = filteredLocs.length ? filteredLocs : ALL_LOCATIONS;
     list.forEach(loc => {
-        const icon = (loc.location_type === 'business') ? '🏢' : '🏭';
+        const icon = loc.location_type === 'business' ? '🏢' : '🏭';
         const opt  = document.createElement('option');
         opt.value  = loc.id;
         opt.textContent = loc.location_name + ' (' + icon + ')';
         if (String(loc.id) === String(currLocId)) opt.selected = true;
         locSel.appendChild(opt);
     });
-
-    const stillValid = list.some(l => String(l.id) === String(currLocId));
-    if (!stillValid && currLocId) {
-        locSel.value = '';
-        document.getElementById('series_wrapper').style.display = 'none';
-        document.getElementById('invoice-number-input').value   = '{{ $invoiceNumber }}';
-    }
 }
 
 function resetCategoryLabel() {
     document.getElementById('cat-label-box').style.display = 'none';
     document.getElementById('cat-loc-badge').style.display = 'none';
     document.getElementById('user-category-id-input').value = '';
-    window._categoryLocations = null;
-    filterLocationDropdown(ALL_LOCATIONS); // All locations காட்டு
+    filterLocationDropdown(ALL_LOCATIONS);
 }
 
 function openCustPanelFromBtn() {
@@ -1589,90 +1285,6 @@ function fetchLocationStock(idx, productId, locationId, unit) {
     .catch(() => {});
 }
 
-// ══════════════════════════════════════════
-// PAYMENT RECEIVED SECTION
-// ══════════════════════════════════════════
-let splitPaymentCount = 1;
-
-function togglePaymentSection(chk) {
-    const section = document.getElementById('payment-details-section');
-    section.style.display = chk.checked ? 'block' : 'none';
-    if (chk.checked) {
-        const grandTotal = parseFloat(document.getElementById('grand-val').value) || 0;
-        const creditAmt  = parseFloat(document.getElementById('apply-credit-amount-hidden').value) || 0;
-        const fillAmt    = Math.max(0, grandTotal - creditAmt);
-        
-        const amtInput = document.getElementById('amount-received-input');
-        amtInput.value = fillAmt.toFixed(2);
-        
-        // ✅ Credit fully covers → disable input, show 0
-        amtInput.readOnly = creditAmt >= grandTotal;
-        amtInput.style.background = creditAmt >= grandTotal ? '#f0fdf4' : '#fff';
-        amtInput.style.color      = creditAmt >= grandTotal ? '#27ae60' : '#333';
-        
-        updatePaymentTotals();
-    }
-}
-function updatePaymentTotals() {
-    const grandTotal = parseFloat(document.getElementById('grand-val').value) || 0;
-    const creditAmt  = parseFloat(document.getElementById('apply-credit-amount-hidden').value) || 0;
-    let   cashReceived = 0;
-
-    document.querySelectorAll('[name="amount_received"], [name^="split_amount_received"]')
-        .forEach(el => { cashReceived += parseFloat(el.value) || 0; });
-
-    const totalReceived = cashReceived + creditAmt; // ✅ credit + cash
-    const balance       = grandTotal - totalReceived;
-
-    document.getElementById('payment-total-display').textContent   = totalReceived.toFixed(2);
-    document.getElementById('payment-balance-display').textContent = balance.toFixed(2);
-    document.getElementById('payment-balance-display').style.color = balance > 0.001 ? '#e05050' : '#27ae60';
-}
-
-function addSplitPayment() {
-    const idx  = splitPaymentCount++;
-    const body = document.getElementById('payment-rows-body');
-    const tr   = document.createElement('tr');
-    tr.id = 'split-row-' + idx;
-    tr.innerHTML = `
-        <td style="padding:8px 12px;">
-            <select name="split_payment_mode_${idx}" style="width:100%;height:34px;">
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cheque">Cheque</option>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-            </select>
-        </td>
-        <td style="padding:8px 12px;">
-            <select name="split_deposit_to_${idx}" style="width:100%;height:34px;">
-                <option value="petty_cash">Petty Cash</option>
-                <option value="bank">Bank</option>
-            </select>
-        </td>
-        <td style="padding:8px 12px;display:flex;align-items:center;gap:6px;">
-            <input type="number" name="split_amount_received_${idx}"
-                   min="0" step="0.01" value="0"
-                   style="width:100%;height:34px;text-align:right;"
-                   oninput="updatePaymentTotals()">
-            <button type="button" onclick="removeSplitRow(${idx})"
-                    style="background:none;border:none;color:#e05050;
-                           font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
-        </td>
-    `;
-    body.appendChild(tr);
-}
-
-function removeSplitRow(idx) {
-    document.getElementById('split-row-' + idx)?.remove();
-    updatePaymentTotals();
-}
-
-function selectAllEmails(e) {
-    e.preventDefault();
-    document.querySelectorAll('[name="notify_emails[]"]')
-        .forEach(chk => chk.checked = true);
-}
 // ══════════════════════════════════════════
 // PRODUCT FILL
 // ══════════════════════════════════════════
@@ -1710,8 +1322,7 @@ function fillProduct(idx, sel) {
             Stock: <span id="stock-display-${idx}" class="${p.stock > 0 ? 'stock-ok' : 'stock-low'}">
                 <strong>${p.stock}</strong> ${p.unit}
             </span>
-            <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;
-                  margin-left:6px;font-size:11px"></span>
+            <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;margin-left:6px;font-size:11px"></span>
         `;
         metaEl.classList.add('show');
 
@@ -1719,26 +1330,12 @@ function fillProduct(idx, sel) {
         if (plBtn) plBtn.style.display = 'block';
 
         const warehouseId = document.getElementById('location-select')?.value;
-        if (warehouseId) {
-            fetchLocationStock(idx, pid, warehouseId, p.unit);
-        }
+        if (warehouseId) fetchLocationStock(idx, pid, warehouseId, p.unit);
 
-// Apply active price list if set — composite key for variants
-        const plCompositeKey = sku ? `${pid}__${sku}` : null;
-        const rateData = (plCompositeKey && activePriceListRates[plCompositeKey])
-            ? activePriceListRates[plCompositeKey]
-            : (activePriceListRates[pid] || activePriceListRates[String(pid)] || null);
-
+        const rateData = activePriceListRates[pid] || activePriceListRates[String(pid)];
         if (rateData) {
             document.getElementById('irate-' + idx).value = parseFloat(rateData.rate).toFixed(2);
-            const lbl = document.getElementById('pl-label-' + idx);
-            if (lbl) {
-                const plSel = document.getElementById('price-list-select');
-                const plName = plSel?.options[plSel?.selectedIndex]?.text || '';
-                if (plName && plName !== '— No Price List —') lbl.textContent = '✓ ' + plName;
-            }
         }
-
     } else {
         nameInput.value = '';
         if (varInput) varInput.value = '';
@@ -1750,7 +1347,6 @@ function fillProduct(idx, sel) {
         const plBtn = document.getElementById('pl-btn-' + idx);
         if (plBtn) plBtn.style.display = 'none';
     }
-
     calcRow(idx);
 }
 
@@ -1761,17 +1357,13 @@ function validateQty(idx) {
     const qtyInput = document.getElementById('iqty-' + idx);
     const warnEl   = document.getElementById('stock-warn-' + idx);
     if (!qtyInput || !warnEl) return;
-
     const qty    = parseFloat(qtyInput.value) || 0;
     const metaEl = document.getElementById('imeta-' + idx);
     if (!metaEl || !metaEl.classList.contains('show')) return;
-
     const stockEl  = document.getElementById('stock-display-' + idx);
     if (!stockEl) return;
-
     const strongEl = stockEl.querySelector('strong');
     const stock    = parseFloat(strongEl ? strongEl.textContent : '0') || 0;
-
     if (stock > 0 && qty > stock) {
         warnEl.textContent         = `⚠ Only ${stock} available`;
         warnEl.style.display       = 'inline';
@@ -1809,7 +1401,7 @@ function calcRow(idx) {
 }
 
 // ══════════════════════════════════════════
-// PRICE LIST — PAGE LEVEL (header dropdown)
+// PRICE LIST — PAGE LEVEL
 // ══════════════════════════════════════════
 function onPriceListChange(priceListId) {
     if (!priceListId) {
@@ -1829,7 +1421,6 @@ function onPriceListChange(priceListId) {
         });
         return;
     }
-
     fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
@@ -1839,34 +1430,15 @@ function onPriceListChange(priceListId) {
         document.querySelectorAll('#items-body tr').forEach(tr => {
             const idx = tr.dataset.index;
             const sel = tr.querySelector(`select[name="items[${idx}][product_id]"]`);
-            if (sel && sel.value) {
-                applyPriceListToRow(idx, parseInt(sel.value), data.name);
-            }
+            if (sel && sel.value) applyPriceListToRow(idx, parseInt(sel.value), data.name);
         });
-    })
-    .catch(() => console.warn('Price list fetch failed'));
+    });
 }
 
 function applyPriceListToRow(idx, productId, listName) {
     if (!productId) return;
-    
-    // ── Variant item-க்கு composite key check ──
-    // item select-ல இருந்து actual item id எடு
-    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
-    const opt = sel ? sel.options[sel.selectedIndex] : null;
-    const sku = opt ? (opt.dataset.sku || '') : '';
-    
-    // Composite key try: "productId__sku" format
-    const compositeKey = sku ? `${productId}__${sku}` : null;
-    
-    // rates-ல composite key இருந்தா அதை use பண்ணு,
-    // இல்லன்னா direct productId try பண்ணு
-    const rateData = (compositeKey && activePriceListRates[compositeKey])
-        ? activePriceListRates[compositeKey]
-        : (activePriceListRates[productId] || activePriceListRates[String(productId)] || null);
-    
+    const rateData = activePriceListRates[productId] || activePriceListRates[String(productId)];
     if (!rateData) return;
-    
     const rateInput = document.getElementById('irate-' + idx);
     if (rateInput) {
         rateInput.value = parseFloat(rateData.rate).toFixed(2);
@@ -1874,7 +1446,7 @@ function applyPriceListToRow(idx, productId, listName) {
         if (lbl && listName) lbl.textContent = '✓ ' + listName;
         calcRow(idx);
     }
-}   
+}
 
 // ══════════════════════════════════════════
 // PRICE LIST — ROW LEVEL MODAL
@@ -1884,12 +1456,10 @@ function openRowPriceList(idx) {
     const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
     const pid = sel ? parseInt(sel.value) : null;
     const productName = pid && PRODUCTS[pid] ? PRODUCTS[pid].name : 'This item';
-
     document.getElementById('rpl-product-name').textContent = 'Product: ' + productName;
 
     const priceLists = @json($priceLists);
     const container  = document.getElementById('rpl-list');
-
     if (!priceLists.length) {
         container.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px;font-size:13px;">No price lists found</div>';
     } else {
@@ -1908,10 +1478,8 @@ function openRowPriceList(idx) {
                     </div>
                 </div>
                 <span style="color:#4a90d9;font-size:18px;">›</span>
-            </div>
-        `).join('');
+            </div>`).join('');
     }
-
     document.getElementById('row-pl-modal').style.display = 'flex';
 }
 
@@ -1938,24 +1506,13 @@ function applyRowPriceListById(priceListId, listName, idx) {
     const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
     const pid = sel ? parseInt(sel.value) : null;
     if (!pid) { closeRowPriceList(); return; }
-
-    // ── Variant SKU எடு composite key build பண்ண ──
-    const opt = sel ? sel.options[sel.selectedIndex] : null;
-    const sku = opt ? (opt.dataset.sku || '') : '';
-    const compositeKey = sku ? `${pid}__${sku}` : null;
-
     fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
     .then(data => {
-        const rates = data.rates || {};
-
-        // ── Composite key முதல் try, இல்லன்னா direct pid ──
-        const rateData = (compositeKey && rates[compositeKey])
-            ? rates[compositeKey]
-            : (rates[pid] || rates[String(pid)] || null);
-
+        const rates    = data.rates || {};
+        const rateData = rates[pid] || rates[String(pid)] || null;
         if (rateData) {
             document.getElementById('irate-' + idx).value = parseFloat(rateData.rate).toFixed(2);
             const lbl = document.getElementById('pl-label-' + idx);
@@ -1968,6 +1525,10 @@ function applyRowPriceListById(priceListId, listName, idx) {
     })
     .catch(() => { alert('Failed to load rates.'); closeRowPriceList(); });
 }
+
+document.getElementById('row-pl-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeRowPriceList();
+});
 
 // ══════════════════════════════════════════
 // EXTRA CHARGES
@@ -1990,10 +1551,8 @@ function addExtraCharge() {
                    style="width:80px;height:28px;text-align:right;"
                    oninput="calcTotals()">
             <button type="button" onclick="removeExtraCharge(${idx})"
-                    style="background:none;border:none;color:#e05050;
-                           cursor:pointer;font-size:16px;padding:0 4px;line-height:1;">✕</button>
-        </div>
-    `;
+                    style="background:none;border:none;color:#e05050;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;">✕</button>
+        </div>`;
     container.appendChild(div);
     calcTotals();
 }
@@ -2009,17 +1568,14 @@ function removeExtraCharge(idx) {
 // ══════════════════════════════════════════
 function calcTotals() {
     let subtotal = 0, totalQty = 0;
-
     document.querySelectorAll('#items-body tr').forEach(tr => {
         const idx     = tr.dataset.index;
         const qty     = parseFloat(document.getElementById('iqty-'    + idx)?.value) || 0;
         const rate    = parseFloat(document.getElementById('irate-'   + idx)?.value) || 0;
         const gstVal  = parseFloat(document.getElementById('igstval-' + idx)?.value) || 0;
         const gstType = document.getElementById('igsttype-' + idx)?.value || '%';
-
         const baseAmt = qty * rate;
         const gstAmt  = gstType === '%' ? (baseAmt * gstVal / 100) : (gstVal * qty);
-
         subtotal += baseAmt + gstAmt;
         totalQty += qty;
     });
@@ -2027,7 +1583,6 @@ function calcTotals() {
     const discVal  = parseFloat(document.getElementById('disc-pct').value) || 0;
     const discType = document.getElementById('disc-type').value;
     let discAmt, discPct;
-
     if (discType === '%') {
         discPct = Math.min(discVal, 100);
         discAmt = subtotal * discPct / 100;
@@ -2064,7 +1619,7 @@ function calcTotals() {
 }
 
 // ══════════════════════════════════════════
-// BUILD PRODUCT OPTIONS (helper for addRow / bulkAdd)
+// BUILD PRODUCT OPTIONS
 // ══════════════════════════════════════════
 function buildProductOptions() {
     let options = '<option value="">Type or click to select an item</option>';
@@ -2074,25 +1629,19 @@ function buildProductOptions() {
             options += `<optgroup label="${pd.name}">`;
             pvariants.forEach(v => {
                 options += `<option value="${pid}"
-                    data-variant-id="${v.id}"
-                    data-name="${pd.name} - ${v.name}"
-                    data-rate="${v.rate}"
-                    data-sku="${v.sku}"
-                    data-stock="${pd.stock}"
-                    data-unit="${pd.unit}"
-                    data-gst="${pd.gst || 0}"
-                    data-img="${pd.img}">
+                    data-variant-id="${v.id}" data-name="${pd.name} - ${v.name}"
+                    data-rate="${v.rate}" data-sku="${v.sku}"
+                    data-stock="${pd.stock}" data-unit="${pd.unit}"
+                    data-gst="${pd.gst || 0}" data-img="${pd.img}">
                     ${v.name} ${v.sku ? '['+v.sku+']' : ''} — ₹${parseFloat(v.rate).toFixed(2)}
                 </option>`;
             });
             options += `</optgroup>`;
         } else {
             options += `<option value="${pid}"
-                data-variant-id=""
-                data-name="${pd.name}" data-rate="${pd.rate}"
-                data-sku="${pd.sku}" data-stock="${pd.stock}"
-                data-unit="${pd.unit}" data-img="${pd.img}"
-                data-gst="${pd.gst || 0}">
+                data-variant-id="" data-name="${pd.name}" data-rate="${pd.rate}"
+                data-sku="${pd.sku}" data-stock="${pd.stock}" data-unit="${pd.unit}"
+                data-img="${pd.img}" data-gst="${pd.gst || 0}">
                 ${pd.name} ${pd.sku ? '['+pd.sku+']' : ''} — ₹${parseFloat(pd.rate).toFixed(2)}
                 (Stock: ${pd.stock} ${pd.unit})
             </option>`;
@@ -2102,33 +1651,24 @@ function buildProductOptions() {
 }
 
 // ══════════════════════════════════════════
-// BUILD ROW HTML (shared between addRow & confirmBulkAdd)
+// BUILD ROW HTML
 // ══════════════════════════════════════════
 function buildRowHtml(idx, options, selectedProductId, qty, rate, gst, sku, stockOnHand, unit, img, itemName) {
-    const imgHtml = img
-        ? `<img src="${img}" alt="${itemName}">`
-        : '<span class="noimg">&#128247;</span>';
-
+    const imgHtml    = img ? `<img src="${img}" alt="${itemName}">` : '<span class="noimg">&#128247;</span>';
     const stockClass = stockOnHand > 0 ? 'stock-ok' : 'stock-low';
     const metaHtml   = itemName
         ? `<div class="product-meta show" id="imeta-${idx}">
-            <span style="color:#666">SKU: <strong>${sku || '—'}</strong></span>
-            &nbsp;|&nbsp;
+            <span style="color:#666">SKU: <strong>${sku || '—'}</strong></span>&nbsp;|&nbsp;
             Stock: <span id="stock-display-${idx}" class="${stockClass}">
                 <strong>${parseFloat(stockOnHand)}</strong> ${unit}
             </span>
-            <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;
-                  margin-left:6px;font-size:11px"></span>
+            <span id="stock-warn-${idx}" style="display:none;color:#e05050;font-weight:600;margin-left:6px;font-size:11px"></span>
           </div>`
         : `<div class="product-meta" id="imeta-${idx}"></div>`;
 
-    const plBtnDisplay = itemName ? 'block' : 'none';
-
     return `
         <td class="drag-col">&#8942;&#8942;</td>
-        <td class="img-col">
-            <div class="item-img-box" id="iimg-${idx}">${imgHtml}</div>
-        </td>
+        <td class="img-col"><div class="item-img-box" id="iimg-${idx}">${imgHtml}</div></td>
         <td>
             <select name="items[${idx}][product_id]" onchange="fillProduct(${idx}, this)" style="width:100%">
                 ${options}
@@ -2139,12 +1679,10 @@ function buildRowHtml(idx, options, selectedProductId, qty, rate, gst, sku, stoc
         </td>
         <td style="text-align:center;font-size:12px;color:#888" id="isku-cell-${idx}">${sku || '—'}</td>
         <td style="text-align:center;vertical-align:middle">
-            <div id="pl-btn-${idx}" style="display:${plBtnDisplay};">
-                <button type="button"
-                        onclick="openRowPriceList(${idx})"
+            <div id="pl-btn-${idx}" style="display:${itemName ? 'block' : 'none'};">
+                <button type="button" onclick="openRowPriceList(${idx})"
                         style="font-size:11px;padding:3px 8px;border:1px solid #4a90d9;
-                               border-radius:4px;background:#e8f0fe;color:#4a90d9;
-                               cursor:pointer;white-space:nowrap;">
+                               border-radius:4px;background:#e8f0fe;color:#4a90d9;cursor:pointer;white-space:nowrap;">
                     📋 Apply
                 </button>
                 <div id="pl-label-${idx}" style="font-size:10px;color:#27ae60;margin-top:2px;"></div>
@@ -2165,8 +1703,8 @@ function buildRowHtml(idx, options, selectedProductId, qty, rate, gst, sku, stoc
                 <select name="items[${idx}][gst_type]" id="igsttype-${idx}"
                         onchange="calcRow(${idx})"
                         style="width:40px;height:30px;border:1px solid #d0d5dd;
-                               border-radius:0 4px 4px 0;font-size:12px;
-                               background:#f8f9fa;padding:0 2px;appearance:none;text-align:center">
+                               border-radius:0 4px 4px 0;font-size:12px;background:#f8f9fa;
+                               padding:0 2px;appearance:none;text-align:center">
                     <option value="%">%</option>
                     <option value="₹">₹</option>
                 </select>
@@ -2181,12 +1719,11 @@ function buildRowHtml(idx, options, selectedProductId, qty, rate, gst, sku, stoc
                    oninput="calcRow(${idx})">
         </td>
         <td class="r" id="iamt-${idx}" style="font-weight:600;color:#1a1a2e">0.00</td>
-        <td><button type="button" class="btn-del" onclick="delRow(this)">&#10005;</button></td>
-    `;
+        <td><button type="button" class="btn-del" onclick="delRow(this)">&#10005;</button></td>`;
 }
 
 // ══════════════════════════════════════════
-// ADD NEW ROW
+// ADD / DELETE ROW
 // ══════════════════════════════════════════
 function addRow() {
     const idx   = rowCount++;
@@ -2222,39 +1759,31 @@ function calcDueDate() {
 }
 
 // ══════════════════════════════════════════
-// LOCATION → SERIES → INVOICE NUMBER
+// LOCATION → SERIES (no auto invoice number change on edit)
 // ══════════════════════════════════════════
 function onLocationChange(locationId) {
     bulkProducts = [];
     bulkSelected = {};
-
     if (!locationId) {
         document.getElementById('series_wrapper').style.display = 'none';
         return;
     }
-
     if (document.getElementById('bulk-modal').style.display === 'flex') {
         loadBulkProducts(locationId);
     }
-
+    // On edit, we only load series for display, but do NOT change invoice number
     fetch(`/invoices/invoice-number?location_id=${locationId}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
     .then(data => {
-        document.getElementById('invoice-number-input').value = data.invoice_number ?? '';
-
-        const hint = document.getElementById('invoice-format-hint');
-        if (hint && data.format_preview) hint.textContent = `Format: ${data.format_preview}`;
-
         const wrapper      = document.getElementById('series_wrapper');
         const seriesSelect = document.getElementById('series_id');
         seriesSelect.innerHTML = '';
-
         if (data.series_list && data.series_list.length > 0) {
             data.series_list.forEach(series => {
-                const opt     = document.createElement('option');
-                opt.value     = series.id;
+                const opt = document.createElement('option');
+                opt.value = series.id;
                 const preview = series.prefix + String(
                     series.last_number
                         ? (parseInt(series.last_number) + 1)
@@ -2264,33 +1793,20 @@ function onLocationChange(locationId) {
                 seriesSelect.appendChild(opt);
             });
             wrapper.style.display = 'block';
-            updateInvoiceNumberBySeries(locationId, data.series_list[0].id);
         } else {
             wrapper.style.display = 'none';
         }
+        // NOTE: Invoice number stays read-only on edit page — no change
     })
-    .catch(() => console.warn('Invoice number fetch failed'));
+    .catch(() => {});
 }
 
 function onSeriesChange(seriesId) {
-    const locationId = document.getElementById('location-select').value;
-    if (!locationId || !seriesId) return;
-    updateInvoiceNumberBySeries(locationId, seriesId);
-}
-
-function updateInvoiceNumberBySeries(locationId, seriesId) {
-    fetch(`/invoices/invoice-number?location_id=${locationId}&series_id=${seriesId}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('invoice-number-input').value = data.invoice_number ?? '';
-    })
-    .catch(() => console.warn('Series invoice number fetch failed'));
+    // On edit page, series change does NOT modify the invoice number
 }
 
 // ══════════════════════════════════════════
-// BULK ADD ITEMS MODAL
+// BULK ADD ITEMS
 // ══════════════════════════════════════════
 let bulkProducts = [];
 let bulkSelected = {};
@@ -2299,7 +1815,6 @@ function openBulkModal() {
     document.getElementById('bulk-modal').style.display = 'flex';
     bulkSelected = {};
     renderBulkSelected();
-
     const warehouseId = document.getElementById('location-select')?.value;
     if (warehouseId) {
         loadBulkProducts(warehouseId);
@@ -2320,15 +1835,11 @@ document.getElementById('bulk-modal').addEventListener('click', function(e) {
 function loadBulkProducts(locationId) {
     document.getElementById('bulk-product-list').innerHTML =
         '<div style="text-align:center;padding:40px;color:#aaa;font-size:13px;">Loading products...</div>';
-
     fetch(`/invoices/location-stock?location_id=${locationId}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
-    .then(data => {
-        bulkProducts = data.products || [];
-        renderBulkProducts(bulkProducts);
-    })
+    .then(data => { bulkProducts = data.products || []; renderBulkProducts(bulkProducts); })
     .catch(() => {
         document.getElementById('bulk-product-list').innerHTML =
             '<div style="text-align:center;padding:40px;color:#e05050;font-size:13px;">Failed to load products</div>';
@@ -2338,9 +1849,7 @@ function loadBulkProducts(locationId) {
 function filterBulkProducts() {
     const q = document.getElementById('bulk-search').value.toLowerCase();
     const filtered = q
-        ? bulkProducts.filter(p =>
-            p.name.toLowerCase().includes(q) ||
-            (p.sku || '').toLowerCase().includes(q))
+        ? bulkProducts.filter(p => p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q))
         : bulkProducts;
     renderBulkProducts(filtered);
 }
@@ -2351,109 +1860,41 @@ function renderBulkProducts(list) {
         container.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;font-size:13px;">No products found</div>';
         return;
     }
-
-    let html = '';
-    list.forEach(p => {
-        // ✅ VARIANTS JS map-ஐ விட்டு, API-ல் வந்த p.variants use பண்ணு
-        const pvariants = p.variants || [];
-
-        if (pvariants.length > 0) {
-            html += `<div style="padding:8px 16px 4px;background:#f8f9fa;border-bottom:1px solid #e8eaed;">
-                <span style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;">${p.name}</span>
-            </div>`;
-
-            pvariants.forEach(v => {
-                const bulkKey    = `${p.id}__${v.id}`;
-                const isSelected = bulkSelected[bulkKey] !== undefined;
-                // ✅ v.stock_on_hand use பண்ணு (API-ல் இருந்து வருது)
-                const vStock     = parseFloat(v.stock_on_hand ?? 0);
-                const stockColor = vStock > 0 ? '#27ae60' : '#e05050';
-                const stockNum   = vStock.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
-
-                html += `<div id="bulk-prow-${bulkKey}"
-onclick="toggleBulkVariant(${p.id}, ${v.id}, '${(p.name+' - '+v.name).replace(/'/g,"\\'")}', ${parseFloat(v.rate||0)}, '${v.sku||''}', ${vStock}, '${p.unit||''}', '${p.img||''}')"
-                     style="display:flex;align-items:center;justify-content:space-between;
-                            padding:9px 16px 9px 24px;cursor:pointer;
-                            background:${isSelected ? '#eef4ff' : '#fff'};
-                            border-left:3px solid ${isSelected ? '#4a90d9' : 'transparent'};
-                            border-bottom:1px solid #f2f3f5;">
-                  <div>
-                    <div style="font-size:13px;font-weight:500;color:${isSelected ? '#4a90d9' : '#1a1a2e'}">
-                        ${v.name}
-                        ${v.sku ? `<span style="font-size:11px;color:#888;">[${v.sku}]</span>` : ''}
-                    </div>
-                    <div style="font-size:11px;color:#888;margin-top:2px">Rate: ₹${parseFloat(v.rate||0).toFixed(2)}</div>
-                  </div>
-                  <div style="text-align:right;display:flex;align-items:center;gap:10px;">
-                    <div>
-                      <div style="font-size:11px;color:#888;">Stock on Hand</div>
-                      <div style="font-size:12px;font-weight:600;color:${stockColor}">${stockNum} ${p.unit}</div>
-                    </div>
-                    <div style="width:22px;height:22px;border-radius:50%;
-                                background:${isSelected ? '#4a90d9' : '#e8eaed'};
-                                display:flex;align-items:center;justify-content:center;">
-                      ${isSelected ? '<span style="color:#fff;font-size:14px">✓</span>' : ''}
-                    </div>
-                  </div>
-                </div>`;
-            });
-      } else {
-            // No variants — plain product
-            const isSelected = bulkSelected[p.id] !== undefined;
-            const vStock     = parseFloat(p.stock_on_hand ?? 0);
-            const stockColor = vStock > 0 ? '#27ae60' : '#e05050';
-            const stockNum   = vStock.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
-
-            html += `
-            <div id="bulk-prow-${p.id}" onclick="toggleBulkProduct(${p.id})"
-                 style="display:flex;align-items:center;justify-content:space-between;
-                        padding:10px 16px;cursor:pointer;
-                        background:${isSelected ? '#eef4ff' : '#fff'};
-                        border-left:3px solid ${isSelected ? '#4a90d9' : 'transparent'};
-                        border-bottom:1px solid #f2f3f5;">
-              <div>
-                <div style="font-size:13px;font-weight:500;color:${isSelected ? '#4a90d9' : '#1a1a2e'}">${p.name}</div>
-                <div style="font-size:11px;color:#888;margin-top:2px">Rate: ₹${parseFloat(p.rate).toFixed(2)}</div>
-              </div>
-              <div style="text-align:right;display:flex;align-items:center;gap:10px;">
-                <div>
-                  <div style="font-size:11px;color:#888;">Stock on Hand</div>
-                  <div style="font-size:12px;font-weight:600;color:${stockColor}">${stockNum} ${p.unit}</div>
-                </div>
-                <div style="width:22px;height:22px;border-radius:50%;
-                            background:${isSelected ? '#4a90d9' : '#e8eaed'};
-                            display:flex;align-items:center;justify-content:center;">
-                  ${isSelected ? '<span style="color:#fff;font-size:14px">✓</span>' : ''}
-                </div>
-              </div>
-            </div>`;
-        }
-    });
-
-    container.innerHTML = html;
+    container.innerHTML = list.map(p => {
+        const isSelected = bulkSelected[p.id] !== undefined;
+        const stockColor = p.stock_on_hand > 0 ? '#27ae60' : '#e05050';
+        const stockNum   = parseFloat(p.stock_on_hand).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        return `
+        <div id="bulk-prow-${p.id}" onclick="toggleBulkProduct(${p.id})"
+             style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 16px;cursor:pointer;
+                    background:${isSelected ? '#eef4ff' : '#fff'};
+                    border-left:3px solid ${isSelected ? '#4a90d9' : 'transparent'};
+                    transition:background 0.1s;">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:${isSelected ? '#4a90d9' : '#1a1a2e'}">${p.name}</div>
+            <div style="font-size:11px;color:#888;margin-top:2px">Rate: ₹${parseFloat(p.rate).toFixed(2)}</div>
+          </div>
+          <div style="text-align:right;display:flex;align-items:center;gap:10px;">
+            <div>
+              <div style="font-size:11px;color:#888;">Stock on Hand</div>
+              <div style="font-size:12px;font-weight:600;color:${stockColor}">${stockNum} ${p.unit}</div>
+            </div>
+            <div style="width:22px;height:22px;border-radius:50%;
+                        background:${isSelected ? '#4a90d9' : '#e8eaed'};
+                        display:flex;align-items:center;justify-content:center;">
+              ${isSelected ? '<span style="color:#fff;font-size:14px">✓</span>' : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
 }
 
 function toggleBulkProduct(productId) {
     const p = bulkProducts.find(x => x.id == productId);
     if (!p) return;
-    if (bulkSelected[productId] !== undefined) {
-        delete bulkSelected[productId];
-    } else {
-        bulkSelected[productId] = 1;
-    }
-    renderBulkSelected();
-    filterBulkProducts();
-}
-function toggleBulkVariant(productId, variantId, displayName, rate, sku, stock, unit, img) {
-    const bulkKey = `${productId}__${variantId}`;
-    if (bulkSelected[bulkKey] !== undefined) {
-        delete bulkSelected[bulkKey];
-    } else {
-        bulkSelected[bulkKey] = {
-            qty: 1, productId, variantId, name: displayName,
-            rate, sku, stock, unit, img, isVariant: true
-        };
-    }
+    if (bulkSelected[productId] !== undefined) delete bulkSelected[productId];
+    else bulkSelected[productId] = 1;
     renderBulkSelected();
     filterBulkProducts();
 }
@@ -2462,91 +1903,52 @@ function renderBulkSelected() {
     const ids     = Object.keys(bulkSelected);
     const countEl = document.getElementById('bulk-selected-count');
     const footer  = document.getElementById('bulk-footer');
-
     countEl.textContent = ids.length;
-
     let totalQty = 0;
-    ids.forEach(id => {
-        const entry = bulkSelected[id];
-        totalQty += parseFloat(typeof entry === 'object' ? entry.qty : entry) || 0;
-    });
+    ids.forEach(id => { totalQty += parseFloat(bulkSelected[id] || 0); });
     document.getElementById('bulk-total-qty').textContent = totalQty;
-
     if (!ids.length) {
         document.getElementById('bulk-selected-list').innerHTML =
-            '<div style="color:#aaa;font-size:13px;text-align:center;padding:40px;">Click the item names from the left pane to select them</div>';
+            '<div style="color:#aaa;font-size:13px;text-align:center;padding:40px;">Click items from the left to select</div>';
         footer.style.display = 'none';
         return;
     }
     footer.style.display = 'flex';
-
-    document.getElementById('bulk-selected-list').innerHTML = ids.map(key => {
-        const entry = bulkSelected[key];
-        const isVariant = typeof entry === 'object' && entry.isVariant;
-
-        let name, qty, rate, stock, unit, overStock;
-        if (isVariant) {
-            name      = entry.name;
-            qty       = entry.qty;
-            rate      = entry.rate;
-            stock     = entry.stock;
-            unit      = entry.unit;
-            overStock = parseFloat(qty) > parseFloat(stock);
-        } else {
-            const p   = bulkProducts.find(x => x.id == key);
-            if (!p) return '';
-            name      = p.name;
-            qty       = entry;
-            rate      = p.rate;
-            stock     = p.stock_on_hand;
-            unit      = p.unit;
-            overStock = parseFloat(qty) > parseFloat(stock);
-        }
-
+    document.getElementById('bulk-selected-list').innerHTML = ids.map(id => {
+        const p   = bulkProducts.find(x => x.id == id);
+        if (!p) return '';
+        const qty       = bulkSelected[id];
+        const overStock = parseFloat(qty) > parseFloat(p.stock_on_hand);
         return `
-        <div style="display:flex;align-items:center;justify-content:space-between;
-                    padding:10px 0;border-bottom:1px solid #f0f2f4;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f2f4;">
           <div>
-            <div style="font-size:13px;font-weight:500;color:#1a1a2e">${name}</div>
-            ${overStock ? `<div style="font-size:11px;color:#e05050;margin-top:2px;">
-              ⚠ Insufficient stock — only ${parseFloat(stock).toFixed(2)} ${unit} available
-            </div>` : ''}
+            <div style="font-size:13px;font-weight:500;color:#1a1a2e">${p.name}</div>
+            ${overStock ? `<div style="font-size:11px;color:#e05050;margin-top:2px;">⚠ Only ${parseFloat(p.stock_on_hand).toFixed(2)} ${p.unit} available</div>` : ''}
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <button type="button" onclick="changeBulkQtyKey('${key}', -1)"
+            <button type="button" onclick="changeBulkQty(${id}, -1)"
                     style="width:26px;height:26px;border-radius:50%;border:1px solid #d0d5dd;
-                           background:${qty <= 1 ? '#f5f5f5':'#fff'};font-size:16px;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;color:#555">−</button>
-            <input type="number" value="${qty}" min="1" id="bulk-qty-input-${key}"
-                   style="width:52px;height:30px;text-align:center;
-                          border:2px solid ${overStock?'#e05050':'#4a90d9'};
-                          border-radius:6px;font-size:13px;font-weight:600;"
-                   oninput="setBulkQtyKey('${key}', this.value)">
-            <button type="button" onclick="changeBulkQtyKey('${key}', 1)"
-                    style="width:26px;height:26px;border-radius:50%;border:none;
-                           background:#4a90d9;font-size:16px;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;color:#fff">+</button>
-            <button type="button" onclick="removeBulkKey('${key}')"
-                    style="width:26px;height:26px;border-radius:50%;border:1px solid #fecaca;
-                           background:#fff;cursor:pointer;display:flex;align-items:center;
-                           justify-content:center;color:#e05050;font-size:14px;">✕</button>
+                           background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555">−</button>
+            <input type="number" value="${qty}" min="1" id="bulk-qty-input-${id}"
+                   style="width:52px;height:30px;text-align:center;border:2px solid ${overStock?'#e05050':'#4a90d9'};border-radius:6px;font-size:13px;font-weight:600;"
+                   oninput="setBulkQty(${id}, this.value)">
+            <button type="button" onclick="changeBulkQty(${id}, 1)"
+                    style="width:26px;height:26px;border-radius:50%;border:none;background:#4a90d9;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff">+</button>
+            <button type="button" onclick="removeBulkSelected(${id})"
+                    style="width:26px;height:26px;border-radius:50%;border:1px solid #fecaca;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e05050;font-size:14px;">✕</button>
           </div>
         </div>`;
     }).join('');
 }
 
 function changeBulkQty(productId, delta) {
-    const current = parseFloat(bulkSelected[productId] || 1);
-    bulkSelected[productId] = Math.max(1, current + delta);
+    bulkSelected[productId] = Math.max(1, parseFloat(bulkSelected[productId] || 1) + delta);
     renderBulkSelected();
 }
 
 function setBulkQty(productId, val) {
     const n = parseFloat(val);
-    if (!isNaN(n) && n > 0) {
-        bulkSelected[productId] = n;
-        renderBulkSelected();
-    }
+    if (!isNaN(n) && n > 0) { bulkSelected[productId] = n; renderBulkSelected(); }
 }
 
 function removeBulkSelected(productId) {
@@ -2555,114 +1957,38 @@ function removeBulkSelected(productId) {
     filterBulkProducts();
 }
 
-function changeBulkQtyKey(key, delta) {
-    const entry = bulkSelected[key];
-    if (typeof entry === 'object') {
-        entry.qty = Math.max(1, parseFloat(entry.qty) + delta);
-    } else {
-        bulkSelected[key] = Math.max(1, parseFloat(entry) + delta);
-    }
-    renderBulkSelected();
-}
-
-function setBulkQtyKey(key, val) {
-    const n = parseFloat(val);
-    if (!isNaN(n) && n > 0) {
-        const entry = bulkSelected[key];
-        if (typeof entry === 'object') entry.qty = n;
-        else bulkSelected[key] = n;
-        renderBulkSelected();
-    }
-}
-
-function removeBulkKey(key) {
-    delete bulkSelected[key];
-    renderBulkSelected();
-    filterBulkProducts();
-}
 function confirmBulkAdd() {
     let hasError = false;
-    for (const [key, entry] of Object.entries(bulkSelected)) {
-        const isVariant = typeof entry === 'object' && entry.isVariant;
-        const qty   = isVariant ? entry.qty : entry;
-        const stock = isVariant ? entry.stock : (bulkProducts.find(x => x.id == key)?.stock_on_hand || 0);
-        if (parseFloat(qty) > parseFloat(stock)) { hasError = true; break; }
+    for (const [id, qty] of Object.entries(bulkSelected)) {
+        const p = bulkProducts.find(x => x.id == id);
+        if (p && parseFloat(qty) > parseFloat(p.stock_on_hand)) { hasError = true; break; }
     }
-    if (hasError) {
-        alert('⚠ Some items exceed available stock. Please reduce the quantities highlighted in red.');
-        return;
-    }
+    if (hasError) { alert('⚠ Some items exceed available stock.'); return; }
 
     document.querySelectorAll('#items-body tr').forEach(tr => {
         const sel = tr.querySelector('select[name*="product_id"]');
         if (sel && !sel.value) tr.remove();
     });
 
-    for (const [key, entry] of Object.entries(bulkSelected)) {
-        const isVariant = typeof entry === 'object' && entry.isVariant;
+    for (const [id, qty] of Object.entries(bulkSelected)) {
+        const p = bulkProducts.find(x => x.id == id);
+        if (!p) continue;
         const idx   = rowCount++;
         const tbody = document.getElementById('items-body');
         const tr    = document.createElement('tr');
         tr.dataset.index = idx;
-
-        let pid, vid, qty, rate, gst, sku, stock, unit, img, name;
-
-        if (isVariant) {
-            pid   = entry.productId;
-            vid   = entry.variantId;
-            qty   = entry.qty;
-            rate  = entry.rate;
-            sku   = entry.sku;
-            stock = entry.stock;
-            unit  = entry.unit;
-            img   = entry.img;
-            name  = entry.name;
-            gst   = PRODUCTS[pid]?.gst || 0;
-        } else {
-            const p = bulkProducts.find(x => x.id == key);
-            if (!p) continue;
-            pid   = p.id; vid = ''; qty = entry; rate = p.rate;
-            gst   = p.gst || 0; sku = p.sku || ''; stock = p.stock_on_hand;
-            unit  = p.unit; img = p.img; name = p.name;
-        }
-
-        // Build options with correct product + variant selected
         let options = '<option value="">Type or click to select an item</option>';
-        for (const [opid, pd] of Object.entries(PRODUCTS)) {
-            const pvariants = VARIANTS[opid] || [];
-            if (pvariants.length > 0) {
-                options += `<optgroup label="${pd.name}">`;
-               pvariants.forEach(v => {
-                const sel = (parseInt(opid) === parseInt(pid) && v.id === vid) ? 'selected' : '';
-                options += `<option value="${opid}" ${sel}
-                    data-variant-id="${v.id}"
-                    data-name="${pd.name} - ${v.name}"
-                    data-rate="${v.rate}" data-sku="${v.sku||''}"
-                    data-stock="${v.stock ?? pd.stock}" data-unit="${pd.unit}"
-                    data-gst="${pd.gst||0}" data-img="${pd.img}">
-                    ${v.name} ${v.sku?'['+v.sku+']':''} — ₹${parseFloat(v.rate).toFixed(2)}
-                </option>`;
-            });
-                options += `</optgroup>`;
-            } else {
-                const sel = parseInt(opid) === parseInt(pid) ? 'selected' : '';
-                options += `<option value="${opid}" ${sel}
-                    data-variant-id="" data-name="${pd.name}" data-rate="${pd.rate}"
-                    data-sku="${pd.sku}" data-stock="${pd.stock}" data-unit="${pd.unit}"
-                    data-img="${pd.img}" data-gst="${pd.gst||0}">
-                    ${pd.name} ${pd.sku?'['+pd.sku+']':''} — ₹${parseFloat(pd.rate).toFixed(2)}
-                    (Stock: ${pd.stock} ${pd.unit})
-                </option>`;
-            }
+        for (const [pid, pd] of Object.entries(PRODUCTS)) {
+            const isSelected = parseInt(pid) === parseInt(id) ? 'selected' : '';
+            options += `<option value="${pid}" ${isSelected} data-name="${pd.name}" data-rate="${pd.rate}"
+                data-sku="${pd.sku}" data-stock="${pd.stock}" data-unit="${pd.unit}" data-img="${pd.img}" data-gst="${pd.gst || 0}">
+                ${pd.name} — ₹${parseFloat(pd.rate).toFixed(2)}
+            </option>`;
         }
-
-        tr.innerHTML = buildRowHtml(idx, options, pid, qty, rate, gst, sku, stock, unit, img, name);
-        // Set variant id hidden field
+        tr.innerHTML = buildRowHtml(idx, options, parseInt(id), qty, p.rate, p.gst || 0, p.sku || '', p.stock_on_hand, p.unit, p.img, p.name);
         tbody.appendChild(tr);
-        document.getElementById('ivariantid-' + idx).value = vid || '';
         calcRow(idx);
     }
-
     closeBulkModal();
     calcTotals();
 }
@@ -2687,27 +2013,20 @@ document.getElementById('referral-modal').addEventListener('click', function(e) 
 
 function loadReferrals() {
     document.getElementById('ref-tbody').innerHTML =
-        `<tr><td colspan="5"><div class="ref-empty"><div class="icon">👥</div><div>Loading referrals...</div></div></td></tr>`;
-
+        `<tr><td colspan="5"><div class="ref-empty"><div class="icon">👥</div><div>Loading...</div></div></td></tr>`;
     fetch('/referrals', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
-    .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    })
-    .then(data => {
-        allReferrals = data.data || data || [];
-        renderReferrals(allReferrals);
-    })
+    .then(r => r.json())
+    .then(data => { allReferrals = data.data || data || []; renderReferrals(allReferrals); })
     .catch(() => {
         document.getElementById('ref-tbody').innerHTML =
-            `<tr><td colspan="5"><div class="ref-empty"><div class="icon">⚠️</div><div>Failed to load referrals.</div></div></td></tr>`;
+            `<tr><td colspan="5"><div class="ref-empty"><div class="icon">⚠️</div><div>Failed to load.</div></div></td></tr>`;
     });
 }
 
 function renderReferrals(list) {
     const tbody = document.getElementById('ref-tbody');
     if (!list.length) {
-        tbody.innerHTML = `<tr><td colspan="5"><div class="ref-empty"><div class="icon">👥</div><div>No referrals found. Click "+ New Referral" to add one.</div></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5"><div class="ref-empty"><div class="icon">👥</div><div>No referrals found.</div></div></td></tr>`;
         return;
     }
     const typeBadge = t => {
@@ -2727,8 +2046,7 @@ function renderReferrals(list) {
                     <button class="btn-ref-del"    onclick="deleteReferral(${r.id})">🗑</button>
                 </div>
             </td>
-        </tr>
-    `).join('');
+        </tr>`).join('');
 }
 
 function filterReferrals() {
@@ -2753,10 +2071,10 @@ function selectReferral(id, name) {
 
 function clearReferral() {
     selectedReferral = null;
-    document.getElementById('referral-id-input').value                  = '';
-    document.getElementById('referral-placeholder').style.display       = 'inline';
-    document.getElementById('referral-selected-name').style.display     = 'none';
-    document.getElementById('referral-clear-btn').style.display         = 'none';
+    document.getElementById('referral-id-input').value            = '';
+    document.getElementById('referral-placeholder').style.display = 'inline';
+    document.getElementById('referral-selected-name').style.display = 'none';
+    document.getElementById('referral-clear-btn').style.display   = 'none';
 }
 
 function showRefForm(clearFields = true) {
@@ -2770,9 +2088,7 @@ function showRefForm(clearFields = true) {
     document.getElementById('ref-form').classList.add('open');
     document.getElementById('ref-name').focus();
 }
-function hideRefForm() {
-    document.getElementById('ref-form').classList.remove('open');
-}
+function hideRefForm() { document.getElementById('ref-form').classList.remove('open'); }
 
 function saveReferral() {
     const name   = document.getElementById('ref-name').value.trim();
@@ -2780,9 +2096,7 @@ function saveReferral() {
     const phone  = document.getElementById('ref-phone').value.trim();
     const type   = document.getElementById('ref-type').value;
     const editId = document.getElementById('ref-edit-id').value;
-
     if (!name) { alert('Name is required.'); document.getElementById('ref-name').focus(); return; }
-
     fetch(editId ? `/referrals/${editId}` : '/referrals', {
         method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
@@ -2790,7 +2104,7 @@ function saveReferral() {
     })
     .then(r => r.json())
     .then(data => { if (data.success) { hideRefForm(); loadReferrals(); } else alert(data.message || 'Failed to save.'); })
-    .catch(() => alert('Server error. Please try again.'));
+    .catch(() => alert('Server error.'));
 }
 
 function editReferral(id) {
@@ -2843,14 +2157,11 @@ document.getElementById('invoice-form').addEventListener('submit', function(e) {
 function openCustPanel(customerId, displayName) {
     const panel = document.getElementById('cust-panel');
     panel.classList.add('open');
-
     const initial = displayName.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.)\s*/i,'').trim()[0]?.toUpperCase() || '?';
     document.getElementById('cp-avatar').textContent = initial;
     document.getElementById('cp-name').textContent   = displayName;
     document.getElementById('cp-link').href          = `/customers/${customerId}`;
-
     switchCustTab('details', document.querySelector('.cust-tab'));
-
     fetch(`/customers/${customerId}/panel-data`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
@@ -2878,7 +2189,6 @@ function renderCustPanel(data) {
     document.getElementById('cp-outstanding').textContent = '₹' + parseFloat(data.outstanding ?? 0).toFixed(2);
     document.getElementById('cp-credits').textContent     = '₹' + parseFloat(data.credits ?? 0).toFixed(2);
     document.getElementById('cp-type').textContent        = data.customer_type ?? 'Customer';
-
     const detailsMap = [
         ['Customer Type', data.customer_type],
         ['Currency',      data.currency ?? 'INR'],
@@ -2888,12 +2198,7 @@ function renderCustPanel(data) {
         ['Portal Status', data.portal_status ?? '—'],
     ];
     document.getElementById('cp-details-rows').innerHTML = detailsMap
-        .map(([k,v]) => `
-            <div class="cust-detail-row">
-                <span class="key">${k}</span>
-                <span class="val">${v || '—'}</span>
-            </div>`).join('');
-
+        .map(([k,v]) => `<div class="cust-detail-row"><span class="key">${k}</span><span class="val">${v || '—'}</span></div>`).join('');
     const contacts = data.contacts ?? [];
     document.getElementById('cp-contacts-list').innerHTML = contacts.length
         ? contacts.map(c => `
@@ -2911,14 +2216,11 @@ function renderCustPanel(data) {
                 </div>
             </div>`).join('')
         : '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px">No contact persons</div>';
-
     const billing  = data.billing_address;
     const shipping = data.shipping_address;
     document.getElementById('cp-address-content').innerHTML = `
-        ${billing  ? `<div class="addr-card"><div class="addr-card-title">📦 Billing Address</div><div class="addr-card-body">${formatAddressLines(billing)}</div></div>`  : ''}
-        ${shipping ? `<div class="addr-card"><div class="addr-card-title">🚚 Shipping Address</div><div class="addr-card-body">${formatAddressLines(shipping)}</div></div>` : ''}
-    `;
-
+        ${billing  ? `<div class="addr-card"><div class="addr-card-title">📦 Billing Address</div><div class="addr-card-body">${formatAddressLines(billing)}</div></div>` : ''}
+        ${shipping ? `<div class="addr-card"><div class="addr-card-title">🚚 Shipping Address</div><div class="addr-card-body">${formatAddressLines(shipping)}</div></div>` : ''}`;
     const activities = data.activities ?? [];
     document.getElementById('cp-activity-list').innerHTML = activities.length
         ? activities.map(a => `
@@ -2929,86 +2231,58 @@ function renderCustPanel(data) {
                     <span class="act-time">• ${a.time ?? ''}</span>
                     <div class="act-text">${a.description ?? ''}</div>
                 </div>
-            </div>
-            <div class="act-divider"></div>`).join('')
+            </div><div class="act-divider"></div>`).join('')
         : '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px">No activity yet</div>';
 }
 
 // ══════════════════════════════════════════
-// INIT
+// INIT — Load existing customer on page load
 // ══════════════════════════════════════════
-calcTotals();
+(function init() {
+    // Set selected customer tracking variables
+    @if($invoice->customer_id)
+    window._selectedCustomerId   = '{{ $invoice->customer_id }}';
+    window._selectedCustomerName = '{{ addslashes($invoice->customer?->display_name ?? '') }}';
 
-// ── Apply Credit Checkbox ──
-document.getElementById('apply-credit-checkbox').addEventListener('change', function() {
-    const grandTotal = parseFloat(document.getElementById('grand-val').value) || 0;
-    const maxCredit  = window._customerUnusedCredit || 0;
-    const applyAmt   = Math.min(maxCredit, grandTotal); // credit > invoice ஆனா invoice amount மட்டும்
-
-    if (this.checked) {
-        // Show credit info
-        document.getElementById('credit-apply-section').style.display = 'block';
-        document.getElementById('apply-credit-amount-hidden').value   = applyAmt;
-
-        // Update display
-        // credit-will-apply-display update
-const displayEl = document.getElementById('credit-will-apply-display');
-if (displayEl) displayEl.textContent = applyAmt.toFixed(2);
-
-        // Auto-check "I have received the payment"
-        const paymentChk = document.getElementById('payment-received-chk');
-        paymentChk.checked = true;
-        togglePaymentSection(paymentChk);
-
-        // Payment mode → Advance Payment (auto-add option if missing)
-        const modeSelect = document.querySelector('select[name="payment_mode"]');
-        if (modeSelect) {
-            if (!modeSelect.querySelector('option[value="advance"]')) {
-                const opt       = document.createElement('option');
-                opt.value       = 'advance';
-                opt.textContent = 'Advance Payment';
-                modeSelect.appendChild(opt);
-            }
-            modeSelect.value = 'advance';
+    // Load customer category label
+    fetch(`/invoices/customer-defaults?customer_id={{ $invoice->customer_id }}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.category) return;
+        const labelBox = document.getElementById('cat-label-box');
+        labelBox.style.display = 'block';
+        document.getElementById('cat-avatar').textContent       = data.category.name[0]?.toUpperCase() || '?';
+        document.getElementById('cat-display-name').textContent = data.category.name;
+        document.getElementById('user-category-id-input').value = data.category.id;
+        const badge     = document.getElementById('cat-loc-badge');
+        const badgeText = document.getElementById('cat-loc-badge-text');
+        badge.style.display = 'flex';
+        if (data.locations.length) {
+            badgeText.textContent  = data.locations.length + ' location' + (data.locations.length > 1 ? 's' : '');
+            badgeText.style.cssText = 'font-size:11px;color:#27ae60;background:#ecfdf5;border:0.5px solid #a7f3d0;border-radius:10px;padding:3px 10px;';
+        } else {
+            badgeText.textContent  = 'No locations assigned';
+            badgeText.style.cssText = 'font-size:11px;color:#e05050;background:#fef2f2;border:0.5px solid #fecaca;border-radius:10px;padding:3px 10px;';
         }
 
-        // Amount received = grand total - credit applied
-        // If credit >= grand total → 0 (fully covered by credit)
-       // Amount received field — credit cover பண்றதை disable பண்ணு
-        const remaining  = Math.max(0, grandTotal - applyAmt);
-        const amtInput   = document.getElementById('amount-received-input');
-        amtInput.value   = remaining.toFixed(2);
-        amtInput.readOnly = applyAmt >= grandTotal;
-        amtInput.style.background = applyAmt >= grandTotal ? '#f0fdf4' : '#fff';
-        amtInput.style.color      = applyAmt >= grandTotal ? '#27ae60' : '#333';
-        updatePaymentTotals();
+        // Load billing/shipping address
+        const sel = document.getElementById('customer-select');
+        const opt = sel.options[sel.selectedIndex];
+        let addrData = null;
+        try { addrData = JSON.parse(opt.dataset.address || 'null'); } catch(e) {}
+        if (addrData) {
+            document.getElementById('billing-addr-display').innerHTML  = formatAddress(addrData.billing);
+            document.getElementById('shipping-addr-display').innerHTML = formatAddress(addrData.shipping);
+        }
+    })
+    .catch(() => {});
+    @endif
 
-    } else {
-    // reset
-    document.getElementById('credit-apply-section').style.display = 'none';
-    document.getElementById('apply-credit-amount-hidden').value   = '0';
-
-    const modeSelect = document.querySelector('select[name="payment_mode"]');
-    if (modeSelect) modeSelect.value = 'cash';
-
-    const amtInput = document.getElementById('amount-received-input');
-    amtInput.value    = (parseFloat(document.getElementById('grand-val').value) || 0).toFixed(2);
-    amtInput.readOnly = false;          // ✅ re-enable
-    amtInput.style.background = '#fff';
-    amtInput.style.color      = '#333';
-    updatePaymentTotals();
-}
-});
-
-// ── Payment Checkbox — Apply credit check பண்ணா uncheck block ──
-document.getElementById('payment-received-chk').addEventListener('change', function() {
-    if (!this.checked && document.getElementById('apply-credit-checkbox').checked) {
-        // Credit apply பண்றோம் — payment uncheck block
-        this.checked = true;
-       alert('Please uncheck "Apply Credit" before making changes.');
-        return;
-    }
-});
+    // Calculate totals from pre-filled items
+    calcTotals();
+})();
 </script>
 </body>
 </html>

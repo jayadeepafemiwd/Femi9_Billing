@@ -34,7 +34,13 @@ return new class extends Migration
         $table->decimal('grand_total', 10, 2)->default(0);
         $table->text('customer_notes')->nullable();
         $table->text('terms_conditions')->nullable();
+         $table->json('additional_data')->nullable();
         $table->string('status')->default('Draft');
+        $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+        $table->decimal('amount_received', 12, 2)->default(0);
+        $table->decimal('balance_due', 12, 2)->default(0);
+        $table->string('payment_mode')->nullable();
+        $table->string('deposit_to')->nullable();
         $table->timestamps();
     });
 }

@@ -25,4 +25,20 @@ class ItemStockLedger extends Model
         'stock_on_hand_after' => 'decimal:4',
         'available_after'     => 'decimal:4',
     ];
+
+    // ✅ இதை add பண்ணு
+    public function item()
+    {
+        return $this->belongsTo(\App\Models\Product::class, 'item_id');
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(\App\Models\Location::class, 'location_id');
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(\App\Models\ItemVariant::class, 'variant_id');
+    }
 }

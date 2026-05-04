@@ -293,8 +293,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   $primaryContact = $contacts[$primaryIdx] ?? null;
 
   // Comments from DB
-$comments = collect($customer->comments ?? [])->sortByDesc('created_at')->values();
-@endphp
+  @endphp
 
 <div class="app-shell">
 

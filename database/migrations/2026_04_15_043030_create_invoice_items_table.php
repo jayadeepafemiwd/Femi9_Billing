@@ -18,6 +18,7 @@ return new class extends Migration
             $table->json('gst_data')->nullable();
             $table->decimal('amount', 10, 2)->default(0);
             $table->decimal('courier_charges', 10, 2)->default(0);
+            $table->json('additional_data')->nullable();
             $table->timestamps();
         });
     }

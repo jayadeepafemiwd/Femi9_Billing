@@ -50,7 +50,7 @@ class LcLayerController extends Controller
             return response()->json(['success' => false, 'message' => 'Layer name is required.']);
         }
 
-        // ── RULE 1: Duplicate name at same depth + same parent ──
+        // Duplicate name at same depth + same parent
         if (LcLayer::where('name', $name)
                    ->where('depth', $depth)
                    ->where('is_global', $isGlobal)
@@ -62,49 +62,32 @@ class LcLayerController extends Controller
             ]);
         }
 
-        // ── RULE 2: Only ONE specific layer allowed per parent value ──
-        // Example: India already has "state" layer → cannot create another layer under India
-        // USA can still create its own "state" layer because parent_value_id is different
- // ── RULE 2: Only ONE specific layer allowed per parent value ──
-// ── RULE 2: Same layer name cannot exist in the same country's tree ──
-if (!$isGlobal) {
-    // Find the root ancestor value of the current parent
-    // to check if same-named layer already exists in this country's branch
-    if (!is_null($parentValueId)) {
-        
-        // Get the root country value id (trace up to depth=0 layer)
-        $rootCountryValueId = $this->getRootAncestor($parentValueId);
-        
-        // Check if a layer with same name already exists anywhere 
-        // under this same root country
-        $sameNameExists = $this->layerExistsUnderCountry($name, $rootCountryValueId);
-        
-        if ($sameNameExists) {
-            return response()->json([
-                'success' => false,
-                'message' => "A '{$name}' layer already exists in this country's hierarchy. Cannot create duplicate.",
-            ]);
-        }
-        
-        // Also block: only ONE layer per parent+depth
-        if (LcLayer::where('depth', $depth)
-                   ->where('is_global', false)
-                   ->where('parent_value_id', $parentValueId)
-                   ->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'A layer already exists under this item.',
-            ]);
-        }
-    }
-}
+        // Only ONE specific layer per parent value + depth
+        if (!$isGlobal && !is_null($parentValueId)) {
+            $rootCountryValueId = $this->getRootAncestor($parentValueId);
+            $sameNameExists     = $this->layerExistsUnderCountry($name, $rootCountryValueId);
 
-        // ── RULE 3: Only ONE global layer per depth ──
-        // Example: depth=1 already has a global "district" → block another global at depth=1
-        if ($isGlobal) {
+            if ($sameNameExists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "A '{$name}' layer already exists in this country's hierarchy.",
+                ]);
+            }
+
             if (LcLayer::where('depth', $depth)
-                       ->where('is_global', true)
+                       ->where('is_global', false)
+                       ->where('parent_value_id', $parentValueId)
                        ->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A layer already exists under this item.',
+                ]);
+            }
+        }
+
+        // Only ONE global layer per depth
+        if ($isGlobal) {
+            if (LcLayer::where('depth', $depth)->where('is_global', true)->exists()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'A global layer already exists at this level. Please delete it first.',
@@ -118,6 +101,51 @@ if (!$isGlobal) {
             'depth'           => $depth,
             'parent_value_id' => $parentValueId,
         ]);
+
+        return response()->json(['success' => true, 'layer' => $layer]);
+    }
+
+    /* ── EDIT LAYER (rename + toggle global) ── */
+    public function editLayer(Request $request)
+    {
+        $request->validate(['layer_id' => 'required|integer']);
+
+        $layer    = LcLayer::findOrFail($request->layer_id);
+        $newName  = strtolower(trim($request->name ?? ''));
+        $newGlobal = (bool) $request->is_global;
+
+        if (!$newName) {
+            return response()->json(['success' => false, 'message' => 'Layer name is required.']);
+        }
+
+        // If name changed, check for duplicates at same depth+parent
+        if ($newName !== $layer->name || $newGlobal !== (bool) $layer->is_global) {
+            $parentValueId = $newGlobal ? null : ($request->parent_value_id ?? $layer->parent_value_id);
+
+            $duplicate = LcLayer::where('name', $newName)
+                ->where('depth', $layer->depth)
+                ->where('is_global', $newGlobal)
+                ->where('parent_value_id', $parentValueId)
+                ->where('id', '!=', $layer->id)
+                ->exists();
+
+            if ($duplicate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "A layer named '{$newName}' already exists here!",
+                ]);
+            }
+        }
+
+        $layer->name      = $newName;
+        $layer->is_global = $newGlobal;
+
+        // If switching to global, clear parent_value_id
+        if ($newGlobal) {
+            $layer->parent_value_id = null;
+        }
+
+        $layer->save();
 
         return response()->json(['success' => true, 'layer' => $layer]);
     }
@@ -141,10 +169,7 @@ if (!$isGlobal) {
             ->exists();
 
         if ($exists) {
-            return response()->json([
-                'success' => false,
-                'message' => "'{$value}' already exists!",
-            ]);
+            return response()->json(['success' => false, 'message' => "'{$value}' already exists!"]);
         }
 
         $val = LcLayerValue::create([
@@ -152,6 +177,37 @@ if (!$isGlobal) {
             'parent_value_id' => $parentValueId,
             'value'           => $value,
         ]);
+
+        return response()->json(['success' => true, 'value' => $val]);
+    }
+
+    /* ── EDIT VALUE (rename) ── */
+    public function editValue(Request $request)
+    {
+        $request->validate([
+            'value_id' => 'required|integer',
+            'value'    => 'required|string|max:200',
+        ]);
+
+        $val     = LcLayerValue::findOrFail($request->value_id);
+        $newName = trim($request->value);
+
+        // Check duplicate: same layer + same parent + same name (excluding self)
+        $exists = LcLayerValue::where('layer_id', $val->layer_id)
+            ->where('parent_value_id', $val->parent_value_id)
+            ->whereRaw('LOWER(value) = ?', [strtolower($newName)])
+            ->where('id', '!=', $val->id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => "'{$newName}' already exists here!",
+            ]);
+        }
+
+        $val->value = $newName;
+        $val->save();
 
         return response()->json(['success' => true, 'value' => $val]);
     }
@@ -187,7 +243,6 @@ if (!$isGlobal) {
         $layer = LcLayer::findOrFail($request->layer_id);
 
         if ($request->filled('parent_value_id')) {
-            // Scoped delete: only values under this specific parent value
             $values = LcLayerValue::where('layer_id', $layer->id)
                 ->where('parent_value_id', $request->parent_value_id)
                 ->get();
@@ -196,7 +251,6 @@ if (!$isGlobal) {
                 $this->deleteValueRecursive($val->id);
             }
         } else {
-            // Full delete: remove all values + the layer record itself
             $rootValues = LcLayerValue::where('layer_id', $layer->id)
                 ->whereNull('parent_value_id')
                 ->get();
@@ -205,7 +259,6 @@ if (!$isGlobal) {
                 $this->deleteValueRecursive($val->id);
             }
 
-            // Safety: delete any remaining values for this layer
             LcLayerValue::where('layer_id', $layer->id)->delete();
             $layer->delete();
         }
@@ -213,44 +266,34 @@ if (!$isGlobal) {
         return response()->json(['success' => true]);
     }
 
-    /**
- * Trace up to find the root country value id
- */
-private function getRootAncestor(int $valueId): int
-{
-    $value = LcLayerValue::find($valueId);
-    if (!$value || is_null($value->parent_value_id)) {
-        return $valueId; // This IS the root
+    /* ── HELPERS ── */
+    private function getRootAncestor(int $valueId): int
+    {
+        $value = LcLayerValue::find($valueId);
+        if (!$value || is_null($value->parent_value_id)) {
+            return $valueId;
+        }
+        return $this->getRootAncestor($value->parent_value_id);
     }
-    return $this->getRootAncestor($value->parent_value_id);
-}
 
-/**
- * Check if a layer with given name exists anywhere under this country
- */
-private function layerExistsUnderCountry(string $name, int $rootValueId): bool
-{
-    // Get ALL value ids under this root country (recursively)
-    $allValueIds = $this->getAllDescendantIds($rootValueId);
-    $allValueIds[] = $rootValueId;
-    
-    // Check if any layer with this name has parent_value_id in this set
-    return LcLayer::where('name', $name)
-                  ->where('is_global', false)
-                  ->whereIn('parent_value_id', $allValueIds)
-                  ->exists();
-}
+    private function layerExistsUnderCountry(string $name, int $rootValueId): bool
+    {
+        $allValueIds   = $this->getAllDescendantIds($rootValueId);
+        $allValueIds[] = $rootValueId;
 
-/**
- * Get all descendant value ids recursively
- */
-private function getAllDescendantIds(int $valueId): array
-{
-    $children = LcLayerValue::where('parent_value_id', $valueId)->pluck('id')->toArray();
-    $all = $children;
-    foreach ($children as $childId) {
-        $all = array_merge($all, $this->getAllDescendantIds($childId));
+        return LcLayer::where('name', $name)
+                      ->where('is_global', false)
+                      ->whereIn('parent_value_id', $allValueIds)
+                      ->exists();
     }
-    return $all;
-}
+
+    private function getAllDescendantIds(int $valueId): array
+    {
+        $children = LcLayerValue::where('parent_value_id', $valueId)->pluck('id')->toArray();
+        $all      = $children;
+        foreach ($children as $childId) {
+            $all = array_merge($all, $this->getAllDescendantIds($childId));
+        }
+        return $all;
+    }
 }

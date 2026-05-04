@@ -291,8 +291,15 @@ class FieldCustomizationController extends Controller
                 'user_id' => auth()->id()
             ]);
 
-            return redirect()->route('field_customization.index')
-                ->with('success', 'Field created successfully!');
+           $category = $request->input('category_name', 'products');
+
+if ($category === 'invoice') {
+    return redirect()->route('invoices.index')
+        ->with('success', 'Invoice custom field created successfully!');
+}
+
+return redirect()->route('field_customization.index', ['from' => $category])
+    ->with('success', 'Field created successfully!');
 
         } catch (Exception $e) {
             DB::rollBack();

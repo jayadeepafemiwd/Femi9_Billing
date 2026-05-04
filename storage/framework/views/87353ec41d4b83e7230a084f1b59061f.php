@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,6 +27,8 @@
         .btn-success:hover:not(:disabled) { background: #059669; }
         .btn-outline { background: #fff; color: #6366f1; border: 1.5px solid #6366f1; }
         .btn-outline:hover { background: #eef2ff; }
+        .btn-warning { background: #f59e0b; color: #fff; }
+        .btn-warning:hover:not(:disabled) { background: #d97706; }
         .btn-danger { background: #ef4444; color: #fff; }
         .btn-danger:hover { background: #dc2626; }
         .btn-sm { padding: 6px 14px; font-size: 12px; }
@@ -34,11 +37,28 @@
         .level-title { font-size: 26px; font-weight: 700; color: #1e293b; margin-bottom: 6px; text-align: center; text-transform: capitalize; }
         .level-hint  { font-size: 13px; color: #94a3b8; margin-bottom: 24px; text-align: center; }
         .items-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 700px; width: 100%; margin-bottom: 24px; }
-        .item-chip { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1.5px solid #e2e8f0; padding: 9px 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; transition: all 0.18s; }
-        .item-chip:hover { border-color: #6366f1; background: #eef2ff; color: #6366f1; }
+
+        /* ── Chip styles ── */
+        .item-chip { display: inline-flex; align-items: center; gap: 0; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; transition: all 0.18s; overflow: hidden; }
+        .item-chip:hover { border-color: #6366f1; }
+        .chip-main { display: flex; align-items: center; gap: 7px; padding: 9px 12px 9px 16px; flex: 1; }
+        .item-chip:hover .chip-main { background: #eef2ff; color: #6366f1; }
         .chip-arrow { color: #6366f1; font-size: 14px; pointer-events: none; }
-        .chip-del { color: #ef4444; font-size: 11px; cursor: pointer; opacity: 0.45; margin-left: 1px; }
-        .chip-del:hover { opacity: 1; }
+        .chip-actions { display: flex; align-items: stretch; border-left: 1.5px solid #f1f5f9; }
+        .chip-edit { display: flex; align-items: center; justify-content: center; padding: 0 9px; color: #6366f1; font-size: 12px; cursor: pointer; opacity: 0.5; background: transparent; border: none; transition: all 0.15s; height: 100%; }
+        .chip-edit:hover { opacity: 1; background: #eef2ff; color: #4f46e5; }
+        .chip-del { display: flex; align-items: center; justify-content: center; padding: 0 9px; color: #ef4444; font-size: 11px; cursor: pointer; opacity: 0.45; background: transparent; border: none; border-left: 1px solid #f1f5f9; transition: all 0.15s; height: 100%; }
+        .chip-del:hover { opacity: 1; background: #fef2f2; }
+
+        /* ── Inline edit chip ── */
+        .chip-edit-inline { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 2px solid #6366f1; border-radius: 10px; padding: 6px 10px; font-size: 13px; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+        .chip-edit-inp { border: none; outline: none; background: transparent; font-size: 13px; font-weight: 600; color: #1e293b; width: 120px; }
+        .chip-save-btn { background: #10b981; color: #fff; border: none; border-radius: 5px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .chip-save-btn:hover { background: #059669; }
+        .chip-cancel-btn { background: transparent; color: #94a3b8; border: none; font-size: 13px; cursor: pointer; padding: 0 2px; }
+        .chip-cancel-btn:hover { color: #ef4444; }
+
+        /* ── Form ── */
         .center-form { width: 100%; max-width: 560px; background: #f8fafc; border: 1px dashed #c7d2fe; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
         .center-form-title { font-size: 14px; font-weight: 700; color: #374151; }
         .center-form-hint  { font-size: 12px; color: #94a3b8; text-align: center; margin-top: -8px; }
@@ -60,6 +80,11 @@
         .empty-state .icon { font-size: 42px; margin-bottom: 12px; }
         .empty-state p { font-size: 14px; line-height: 1.9; }
         .global-badge { font-size: 10px; font-weight: 700; color: #059669; background: #dcfce7; border-radius: 4px; padding: 2px 6px; margin-left: 2px; }
+
+        /* ── Edit Layer inline form ── */
+        .edit-layer-banner { width: 100%; max-width: 560px; background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px; }
+        .edit-layer-title { font-size: 13px; font-weight: 700; color: #92400e; }
+        .edit-layer-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -94,6 +119,8 @@ let values      = [];
 let navPath     = [];
 let addingLayer = false;
 let addingValue = false;
+let editingLayer = false;   // NEW: editing layer name / global toggle
+let editingValueId = null;  // NEW: which value chip is being edited inline
 let pendingTags = [];
 
 loadData();
@@ -107,17 +134,6 @@ async function loadData() {
 
 function currentDepth() { return navPath.length; }
 
-/*
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * THE CORE FIX: depth must match navPath.length
- *
- * Bug in old code: only checked parent_value_id,
- * not depth. So "State" layer at depth=1 leaked
- * into depth=2, depth=3, etc.
- *
- * Fix: always check BOTH depth AND parent_value_id.
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- */
 function getCurrentLayer() {
     const depth = navPath.length;
 
@@ -127,7 +143,6 @@ function getCurrentLayer() {
 
     const parentValueId = Number(navPath[depth - 1].valueId);
 
-    // MUST match BOTH depth AND parent_value_id
     const specific = layers.find(
         l => !l.is_global
           && Number(l.depth) === depth
@@ -135,7 +150,6 @@ function getCurrentLayer() {
     );
     if (specific) return specific;
 
-    // Global fallback: same depth only
     return layers.find(l => l.is_global && Number(l.depth) === depth) || null;
 }
 
@@ -144,13 +158,11 @@ function getCurrentValues() {
     if (!layer) return [];
 
     if (navPath.length === 0) {
-        return values.filter(v => Number(v.layer_id) === Number(layer.id) 
-                                && v.parent_value_id == null);
+        return values.filter(v => Number(v.layer_id) === Number(layer.id) && v.parent_value_id == null);
     }
 
     const parentValueId = Number(navPath[navPath.length - 1].valueId);
-    return values.filter(v => Number(v.layer_id) === Number(layer.id) 
-                            && Number(v.parent_value_id) === parentValueId);
+    return values.filter(v => Number(v.layer_id) === Number(layer.id) && Number(v.parent_value_id) === parentValueId);
 }
 
 function getParentLayerName() {
@@ -166,23 +178,14 @@ function getSiblingValues() {
     if (navPath.length === 1) {
         const rootLayer = layers.find(l => l.depth === 0 && !l.is_global);
         if (!rootLayer) return [];
-        return values
-            .filter(v => v.layer_id == rootLayer.id && v.parent_value_id == null)
-            .map(v => v.value);
+        return values.filter(v => v.layer_id == rootLayer.id && v.parent_value_id == null).map(v => v.value);
     }
 
     const grandParentValueId = navPath[navPath.length - 2].valueId;
     const grandParentLayerId = navPath[navPath.length - 2].layerId;
-    return values
-        .filter(v => v.layer_id == grandParentLayerId && v.parent_value_id == grandParentValueId)
-        .map(v => v.value);
+    return values.filter(v => v.layer_id == grandParentLayerId && v.parent_value_id == grandParentValueId).map(v => v.value);
 }
 
-/*
- * layerAlreadyExistsHere()
- * Same depth + parent scoping as getCurrentLayer().
- * Prevents creating a duplicate layer at the same position.
- */
 function layerAlreadyExistsHere() {
     const depth = navPath.length;
 
@@ -193,14 +196,13 @@ function layerAlreadyExistsHere() {
     const parentValueId = Number(navPath[depth - 1].valueId);
 
     const hasSpecific = layers.some(
-        l => !l.is_global
-          && Number(l.depth) === depth
-          && Number(l.parent_value_id) === parentValueId
+        l => !l.is_global && Number(l.depth) === depth && Number(l.parent_value_id) === parentValueId
     );
     if (hasSpecific) return true;
 
     return layers.some(l => l.is_global && Number(l.depth) === depth);
 }
+
 function navigateTo(index) {
     navPath = navPath.slice(0, index);
     cancelForms();
@@ -223,6 +225,8 @@ function handleMainAdd() {
         addingLayer = false;
     }
 
+    editingLayer   = false;
+    editingValueId = null;
     render();
     setTimeout(() => {
         const el = document.getElementById('layerNameInp') || document.getElementById('tagRealInp');
@@ -230,6 +234,94 @@ function handleMainAdd() {
     }, 80);
 }
 
+/* ──────────────────────────────────────────────
+   EDIT LAYER (rename + toggle global)
+────────────────────────────────────────────── */
+function handleEditLayer() {
+    editingLayer   = true;
+    addingLayer    = false;
+    addingValue    = false;
+    editingValueId = null;
+    pendingTags    = [];
+    render();
+    setTimeout(() => document.getElementById('editLayerNameInp')?.focus(), 80);
+}
+
+async function saveEditLayer() {
+    const newName = (document.getElementById('editLayerNameInp')?.value || '').trim();
+    const chk     = document.getElementById('editGlobalChk');
+    const newGlobal = chk ? chk.checked : false;
+
+    if (!newName) { alert('Please enter a layer name!'); return; }
+
+    const layer = getCurrentLayer();
+    if (!layer) return;
+
+    const btn = document.getElementById('saveEditLayerBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    const parentValueId = (!newGlobal && navPath.length > 0)
+        ? navPath[navPath.length - 1].valueId
+        : null;
+
+    const res = await api('/assign-location/edit-layer', {
+        layer_id        : layer.id,
+        name            : newName,
+        is_global       : newGlobal,
+        parent_value_id : parentValueId,
+    });
+
+    if (!res.success) { alert(res.message || 'Failed to save.'); if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; } return; }
+
+    editingLayer = false;
+    await loadData();
+}
+
+/* ──────────────────────────────────────────────
+   EDIT VALUE (inline rename)
+────────────────────────────────────────────── */
+function startEditValue(valueId) {
+    editingValueId = valueId;
+    addingLayer    = false;
+    addingValue    = false;
+    editingLayer   = false;
+    pendingTags    = [];
+    renderCenter();
+    setTimeout(() => document.getElementById(`editInp_${valueId}`)?.focus(), 60);
+}
+
+function cancelEditValue() {
+    editingValueId = null;
+    renderCenter();
+}
+
+async function saveEditValue(valueId) {
+    const inp = document.getElementById(`editInp_${valueId}`);
+    const newVal = (inp?.value || '').trim();
+    if (!newVal) { alert('Name cannot be empty!'); return; }
+
+    const saveBtn = document.getElementById(`saveEditBtn_${valueId}`);
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
+
+    const res = await api('/assign-location/edit-value', {
+        value_id : valueId,
+        value    : newVal,
+    });
+
+    if (!res.success) { alert(res.message || 'Failed to save.'); if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; } return; }
+
+    editingValueId = null;
+    await loadData();
+}
+
+function toggleEditGlobalHint(chk) {
+    const box = document.getElementById('editGlobalHintBox');
+    if (box) box.style.display = chk.checked ? 'block' : 'none';
+}
+
+/* ──────────────────────────────────────────────
+   ORIGINAL METHODS (unchanged logic)
+────────────────────────────────────────────── */
 function toggleGlobalHint(chk) {
     const box = document.getElementById('globalHintBox');
     if (box) box.style.display = chk.checked ? 'block' : 'none';
@@ -367,9 +459,11 @@ async function handleDeleteLayer() {
 }
 
 function cancelForms() {
-    addingLayer = false;
-    addingValue = false;
-    pendingTags = [];
+    addingLayer    = false;
+    addingValue    = false;
+    editingLayer   = false;
+    editingValueId = null;
+    pendingTags    = [];
     render();
 }
 
@@ -408,10 +502,23 @@ function renderTopButtons() {
     }
 
     const rightBar = document.getElementById('topBarRight');
-    const old = document.getElementById('deleteLayerBtn');
-    if (old) old.remove();
+
+    // Remove old dynamic buttons
+    const oldDel  = document.getElementById('deleteLayerBtn');
+    const oldEdit = document.getElementById('editLayerBtn');
+    if (oldDel)  oldDel.remove();
+    if (oldEdit) oldEdit.remove();
 
     if (layer) {
+        // Edit layer button
+        const editBtn       = document.createElement('button');
+        editBtn.id          = 'editLayerBtn';
+        editBtn.className   = 'btn btn-warning btn-sm';
+        editBtn.onclick     = handleEditLayer;
+        editBtn.textContent = `✏️ Edit "${cap(layer.name)}" Layer`;
+        rightBar.appendChild(editBtn);
+
+        // Delete layer button
         const delBtn       = document.createElement('button');
         delBtn.id          = 'deleteLayerBtn';
         delBtn.className   = 'btn btn-danger btn-sm';
@@ -441,20 +548,77 @@ function renderCenter() {
             : 'Add a sub-layer to organise further';
     }
 
+    /* ── chips ── */
     let chipsHtml = '';
     if (layer) {
         chipsHtml = curVals.map(item => {
             const vname = item.value.replace(/'/g, "\\'");
-            return `<div class="item-chip" onclick="drillInto(${item.id},'${vname}',${item.layer_id})">
-                        <span>${esc(item.value)}</span>
-                        <span class="chip-arrow">›</span>
-                        <span class="chip-del" onclick="event.stopPropagation();deleteValue(${item.id})">✕</span>
+
+            // Inline editing mode for this chip
+            if (editingValueId == item.id) {
+                return `<div class="chip-edit-inline">
+                    <input type="text" id="editInp_${item.id}" class="chip-edit-inp"
+                           value="${esc(item.value)}"
+                           onkeydown="if(event.key==='Enter') saveEditValue(${item.id}); if(event.key==='Escape') cancelEditValue();" />
+                    <button class="chip-save-btn" id="saveEditBtn_${item.id}" onclick="saveEditValue(${item.id})">✓</button>
+                    <button class="chip-cancel-btn" onclick="cancelEditValue()">✕</button>
+                </div>`;
+            }
+
+            return `<div class="item-chip">
+                        <div class="chip-main" onclick="drillInto(${item.id},'${vname}',${item.layer_id})">
+                            <span>${esc(item.value)}</span>
+                            <span class="chip-arrow">›</span>
+                        </div>
+                        <div class="chip-actions">
+                            <button class="chip-edit" title="Edit" onclick="event.stopPropagation();startEditValue(${item.id})">✏</button>
+                            <button class="chip-del"  title="Delete" onclick="event.stopPropagation();deleteValue(${item.id})">✕</button>
+                        </div>
                     </div>`;
         }).join('');
     }
 
-    let formHtml = '';
+    /* ── Edit Layer form ── */
+    let editLayerHtml = '';
+    if (editingLayer && layer) {
+        const showGlobal      = navPath.length > 0;
+        const parentLayerName = getParentLayerName();
+        const siblings        = getSiblingValues();
+        const siblingLabel    = siblings.length > 0
+            ? siblings.slice(0, 3).join(', ') + (siblings.length > 3 ? '...' : '')
+            : (parentLayerName ? `all ${parentLayerName}s` : '');
 
+        // Pre-check if layer is currently global
+        const isCurrentlyGlobal = layer.is_global;
+        const hintDisplay = isCurrentlyGlobal ? 'block' : 'none';
+
+        editLayerHtml = `
+        <div class="edit-layer-banner">
+            <div class="edit-layer-title">✏️ Edit Layer</div>
+            <div class="edit-layer-row">
+                <input type="text" id="editLayerNameInp" class="simple-inp"
+                       value="${esc(layer.name)}" placeholder="Layer name..." style="width:200px;" />
+                ${showGlobal ? `
+                <label class="global-check-wrap" for="editGlobalChk" style="width:auto; padding: 8px 14px;">
+                    <input type="checkbox" id="editGlobalChk"
+                           ${isCurrentlyGlobal ? 'checked' : ''}
+                           onchange="toggleEditGlobalHint(this)">
+                    <span class="global-check-label">
+                        Apply to all <span>${esc(cap(parentLayerName || 'items'))}</span>
+                    </span>
+                </label>` : ''}
+                <button id="saveEditLayerBtn" class="btn btn-success btn-sm" onclick="saveEditLayer()">Save Changes</button>
+                <button class="btn btn-outline btn-sm" onclick="cancelForms()">Cancel</button>
+            </div>
+            ${showGlobal ? `
+            <div class="global-hint-box" id="editGlobalHintBox" style="display:${hintDisplay}; max-width:100%;">
+                ✅ This layer will be shared across: <strong>${esc(siblingLabel)}</strong>
+            </div>` : ''}
+        </div>`;
+    }
+
+    /* ── Add Layer form ── */
+    let formHtml = '';
     if (addingLayer) {
         const parentLayerName = getParentLayerName();
         const siblings        = getSiblingValues();
@@ -529,13 +693,15 @@ function renderCenter() {
     ca.innerHTML = `
         <div class="level-title">${esc(title)}</div>
         <div class="level-hint">${hint}</div>
+        ${editLayerHtml}
         <div class="items-grid">${chipsHtml}</div>
         ${formHtml}
         ${emptyHtml}
     `;
 
-    if (addingLayer) setTimeout(() => document.getElementById('layerNameInp')?.focus(), 60);
-    if (addingValue) setTimeout(() => document.getElementById('tagRealInp')?.focus(), 60);
+    if (addingLayer)  setTimeout(() => document.getElementById('layerNameInp')?.focus(), 60);
+    if (addingValue)  setTimeout(() => document.getElementById('tagRealInp')?.focus(), 60);
+    if (editingLayer) setTimeout(() => document.getElementById('editLayerNameInp')?.focus(), 60);
 }
 
 function esc(s) {
@@ -546,6 +712,7 @@ function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1);
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') cancelForms();
     if (e.key === 'Enter' && addingLayer && document.activeElement?.id === 'layerNameInp') saveLayer();
+    if (e.key === 'Enter' && editingLayer && document.activeElement?.id === 'editLayerNameInp') saveEditLayer();
 });
 </script>
 </body>

@@ -250,54 +250,24 @@ if ($request->filled('customer_category')) {
     //  SHOW
     // ================================================================
     public function show(Customer $customer)
-    {
-        $customers = Customer::whereNull('deleted_at')
-                        ->orderBy('display_name')->get();
+{
+    $customers = Customer::whereNull('deleted_at')
+                    ->orderBy('display_name')->get();
 
-        $commentsRaw = $customer->comments ?? [];
-        $comments = collect($commentsRaw)->sortByDesc('created_at')->values();
+    $comments = \App\Models\Comment::forModule('customer', $customer->id)
+                    ->with('user:id,name')
+                    ->latest()
+                    ->get()
+                    ->map(fn($c) => $c->toApiArray());
 
-        // ✅ History fetch
-        $histories = \App\Models\History::where('module', 'customer')
-                        ->where('record_id', $customer->id)
-                        ->with('user')
-                        ->latest()
-                        ->get();
+    $histories = \App\Models\History::where('module', 'customer')
+                    ->where('record_id', $customer->id)
+                    ->with('user')
+                    ->latest()
+                    ->get();
 
-        return view('customers.show', compact('customer', 'customers', 'comments', 'histories'));
-    }
-
-    public function storeComment(Request $request, Customer $customer)
-    {
-        $request->validate(['content' => 'required|string']);
-
-        $existing = $customer->comments ?? [];
-
-        $newComment = [
-            'id'         => uniqid(),
-            'content'    => $request->content,
-            'user_id'    => auth()->id(),
-            'user_name'  => auth()->user()->name ?? 'User',
-            'created_at' => now()->setTimezone('Asia/Kolkata')->format('d/m/Y h:i A'),
-        ];
-
-        $existing[] = $newComment;
-        $customer->update(['comments' => $existing]);
-
-        return response()->json([
-            'success' => true,
-            'comment' => $newComment,
-        ]);
-    }
-
-    public function destroyComment(Request $request, Customer $customer, $commentId)
-    {
-        $existing = collect($customer->comments ?? []);
-        $updated  = $existing->reject(fn($c) => $c['id'] == $commentId)->values()->toArray();
-        $customer->update(['comments' => $updated]);
-
-        return response()->json(['success' => true]);
-    }
+    return view('customers.show', compact('customer', 'customers', 'comments', 'histories'));
+}
 
 
     // CustomerController
@@ -391,7 +361,7 @@ $activities = \App\Models\History::where('module', 'invoice')
 
     return response()->json([
         'outstanding'      => 0,
-        'credits'          => 0,
+        'credits'          => floatval($customer->unused_credits ?? 0),
         'customer_type'    => ucfirst($customer->customer_type ?? ''),
         'currency'         => $additionalDatas['currency']      ?? 'INR',
         'payment_terms'    => $additionalDatas['payment_terms'] ?? '—',

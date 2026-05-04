@@ -35,12 +35,19 @@ class Invoice extends Model
         'customer_notes',
         'terms_conditions',
         'status',
+        'additional_data',
+         'payment_status',   
+        'amount_received',  
+        'balance_due',      
+        'payment_mode',     
+        'deposit_to',  
     ];
 
     protected $casts = [
         'invoice_date' => 'date',
         'due_date'     => 'date',
         'extra_charges' => 'array',
+        'additional_data' => 'array',
     ];
 
     // Relationships

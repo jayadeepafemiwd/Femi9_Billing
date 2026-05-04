@@ -54,19 +54,23 @@ tr:hover td { background: #fafbfc; }
 .badge-paid     { background: #dcfce7; color: #166534; }
 .badge-overdue  { background: #fef2f2; color: #991b1b; }
 
-.action-links { display: flex; gap: 10px; }
-.action-links a { color: #4a90d9; text-decoration: none; font-size: 12px; }
-.action-links a:hover { text-decoration: underline; }
+.action-links { display: flex; gap: 8px; align-items: center; }
+.action-links a { color: #4a90d9; text-decoration: none; font-size: 12px; padding: 3px 8px; border-radius: 4px; border: 1px solid transparent; transition: all 0.15s; }
+.action-links a:hover { background: #eef4ff; border-color: #4a90d9; }
+.action-links a.edit { color: #f59e0b; }
+.action-links a.edit:hover { background: #fffbeb; border-color: #f59e0b; }
 .action-links a.del { color: #e05050; }
+.action-links a.del:hover { background: #fef2f2; border-color: #fecaca; }
 
 .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
 .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
 .empty-state p { margin-bottom: 16px; }
 
-.pagination { display: flex; gap: 6px; padding: 14px 16px; justify-content: flex-end; border-top: 1px solid #f0f2f4; }
-.pagination a, .pagination span { padding: 5px 10px; border: 1px solid #d0d5dd; border-radius: 5px; font-size: 12px; color: #555; text-decoration: none; }
+.pagination { display: flex; gap: 6px; padding: 14px 16px; justify-content: flex-end; border-top: 1px solid #f0f2f4; align-items: center; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border: 1px solid #d0d5dd; border-radius: 5px; font-size: 12px; color: #555; text-decoration: none; display: inline-block; line-height: 1.4; }
 .pagination a:hover { background: #f0f4ff; border-color: #4a90d9; color: #4a90d9; }
 .pagination span.active { background: #4a90d9; color: #fff; border-color: #4a90d9; }
+.pagination span.disabled { color: #ccc; cursor: default; background: #fafafa; }
 
 .summary-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .summary-card { background: #fff; border: 1px solid #e3e6ea; border-radius: 8px; padding: 14px 20px; flex: 1; min-width: 140px; }
@@ -114,7 +118,36 @@ tr:hover td { background: #fafbfc; }
 
         <div class="page-header">
             <div class="page-title">Invoices</div>
-            <a href="{{ route('invoices.create') }}" class="btn-primary">&#43; New Invoice</a>
+            <div style="display:flex;align-items:center;gap:10px;">
+
+                {{-- Preferences Dropdown --}}
+                <div style="position:relative;" id="prefDropdownWrap">
+                    <button onclick="togglePrefDropdown()"
+                            style="background:#fff;border:1px solid #d0d5dd;border-radius:6px;padding:8px 14px;font-size:13px;color:#444;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                        ⚙ Preferences
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+
+                    <div id="prefDropdown"
+                         style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #e3e6ea;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:200px;z-index:300;overflow:hidden;">
+                        <div style="padding:8px 14px;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.6px;border-bottom:1px solid #f0f2f4;">
+                            Invoice Preferences
+                        </div>
+                        <a href="{{ route('invoice_setting.create') }}"
+                           style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:#333;text-decoration:none;font-size:13px;"
+                           onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background=''">
+                            ⚙ General
+                        </a>
+                        <a href="{{ route('field_customization.create', ['from' => 'invoice']) }}"
+                           style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:#333;text-decoration:none;font-size:13px;"
+                           onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background=''">
+                            ✏ Field Customization
+                        </a>
+                    </div>
+                </div>
+
+                <a href="{{ route('invoices.create') }}" class="btn-primary">&#43; New Invoice</a>
+            </div>
         </div>
 
         {{-- Summary Bar --}}
@@ -186,20 +219,41 @@ tr:hover td { background: #fafbfc; }
                         </td>
                         <td>
                             @php
-                                $badgeClass = match($invoice->status) {
-                                    'Draft'  => 'badge-draft',
-                                    'Sent'   => 'badge-sent',
-                                    'Paid'   => 'badge-paid',
-                                    'Overdue'=> 'badge-overdue',
-                                    default  => 'badge-draft',
-                                };
+                                $payStatus = $invoice->payment_status ?? 'unpaid';
+                                if ($payStatus === 'paid') {
+                                    $displayStatus = 'PAID';
+                                    $statusColor   = '#166534';
+                                    $statusBg      = '#dcfce7';
+                                } elseif ($payStatus === 'partial') {
+                                    $displayStatus = 'PARTIALLY PAID';
+                                    $statusColor   = '#92400e';
+                                    $statusBg      = '#fef3c7';
+                                } else {
+                                    $displayStatus = $invoice->status;
+                                    $statusColor   = match($invoice->status) {
+                                        'Draft'   => '#64748b',
+                                        'Sent'    => '#1e40af',
+                                        'Overdue' => '#991b1b',
+                                        default   => '#64748b',
+                                    };
+                                    $statusBg = match($invoice->status) {
+                                        'Draft'   => '#f1f5f9',
+                                        'Sent'    => '#dbeafe',
+                                        'Overdue' => '#fef2f2',
+                                        default   => '#f1f5f9',
+                                    };
+                                }
                             @endphp
-                            <span class="badge {{ $badgeClass }}">{{ $invoice->status }}</span>
+                            <span style="display:inline-block;padding:3px 10px;border-radius:10px;
+                                         font-size:11px;font-weight:600;
+                                         background:{{ $statusBg }};color:{{ $statusColor }};">
+                                {{ $displayStatus }}
+                            </span>
                         </td>
                         <td>
                             <div class="action-links">
                                 <a href="{{ route('invoices.show', $invoice->id) }}">View</a>
-                                {{-- <a href="{{ route('invoices.edit', $invoice->id) }}">Edit</a> --}}
+                                <a href="{{ route('invoices.edit', $invoice->id) }}" class="edit">✏ Edit</a>
                             </div>
                         </td>
                     </tr>
@@ -207,9 +261,31 @@ tr:hover td { background: #fafbfc; }
                 </tbody>
             </table>
 
+            {{-- ✅ FIXED PAGINATION --}}
             @if($invoices->hasPages())
             <div class="pagination">
-                {{ $invoices->links() }}
+                {{-- Previous Button --}}
+                @if($invoices->onFirstPage())
+                    <span class="disabled">‹ Prev</span>
+                @else
+                    <a href="{{ $invoices->previousPageUrl() }}">‹ Prev</a>
+                @endif
+
+                {{-- Page Numbers --}}
+                @foreach($invoices->getUrlRange(1, $invoices->lastPage()) as $page => $url)
+                    @if($page == $invoices->currentPage())
+                        <span class="active">{{ $page }}</span>
+                    @else
+                        <a href="{{ $url }}">{{ $page }}</a>
+                    @endif
+                @endforeach
+
+                {{-- Next Button --}}
+                @if($invoices->hasMorePages())
+                    <a href="{{ $invoices->nextPageUrl() }}">Next ›</a>
+                @else
+                    <span class="disabled">Next ›</span>
+                @endif
             </div>
             @endif
 
@@ -225,5 +301,17 @@ tr:hover td { background: #fafbfc; }
     </main>
 </div>
 
+<script>
+function togglePrefDropdown() {
+    const d = document.getElementById('prefDropdown');
+    d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('prefDropdownWrap');
+    if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('prefDropdown').style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>

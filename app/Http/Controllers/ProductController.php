@@ -1225,6 +1225,22 @@ if (isset($variantsData['variants'])) {
         }
     }
 
+
+    // Add this method to ProductController
+
+public function history($id)
+{
+    $product = Product::findOrFail($id);
+
+    $histories = \App\Models\History::where('module', 'product')
+        ->where('record_id', $product->id)
+        ->with('user')
+        ->orderBy('created_at', 'desc')
+        ->paginate(20);
+
+    return view('products.history', compact('product', 'histories'));
+}
+
     // ================================================================
     //  RESOLVE ADDITIONAL FIELDS
     // ================================================================

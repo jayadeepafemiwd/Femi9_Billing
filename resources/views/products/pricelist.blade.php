@@ -390,13 +390,14 @@ h2{font-size:20px;font-weight:600;margin-bottom:1.5rem;color:#333}
 
 <script>
 @php
-$productJson = isset($items) ? $items->map(function($p) {
+// $items is now a plain array (not a collection), so use collect()
+$productJson = isset($items) ? collect($items)->map(function($p) {
     return [
-        'id'            => $p->id,
-        'name'          => $p->name,
-        'sku'           => $p->sku ?? '',
-        'selling_price' => (float)($p->selling_price ?? 0),
-        'cost_price'    => (float)($p->cost_price    ?? 0),
+        'id'            => $p['id'],
+        'name'          => $p['name'],
+        'sku'           => $p['sku'] ?? '',
+        'selling_price' => (float)($p['selling_price'] ?? 0),
+        'cost_price'    => (float)($p['cost_price'] ?? 0),
     ];
 })->values()->toJson() : '[]';
 @endphp

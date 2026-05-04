@@ -460,6 +460,8 @@
                             </tr>
                         </thead>
                         <tbody id="modules-tbody">
+                            <!-- Table footer - Add New Module button -->
+
                             {{-- Rendered by JS --}}
                         </tbody>
                     </table>
@@ -590,9 +592,9 @@ function escHtmlCat(s) {
 // DOMContentLoaded
 // ══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-
-    // Modules Table render
     const tbody = document.getElementById('modules-tbody');
+    
+    // ✅ Modules render
     tbody.innerHTML = TRANS_MODULES.map((m, i) => `
         <tr>
             <td class="module-name">
@@ -615,11 +617,20 @@ document.addEventListener('DOMContentLoaded', () => {
         </tr>
     `).join('');
 
-    // URL param clean
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('created') === '1') {
-        history.replaceState({}, '', window.location.pathname);
-    }
+    // ✅ Add New Module button — கடைசியில் append பண்ணு
+    const addRow = document.createElement('tr');
+    addRow.id = 'add-module-row';
+    addRow.innerHTML = `
+        <td colspan="4" style="padding:12px 14px;">
+            <button type="button" onclick="addCustomModule()"
+                    style="display:inline-flex;align-items:center;gap:5px;
+                           color:var(--zoho-blue);font-size:13px;font-weight:500;
+                           cursor:pointer;border:none;background:none;padding:4px 0;">
+                + Add New Module
+            </button>
+        </td>
+    `;
+    tbody.appendChild(addRow);
 });
 
 // ── Preview update ──
@@ -627,6 +638,67 @@ function updatePreview(i) {
     const p = document.getElementById(`prefix-${i}`).value;
     const s = document.getElementById(`start-${i}`).value;
     document.getElementById(`preview-${i}`).textContent = p + s;
+}
+// ── Custom Module ──
+let customModuleCount = 0;
+
+function addCustomModule() {
+    customModuleCount++;
+    const n = `custom_${customModuleCount}`;
+    
+    const tbody = document.getElementById('modules-tbody');
+    const addRow = document.getElementById('add-module-row');
+    
+    const tr = document.createElement('tr');
+    tr.id = `custom-row-${n}`;
+    tr.innerHTML = `
+        <td class="module-name" style="padding:9px 14px;">
+            <input type="text" 
+                   id="module-name-${n}"
+                   placeholder="Module name (e.g. Payment)"
+                   oninput="updateCustomPreview('${n}')"
+                   style="width:100%; padding:6px 10px;
+                          border:1px solid var(--zoho-input-border);
+                          border-radius:4px; font-size:13px; outline:none;
+                          font-family:inherit;">
+        </td>
+        <td style="padding:9px 14px;">
+            <input type="text" id="prefix-${n}" 
+                   placeholder="e.g. PAY-"
+                   oninput="updateCustomPreview('${n}')"
+                   style="width:100%; padding:6px 10px;
+                          border:1px solid var(--zoho-input-border);
+                          border-radius:4px; font-size:13px; outline:none;">
+        </td>
+        <td style="padding:9px 14px;">
+            <input type="text" id="start-${n}" 
+                   value="00001"
+                   oninput="updateCustomPreview('${n}')"
+                   style="width:100%; padding:6px 10px;
+                          border:1px solid var(--zoho-input-border);
+                          border-radius:4px; font-size:13px; outline:none;">
+        </td>
+        <td style="padding:9px 14px;display:flex;align-items:center;gap:8px;">
+            <span class="preview-badge" id="preview-${n}">PAY-00001</span>
+            <button type="button" onclick="removeCustomModule('${n}')"
+                    style="background:none;border:none;color:#e05050;
+                           cursor:pointer;font-size:18px;padding:0;line-height:1;">✕</button>
+        </td>
+    `;
+    
+    tbody.insertBefore(tr, addRow);
+    document.getElementById(`module-name-${n}`).focus();
+}
+
+function updateCustomPreview(n) {
+    const p = document.getElementById(`prefix-${n}`)?.value || '';
+    const s = document.getElementById(`start-${n}`)?.value || '';
+    const preview = document.getElementById(`preview-${n}`);
+    if (preview) preview.textContent = p + s || '—';
+}
+
+function removeCustomModule(n) {
+    document.getElementById(`custom-row-${n}`)?.remove();
 }
 
 // ── Validation ──
@@ -746,13 +818,22 @@ function saveSeries() {
     }
     clearNameError();
 
-    const series = TRANS_MODULES.map((m, i) => ({
-        module:  m.name,
-        prefix:  document.getElementById(`prefix-${i}`)?.value ?? m.prefix,
-        start:   document.getElementById(`start-${i}`)?.value  ?? m.start,
-        preview: (document.getElementById(`prefix-${i}`)?.value ?? m.prefix) +
-                 (document.getElementById(`start-${i}`)?.value  ?? m.start),
-    }));
+   const series = TRANS_MODULES.map((m, i) => ({
+    module:  m.name,
+    prefix:  document.getElementById(`prefix-${i}`)?.value ?? m.prefix,
+    start:   document.getElementById(`start-${i}`)?.value  ?? m.start,
+}));
+
+    document.querySelectorAll('[id^="custom-row-"]').forEach(row => {
+    const n    = row.id.replace('custom-row-', '');
+    const name = document.getElementById(`module-name-${n}`)?.value?.trim();
+    if (!name) return; // name இல்லன்னா skip
+    series.push({
+        module: name,
+        prefix: document.getElementById(`prefix-${n}`)?.value || '',
+        start:  document.getElementById(`start-${n}`)?.value  || '00001',
+    });
+});
 
     const locationIds  = Object.keys(selectedLocs);
     const categoryId   = document.getElementById('cat-hid-id').value   || null;

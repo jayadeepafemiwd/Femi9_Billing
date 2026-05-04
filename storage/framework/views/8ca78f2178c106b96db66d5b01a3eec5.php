@@ -286,10 +286,6 @@
             </div>
           <?php endif; ?>
 
-          <div class="prefill-banner">
-            📋 Prefill Customer details from the GST portal using the Customer's GSTIN. <a href="#">Prefill ›</a>
-          </div>
-
           <div class="form-body" style="padding:16px 0 0;">
 
             
@@ -471,7 +467,6 @@
         <div class="tab" onclick="showTab('assignLocation',this)">Assign Location</div>  
         <div class="tab" onclick="showTab('remarks',this)">Remarks</div>
         <div class="tab" onclick="showTab('customFields',this)">Custom Fields</div>
-        <div class="tab" onclick="showTab('reportingTags',this)">Reporting Tags</div>
       </div>
         
         
