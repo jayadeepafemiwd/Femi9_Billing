@@ -501,10 +501,6 @@ hr.divider { border: none; border-top: 1px solid #e8eaed; margin: 24px 0; }
     <div class="assoc-section">
       <div class="assoc-title">Associated Items*</div>
 
-      <div class="info-box">
-        ℹ️ If you've incurred an additional cost while assembling (e.g. rent, labour, scrap), add it as a <strong>service item</strong>.
-      </div>
-
       <table class="assoc-table" id="itemsTable">
         <thead>
           <tr>
@@ -990,8 +986,7 @@ function saveNumPref() {
   closeNumModal();
 }
 
-// ── FORM SUBMIT ────────────────────────────────────────
-function submitForm(action) {
+async function submitForm(action) {
   document.getElementById('formAction').value = action;
 
   const compositeId = document.getElementById('compositeItemId').value;
@@ -1000,19 +995,18 @@ function submitForm(action) {
   const locationId = document.getElementById('locationSelect').value;
   if (!locationId) { alert('Please select a Location!'); return; }
 
-  // For "assemble" action — check stock first (client-side)
   if (action === 'assemble') {
     const stockOk = checkStockBeforeAlert();
     if (!stockOk) {
-      // Scroll to alert
       document.getElementById('stockAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return; // Block submit — don't send to server
+      return;
     }
   }
 
   document.getElementById('associatedItemsJson').value = JSON.stringify(
     itemRows.map(r => ({
       product_id: r.product_id,
+      variant_id: r.variant_id ?? null,
       name:       r.name,
       sku:        r.sku,
       unit:       r.unit,
@@ -1030,6 +1024,23 @@ function submitForm(action) {
       cost_price: r.cost ?? 0,
     }))
   );
+
+  // ✅ Fresh CSRF token fetch பண்ணி submit
+  try {
+    const tokenRes = await fetch('/csrf-token-refresh', {
+      headers: { 'Accept': 'application/json' }
+    });
+    const tokenData = await tokenRes.json();
+    if (tokenData.token) {
+      // Meta tag update
+      document.querySelector('meta[name="csrf-token"]').setAttribute('content', tokenData.token);
+      // Form hidden input update
+      document.querySelector('input[name="_token"]').value = tokenData.token;
+    }
+  } catch(e) {
+    // Fetch fail ஆனாலும் submit try பண்ணு
+    console.warn('CSRF refresh failed, submitting anyway:', e);
+  }
 
   document.getElementById('assemblyForm').submit();
 }

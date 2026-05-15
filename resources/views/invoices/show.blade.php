@@ -783,6 +783,754 @@ body {
 </div>
 @endif
 
+{{-- ═══════════════════════════════════════════════════════
+     இந்த ENTIRE BLOCK-ஐ உங்கள் show.blade.php-ல்
+     UPI row-க்கு கீழே, invoice-paper div-க்கு மேலே paste பண்ணுங்க
+     ═══════════════════════════════════════════════════════ --}}
+
+{{-- ── Payments Table (only when payments exist) ── --}}
+@if(isset($paymentRecords) && $paymentRecords->count() > 0)
+<div style="background:#fff;border:1px solid #e3e6ea;border-radius:8px;
+            margin-bottom:14px;overflow:hidden;">
+
+    {{-- Header --}}
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:12px 16px;border-bottom:1px solid #e3e6ea;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;font-weight:700;color:#1a1a2e;">Payments Received</span>
+            <span style="background:#4a90d9;color:#fff;border-radius:50%;
+                         width:18px;height:18px;font-size:10px;font-weight:700;
+                         display:inline-flex;align-items:center;justify-content:center;"
+                  id="payment-count">{{ $paymentRecords->count() }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:#6b7280;">Balance Due:</span>
+            <strong id="balance-due-display"
+                    style="font-size:14px;
+                           color:{{ ($invoice->payment_status ?? 'unpaid') === 'paid' ? '#166534' : '#dc2626' }}">
+                ₹{{ number_format($invoice->balance_due ?? $invoice->grand_total, 2) }}
+            </strong>
+            <span id="payment-status-badge"
+                  style="padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;
+                  background:{{ match($invoice->payment_status ?? 'unpaid') {
+                      'paid' => '#dcfce7', 'partial' => '#fef3c7', default => '#fef2f2'
+                  } }};
+                  color:{{ match($invoice->payment_status ?? 'unpaid') {
+                      'paid' => '#166534', 'partial' => '#92400e', default => '#991b1b'
+                  } }}">
+                {{ ucfirst($invoice->payment_status ?? 'unpaid') }}
+            </span>
+        </div>
+    </div>
+
+    {{-- Table --}}
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+            <tr style="background:#f8f9fb;">
+                <th style="padding:9px 16px;text-align:left;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Date</th>
+                <th style="padding:9px 8px;text-align:left;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Payment #</th>
+                <th style="padding:9px 8px;text-align:left;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Reference #</th>
+                <th style="padding:9px 8px;text-align:left;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Mode</th>
+                <th style="padding:9px 8px;text-align:left;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Status</th>
+                <th style="padding:9px 16px 9px 8px;text-align:right;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid #e3e6ea;">Amount</th>
+                <th style="padding:9px 8px;width:60px;border-bottom:1px solid #e3e6ea;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($paymentRecords as $pmt)
+            <tr id="pmt-row-{{ $pmt->id }}"
+                style="border-bottom:1px solid #f0f2f4;
+                       {{ $pmt->status === 'refunded' ? 'opacity:0.55;text-decoration:line-through;' : '' }}
+                       transition:opacity 0.3s;">
+                <td style="padding:10px 16px;color:#374151;">
+                    {{ \Carbon\Carbon::parse($pmt->payment_date)->format('d/m/Y') }}
+                </td>
+                <td style="padding:10px 8px;">
+                    <span style="font-weight:600;color:{{ $pmt->status === 'refunded' ? '#9ca3af' : '#4a90d9' }}">
+                        {{ $pmt->payment_no }}
+                    </span>
+                </td>
+                <td style="padding:10px 8px;color:#9ca3af;">
+                    {{ $pmt->reference_no ?? '—' }}
+                </td>
+                <td style="padding:10px 8px;color:#6b7280;">
+                    {{ $pmt->payment_mode }}
+                </td>
+                <td style="padding:10px 8px;">
+                    @if($pmt->status === 'refunded')
+                        <span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Refunded</span>
+                    @elseif($pmt->status === 'draft')
+                        <span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Draft</span>
+                    @else
+                        <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Paid</span>
+                    @endif
+                </td>
+                <td style="padding:10px 16px 10px 8px;text-align:right;font-weight:600;color:#1a1a2e;">
+                    @if($pmt->status === 'refunded')
+                        <span style="color:#9ca3af;text-decoration:line-through;">₹{{ number_format($pmt->amount_received, 2) }}</span>
+                        <span style="background:#fef2f2;color:#dc2626;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;">Refunded</span>
+                    @else
+                        ₹{{ number_format($pmt->amount_received, 2) }}
+                    @endif
+                </td>
+                <td style="padding:10px 8px;text-align:center;">
+                    @if($pmt->status !== 'refunded')
+                    {{-- 3-dot dropdown --}}
+                    <div style="position:relative;display:inline-block;" class="pmt-dropdown-wrap">
+                        <button onclick="togglePmtDropdown({{ $pmt->id }})"
+                                style="background:none;border:1px solid #e3e6ea;border-radius:4px;
+                                       padding:2px 8px;cursor:pointer;color:#666;font-size:16px;
+                                       line-height:1;">···</button>
+                        <div id="pmt-drop-{{ $pmt->id }}"
+                             style="display:none;position:fixed;background:#fff;
+                                    border:1px solid #e3e6ea;border-radius:6px;
+                                    box-shadow:0 4px 16px rgba(0,0,0,0.12);
+                                    z-index:9999;min-width:130px;overflow:hidden;">
+                            <button onclick="closePmtDropdowns();openEditModal({{ $pmt->id }},'{{ $pmt->payment_date }}',{{ $pmt->amount_received }},'{{ $pmt->payment_mode }}','{{ $pmt->deposit_to ?? 'Cash' }}','{{ $pmt->reference_no ?? '' }}',@js($pmt->notes ?? ''))"
+                                    style="display:flex;align-items:center;gap:8px;width:100%;
+                                           padding:9px 14px;background:none;border:none;
+                                           font-size:13px;cursor:pointer;color:#374151;text-align:left;">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="closePmtDropdowns();openRefundModal({{ $pmt->id }},{{ $pmt->amount_received }},'{{ $pmt->payment_mode }}')"
+                                    style="display:flex;align-items:center;gap:8px;width:100%;
+                                           padding:9px 14px;background:none;border:none;
+                                           font-size:13px;cursor:pointer;color:#374151;text-align:left;">
+                                🔄 Refund
+                            </button>
+                            <div style="height:1px;background:#f0f2f4;margin:2px 0;"></div>
+                            <button onclick="closePmtDropdowns();openDeleteModal({{ $pmt->id }},{{ $pmt->amount_received }})"
+                                    style="display:flex;align-items:center;gap:8px;width:100%;
+                                           padding:9px 14px;background:none;border:none;
+                                           font-size:13px;cursor:pointer;color:#dc2626;text-align:left;">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+
+        {{-- Footer totals --}}
+        @php
+            $activeTotal   = $paymentRecords->where('status','!=','refunded')->sum('amount_received');
+            $refundedTotal = $paymentRecords->where('status','refunded')->sum('amount_received');
+        @endphp
+        <tfoot>
+            @if($refundedTotal > 0)
+            <tr style="background:#fef2f2;">
+                <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;">Total Refunded</td>
+                <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:600;color:#dc2626;">
+                    − ₹{{ number_format($refundedTotal, 2) }}
+                </td>
+                <td></td>
+            </tr>
+            @endif
+            <tr style="background:#f8fffe;">
+                <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;font-weight:600;">Total Paid (Active)</td>
+                <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:700;color:#166534;">
+                    ₹{{ number_format($activeTotal, 2) }}
+                </td>
+                <td></td>
+            </tr>
+            <tr style="background:#f8f9fb;border-top:2px solid #e3e6ea;">
+                <td colspan="5" style="padding:9px 16px;text-align:right;font-size:12px;color:#374151;font-weight:700;">Balance Due</td>
+                <td style="padding:9px 16px 9px 8px;text-align:right;font-size:13px;font-weight:800;
+                            color:{{ ($invoice->payment_status ?? '') === 'paid' ? '#166534' : '#dc2626' }}">
+                    ₹{{ number_format($invoice->balance_due ?? 0, 2) }}
+                </td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+@endif
+
+{{-- ═══════════════════════════════════════════════════════
+     MODALS — @if block-க்கு வெளியே, always render
+     (Bootstrap JS-ல் இருந்து control ஆகும்)
+     ═══════════════════════════════════════════════════════ --}}
+
+{{-- MODAL 1: EDIT PAYMENT --}}
+<div id="editPaymentOverlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+            z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;width:560px;max-height:90vh;
+                overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2);
+                animation:modalIn 0.2s ease;padding:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:16px 20px;border-bottom:1px solid #e3e6ea;">
+            <h5 style="margin:0;font-size:15px;font-weight:700;color:#1a1a2e;">✏️ Edit Payment</h5>
+            <button onclick="document.getElementById('editPaymentOverlay').style.display='none'"
+                    style="background:none;border:none;font-size:20px;color:#888;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <input type="hidden" id="edit_payment_id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Amount Received *</label>
+                    <div style="display:flex;">
+                        <span style="background:#f3f4f6;border:1px solid #d1d5db;border-right:none;
+                                     border-radius:5px 0 0 5px;padding:0 10px;display:flex;
+                                     align-items:center;font-size:13px;color:#6b7280;">₹</span>
+                        <input type="number" id="edit_amount_received" step="0.01" min="0.01"
+                               style="flex:1;height:36px;border:1px solid #d1d5db;border-radius:0 5px 5px 0;
+                                      padding:0 10px;font-size:13px;outline:none;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Payment Date *</label>
+                    <input type="date" id="edit_payment_date"
+                           style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                  padding:0 10px;font-size:13px;outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Payment Mode *</label>
+                    <select id="edit_payment_mode"
+                            style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                   padding:0 10px;font-size:13px;outline:none;">
+                        @foreach(['Cash','Bank Transfer','Bank Remittance','Cheque','Credit Card','UPI'] as $m)
+                        <option value="{{ $m }}">{{ $m }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Deposit To *</label>
+                    <select id="edit_deposit_to"
+                            style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                   padding:0 10px;font-size:13px;outline:none;">
+                        @foreach(['Cash','Petty Cash','Bank'] as $d)
+                        <option value="{{ $d }}">{{ $d }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Reference #</label>
+                    <input type="text" id="edit_reference_no" placeholder="Optional"
+                           style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                  padding:0 10px;font-size:13px;outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Notes</label>
+                    <textarea id="edit_notes" rows="2"
+                              style="width:100%;border:1px solid #d1d5db;border-radius:5px;
+                                     padding:8px 10px;font-size:13px;outline:none;resize:none;"></textarea>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;padding:14px 20px;border-top:1px solid #e3e6ea;background:#fafbfc;">
+            <button onclick="document.getElementById('editPaymentOverlay').style.display='none'"
+                    style="height:36px;padding:0 20px;background:#fff;border:1px solid #d1d5db;
+                           border-radius:5px;font-size:13px;cursor:pointer;">Cancel</button>
+            <button onclick="saveEditPayment()"
+                    style="height:36px;padding:0 20px;background:#4a90d9;color:#fff;
+                           border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;"
+                    id="editSaveBtn">
+                <span id="editSpinner" style="display:none;">⏳ </span>Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- MODAL 2: REFUND PAYMENT (Zoho exact style) --}}
+<div id="refundPaymentOverlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+            z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;width:680px;max-height:90vh;
+                overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2);
+                animation:modalIn 0.2s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:16px 24px;border-bottom:1px solid #e3e6ea;">
+            <h5 style="margin:0;font-size:15px;font-weight:700;color:#1a1a2e;">Payment Refund</h5>
+            <button onclick="document.getElementById('refundPaymentOverlay').style.display='none'"
+                    style="background:none;border:none;font-size:22px;color:#dc2626;cursor:pointer;line-height:1;">✕</button>
+        </div>
+        <div style="padding:24px;">
+            <input type="hidden" id="refund_payment_id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                {{-- Payment Amount --}}
+                <div>
+                    <label style="font-size:12px;color:#374151;font-weight:500;display:block;margin-bottom:5px;">Payment Amount</label>
+                    <div style="display:flex;">
+                        <span style="background:#f3f4f6;border:1px solid #d1d5db;border-right:none;
+                                     border-radius:5px 0 0 5px;padding:0 10px;display:flex;
+                                     align-items:center;font-size:13px;color:#6b7280;">₹</span>
+                        <input type="text" id="refund_amount_display" readonly
+                               style="flex:1;height:36px;border:1px solid #d1d5db;border-radius:0 5px 5px 0;
+                                      padding:0 10px;font-size:13px;background:#f9fafb;font-weight:600;">
+                    </div>
+                </div>
+                {{-- Refunded On --}}
+                <div>
+                    <label style="font-size:12px;color:#dc2626;font-weight:600;display:block;margin-bottom:5px;">Refunded On *</label>
+                    <input type="date" id="refund_refunded_on"
+                           style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                  padding:0 10px;font-size:13px;outline:none;">
+                </div>
+                {{-- Payment Mode --}}
+                <div>
+                    <label style="font-size:12px;color:#374151;font-weight:500;display:block;margin-bottom:5px;">Payment Mode</label>
+                    <select id="refund_payment_mode"
+                            style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                   padding:0 10px;font-size:13px;outline:none;">
+                        @foreach(['Cash','Bank Transfer','Bank Remittance','Cheque','Credit Card','UPI'] as $m)
+                        <option value="{{ $m }}">{{ $m }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- Reference # --}}
+                <div>
+                    <label style="font-size:12px;color:#374151;font-weight:500;display:block;margin-bottom:5px;">Reference #</label>
+                    <input type="text" id="refund_reference_no" placeholder="Optional"
+                           style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                  padding:0 10px;font-size:13px;outline:none;">
+                </div>
+                {{-- From Account --}}
+                <div>
+                    <label style="font-size:12px;color:#dc2626;font-weight:600;display:block;margin-bottom:5px;">From Account *</label>
+                    <select id="refund_from_account"
+                            style="width:100%;height:36px;border:1px solid #d1d5db;border-radius:5px;
+                                   padding:0 10px;font-size:13px;outline:none;">
+                        @foreach(['Petty Cash','Cash','Bank'] as $a)
+                        <option value="{{ $a }}">{{ $a }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- Description --}}
+                <div>
+                    <label style="font-size:12px;color:#374151;font-weight:500;display:block;margin-bottom:5px;">Description</label>
+                    <textarea id="refund_description" rows="2" placeholder="Reason for refund..."
+                              style="width:100%;border:1px solid #d1d5db;border-radius:5px;
+                                     padding:8px 10px;font-size:13px;outline:none;resize:none;"></textarea>
+                </div>
+            </div>
+
+            {{-- Invoice row table (like Zoho) --}}
+            <table style="width:100%;border-collapse:collapse;border:1px solid #e3e6ea;border-radius:6px;overflow:hidden;font-size:12px;">
+                <thead>
+                    <tr style="background:#f8f9fb;">
+                        <th style="padding:9px 14px;text-align:left;color:#6b7280;font-weight:600;text-transform:uppercase;font-size:11px;border-bottom:1px solid #e3e6ea;">Invoice #</th>
+                        <th style="padding:9px 14px;text-align:left;color:#6b7280;font-weight:600;text-transform:uppercase;font-size:11px;border-bottom:1px solid #e3e6ea;">Invoice Date</th>
+                        <th style="padding:9px 14px;text-align:right;color:#6b7280;font-weight:600;text-transform:uppercase;font-size:11px;border-bottom:1px solid #e3e6ea;">Refund Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:10px 14px;font-weight:600;color:#1a1a2e;">{{ $invoice->invoice_number }}</td>
+                        <td style="padding:10px 14px;color:#374151;">{{ \Carbon\Carbon::parse($invoice->invoice_date)->format('Y-m-d') }}</td>
+                        <td style="padding:10px 14px;text-align:right;font-weight:700;color:#374151;" id="refund_row_amount">—</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p style="font-size:12px;color:#6b7280;margin-top:14px;margin-bottom:0;line-height:1.6;">
+                Note: Once you save this refund, the payment received will be dissociated from the related invoice(s), changing the invoice status to Unpaid.
+            </p>
+        </div>
+        <div style="display:flex;gap:10px;padding:14px 24px;border-top:1px solid #e3e6ea;background:#fafbfc;">
+            <button onclick="saveRefund()"
+                    style="height:36px;padding:0 24px;background:#4a90d9;color:#fff;
+                           border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;"
+                    id="refundSaveBtn">
+                <span id="refundSpinner" style="display:none;">⏳ </span>Save
+            </button>
+            <button onclick="document.getElementById('refundPaymentOverlay').style.display='none'"
+                    style="height:36px;padding:0 20px;background:#fff;border:1px solid #d1d5db;
+                           border-radius:5px;font-size:13px;cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{{-- MODAL 3: DELETE PAYMENT (2-step, Zoho exact) --}}
+<div id="deletePaymentOverlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+            z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;width:480px;
+                box-shadow:0 12px 40px rgba(0,0,0,0.2);animation:modalIn 0.2s ease;overflow:hidden;">
+
+        {{-- Step 1: Choose --}}
+        <div id="del-step-1">
+            <div style="display:flex;align-items:center;justify-content:space-between;
+                        padding:16px 20px;border-bottom:1px solid #e3e6ea;">
+                <h5 style="margin:0;font-size:15px;font-weight:700;color:#1a1a2e;">Delete Recorded Payment?</h5>
+                <button onclick="closeDeleteModal()"
+                        style="background:none;border:none;font-size:18px;color:#888;cursor:pointer;">✕</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="display:flex;gap:12px;align-items:flex-start;
+                            background:#fefce8;border:1px solid #fde047;border-radius:8px;
+                            padding:14px;margin-bottom:20px;">
+                    <span style="font-size:20px;flex-shrink:0;">⚠️</span>
+                    <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.5;">
+                        You're deleting a payment of
+                        <strong style="color:#1a1a2e;" id="del_amount_display">₹0.00</strong>.
+                        You can either dissociate this payment from this invoice and add it as a
+                        credit to the customer or you can delete this payment entirely.
+                    </p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button onclick="showDelStep2('dissociate')"
+                            style="display:flex;align-items:center;justify-content:space-between;
+                                   padding:14px 16px;border:1px solid #e3e6ea;border-radius:8px;
+                                   background:#fff;cursor:pointer;text-align:left;width:100%;">
+                        <span style="font-size:13px;color:#374151;font-weight:500;">Dissociate &amp; Add As Credit</span>
+                        <span style="color:#f97316;font-size:16px;">›</span>
+                    </button>
+                    <button onclick="showDelStep2('delete')"
+                            style="display:flex;align-items:center;justify-content:space-between;
+                                   padding:14px 16px;border:1px solid #e3e6ea;border-radius:8px;
+                                   background:#fff;cursor:pointer;text-align:left;width:100%;">
+                        <span style="font-size:13px;color:#374151;font-weight:500;">Delete Payment</span>
+                        <span style="color:#f97316;font-size:16px;">›</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Step 2a: Dissociate --}}
+        <div id="del-step-2-dissociate" style="display:none;">
+            <div style="padding:24px;">
+                <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;">
+                    <span style="font-size:24px;flex-shrink:0;">⚠️</span>
+                    <div>
+                        <h5 style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">
+                            Dissociate and record it as an advance payment?
+                        </h5>
+                        <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.5;">
+                            This payment will be dissociated from this invoice and will be recorded as
+                            an advance payment from the customer.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;padding:14px 24px;border-top:1px solid #e3e6ea;background:#fafbfc;">
+                <button onclick="confirmDelete('dissociate_credit')"
+                        style="height:36px;padding:0 20px;background:#4a90d9;color:#fff;
+                               border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;"
+                        id="dissociateConfirmBtn">
+                    <span id="dissociateSpinner" style="display:none;">⏳ </span>
+                    Dissociate &amp; Add As Credit
+                </button>
+                <button onclick="showDelStep1()"
+                        style="height:36px;padding:0 16px;background:#fff;border:1px solid #d1d5db;
+                               border-radius:5px;font-size:13px;cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+
+        {{-- Step 2b: Hard Delete --}}
+        <div id="del-step-2-delete" style="display:none;">
+            <div style="padding:24px;">
+                <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;">
+                    <span style="font-size:24px;flex-shrink:0;">⚠️</span>
+                    <div>
+                        <h5 style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Delete payment?</h5>
+                        <p style="margin:0;font-size:13px;color:#6b7280;">
+                            Once you delete this payment, you will not be able to retrieve it.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;padding:14px 24px;border-top:1px solid #e3e6ea;background:#fafbfc;">
+                <button onclick="confirmDelete('delete')"
+                        style="height:36px;padding:0 20px;background:#dc2626;color:#fff;
+                               border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;"
+                        id="deleteConfirmBtn">
+                    <span id="deleteSpinner" style="display:none;">⏳ </span>Delete
+                </button>
+                <button onclick="showDelStep1()"
+                        style="height:36px;padding:0 16px;background:#fff;border:1px solid #d1d5db;
+                               border-radius:5px;font-size:13px;cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{{-- Toast container --}}
+<div id="_pmt_toast_wrap"
+     style="position:fixed;bottom:20px;right:20px;z-index:9999;
+            display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+
+
+{{-- ═══════════════════════════════════════════════
+     JAVASCRIPT for all 3 modals
+     ═══════════════════════════════════════════════ --}}
+<script>
+const INV_ID   = {{ $invoice->id }};
+const CSRF_TOK = document.querySelector('meta[name="csrf-token"]').content;
+
+// ── Dropdown ─────────────────────────────────────────────────────────────────
+function togglePmtDropdown(id) {
+    const drop = document.getElementById('pmt-drop-' + id);
+    const btn  = drop.previousElementSibling;
+    const rect = btn.getBoundingClientRect();
+
+    // Close others
+    document.querySelectorAll('[id^="pmt-drop-"]').forEach(d => {
+        if (d.id !== 'pmt-drop-' + id) d.style.display = 'none';
+    });
+
+    if (drop.style.display === 'none') {
+        drop.style.display = 'block';
+        // Position below button
+        drop.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+        drop.style.left = (rect.right - 130 + window.scrollX) + 'px';
+    } else {
+        drop.style.display = 'none';
+    }
+}
+
+function closePmtDropdowns() {
+    document.querySelectorAll('[id^="pmt-drop-"]').forEach(d => d.style.display = 'none');
+}
+
+// Close on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.pmt-dropdown-wrap')) closePmtDropdowns();
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function pmtToast(msg, type = 'success') {
+    const wrap = document.getElementById('_pmt_toast_wrap');
+    const id   = 'pt_' + Date.now();
+    const bg   = type === 'success' ? '#166534' : '#991b1b';
+    const bg2  = type === 'success' ? '#dcfce7' : '#fef2f2';
+    const el   = document.createElement('div');
+    el.id = id;
+    el.style.cssText = `background:${bg2};color:${bg};border:1px solid ${bg};
+        border-radius:8px;padding:12px 16px;font-size:13px;font-weight:500;
+        box-shadow:0 4px 12px rgba(0,0,0,0.12);pointer-events:all;
+        min-width:280px;display:flex;align-items:center;gap:8px;`;
+    el.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span><span>${msg}</span>
+        <button onclick="this.parentElement.remove()"
+                style="margin-left:auto;background:none;border:none;cursor:pointer;color:${bg};font-size:16px;">✕</button>`;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+}
+
+// ── Refresh balance UI ────────────────────────────────────────────────────────
+function refreshPaymentUI(data) {
+    const balEl   = document.getElementById('balance-due-display');
+    const badgeEl = document.getElementById('payment-status-badge');
+    const s       = data.payment_status;
+
+    if (balEl) {
+        balEl.textContent = '₹' + parseFloat(data.new_balance).toLocaleString('en-IN',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        balEl.style.color = s === 'paid' ? '#166534' : '#dc2626';
+    }
+    if (badgeEl) {
+        badgeEl.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+        const colors = {
+            paid:    { bg:'#dcfce7', fg:'#166534' },
+            partial: { bg:'#fef3c7', fg:'#92400e' },
+            unpaid:  { bg:'#fef2f2', fg:'#991b1b' },
+        };
+        const c = colors[s] ?? colors.unpaid;
+        badgeEl.style.background = c.bg;
+        badgeEl.style.color      = c.fg;
+    }
+}
+
+// ═══════════════════════════════════════════════
+// EDIT
+// ═══════════════════════════════════════════════
+function openEditModal(id, date, amount, mode, depositTo, refNo, notes) {
+    document.getElementById('edit_payment_id').value      = id;
+    document.getElementById('edit_payment_date').value    = date;
+    document.getElementById('edit_amount_received').value = amount;
+    document.getElementById('edit_reference_no').value    = refNo;
+    document.getElementById('edit_notes').value           = notes;
+
+    ['edit_payment_mode','edit_deposit_to'].forEach(selId => {
+        const val = selId === 'edit_payment_mode' ? mode : depositTo;
+        const sel = document.getElementById(selId);
+        [...sel.options].forEach(o => o.selected = (o.value === val));
+    });
+
+    document.getElementById('editPaymentOverlay').style.display = 'flex';
+}
+
+function saveEditPayment() {
+    const id     = document.getElementById('edit_payment_id').value;
+    const amount = parseFloat(document.getElementById('edit_amount_received').value);
+    const btn    = document.getElementById('editSaveBtn');
+    const spin   = document.getElementById('editSpinner');
+
+    if (!amount || amount <= 0) { pmtToast('Enter a valid amount', 'error'); return; }
+
+    spin.style.display = 'inline'; btn.disabled = true;
+
+    fetch(`/invoices/${INV_ID}/payments/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
+        body: JSON.stringify({
+            _method:         'PUT',
+            amount_received: amount,
+            payment_date:    document.getElementById('edit_payment_date').value,
+            payment_mode:    document.getElementById('edit_payment_mode').value,
+            deposit_to:      document.getElementById('edit_deposit_to').value,
+            reference_no:    document.getElementById('edit_reference_no').value,
+            notes:           document.getElementById('edit_notes').value,
+        }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        spin.style.display = 'none'; btn.disabled = false;
+        if (d.success) {
+            document.getElementById('editPaymentOverlay').style.display = 'none';
+            pmtToast(d.message);
+            refreshPaymentUI(d);
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            pmtToast(d.message || 'Update failed', 'error');
+        }
+    })
+    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+}
+
+// ═══════════════════════════════════════════════
+// REFUND
+// ═══════════════════════════════════════════════
+function openRefundModal(id, amount, mode) {
+    document.getElementById('refund_payment_id').value     = id;
+    document.getElementById('refund_amount_display').value = parseFloat(amount).toFixed(2);
+    document.getElementById('refund_row_amount').textContent =
+        '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('refund_refunded_on').value    = new Date().toISOString().split('T')[0];
+    document.getElementById('refund_reference_no').value   = '';
+    document.getElementById('refund_description').value    = '';
+
+    const sel = document.getElementById('refund_payment_mode');
+    [...sel.options].forEach(o => o.selected = (o.value === mode));
+
+    document.getElementById('refundPaymentOverlay').style.display = 'flex';
+}
+
+function saveRefund() {
+    const id   = document.getElementById('refund_payment_id').value;
+    const date = document.getElementById('refund_refunded_on').value;
+    const btn  = document.getElementById('refundSaveBtn');
+    const spin = document.getElementById('refundSpinner');
+
+    if (!date) { pmtToast('Please select refund date', 'error'); return; }
+
+    spin.style.display = 'inline'; btn.disabled = true;
+
+    fetch(`/invoices/${INV_ID}/payments/${id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
+        body: JSON.stringify({
+            refunded_on:  date,
+            payment_mode: document.getElementById('refund_payment_mode').value,
+            from_account: document.getElementById('refund_from_account').value,
+            reference_no: document.getElementById('refund_reference_no').value,
+            description:  document.getElementById('refund_description').value,
+        }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        spin.style.display = 'none'; btn.disabled = false;
+        if (d.success) {
+            document.getElementById('refundPaymentOverlay').style.display = 'none';
+            pmtToast(d.message);
+            refreshPaymentUI(d);
+            // Visually mark row as refunded
+            const row = document.getElementById('pmt-row-' + id);
+            if (row) {
+                row.style.opacity = '0.55';
+                row.style.textDecoration = 'line-through';
+                const dropCell = row.querySelector('[id^="pmt-drop-"]');
+                if (dropCell) dropCell.parentElement.innerHTML = '';
+            }
+            setTimeout(() => location.reload(), 1800);
+        } else {
+            pmtToast(d.message || 'Refund failed', 'error');
+        }
+    })
+    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+}
+
+// ═══════════════════════════════════════════════
+// DELETE (2-step)
+// ═══════════════════════════════════════════════
+let _delId = null;
+
+function openDeleteModal(id, amount) {
+    _delId = id;
+    document.getElementById('del_amount_display').textContent =
+        '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    showDelStep1();
+    document.getElementById('deletePaymentOverlay').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deletePaymentOverlay').style.display = 'none';
+}
+
+function showDelStep1() {
+    document.getElementById('del-step-1').style.display             = 'block';
+    document.getElementById('del-step-2-dissociate').style.display  = 'none';
+    document.getElementById('del-step-2-delete').style.display      = 'none';
+}
+
+function showDelStep2(type) {
+    document.getElementById('del-step-1').style.display             = 'none';
+    document.getElementById('del-step-2-dissociate').style.display  = type === 'dissociate' ? 'block' : 'none';
+    document.getElementById('del-step-2-delete').style.display      = type === 'delete'     ? 'block' : 'none';
+}
+
+function confirmDelete(action) {
+    const spinnerId = action === 'dissociate_credit' ? 'dissociateSpinner' : 'deleteSpinner';
+    const btnId     = action === 'dissociate_credit' ? 'dissociateConfirmBtn' : 'deleteConfirmBtn';
+    const spin = document.getElementById(spinnerId);
+    const btn  = document.getElementById(btnId);
+
+    spin.style.display = 'inline'; btn.disabled = true;
+
+    fetch(`/invoices/${INV_ID}/payments/${_delId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
+        body: JSON.stringify({ _method: 'DELETE', action }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        spin.style.display = 'none'; btn.disabled = false;
+        if (d.success) {
+            closeDeleteModal();
+            pmtToast(d.message);
+            refreshPaymentUI(d);
+            const row = document.getElementById('pmt-row-' + _delId);
+            if (row) {
+                row.style.transition = 'opacity 0.4s';
+                row.style.opacity    = '0';
+                setTimeout(() => {
+                    row.remove();
+                    const cnt = document.getElementById('payment-count');
+                    if (cnt) cnt.textContent = Math.max(0, parseInt(cnt.textContent || '1') - 1);
+                }, 400);
+            }
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            pmtToast(d.message || 'Action failed', 'error');
+        }
+    })
+    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+}
+
+// Close modals on overlay click
+['editPaymentOverlay','refundPaymentOverlay','deletePaymentOverlay'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            if (id === 'deletePaymentOverlay') closeDeleteModal();
+            else this.style.display = 'none';
+        }
+    });
+});
+</script>
+
             {{-- ── INVOICE PAPER ── --}}
             <div class="invoice-paper">
 

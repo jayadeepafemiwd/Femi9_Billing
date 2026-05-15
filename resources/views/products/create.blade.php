@@ -451,6 +451,18 @@ img.vit-preview { width: 100%; height: 100%; object-fit: cover; display: none; b
         <a href="{{ url('/products') }}" class="form-close">✕</a>
       </div>
 
+
+       @if($errors->any())
+    <div class="alert-danger">
+      <ul style="margin:0;padding-left:16px;">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  
       @php
         $weightUnit = $settings['weight_unit'] ?? 'kg';
         $dimUnit = $settings['dimension_unit'] ?? 'cm';
@@ -643,6 +655,9 @@ img.vit-preview { width: 100%; height: 100%; object-fit: cover; display: none; b
               </div>
               <div class="unit-dropdown-menu" id="unit-dropdown"></div>
             </div>
+            @error('unit')
+    <span class="text-danger">{{ $message }}</span>
+@enderror
           </div>
           {{-- SKU — Single Item only --}}
           <div class="form-row single-only" id="sku-row" style="margin-bottom:0;">
@@ -1675,10 +1690,23 @@ variants.push({
 }
 
 function handleFormSubmit() {
-  // Pack variants JSON before submitting
-  packVariants();
-  // Small delay to ensure hidden field is set, then submit
-  document.getElementById('main-form').submit();
+    // Unit validation
+    const unitVal = document.getElementById('unit-hidden').value;
+    if (!unitVal) {
+        alert('Please select a Unit.');
+        document.getElementById('unit-search').focus();
+        return;
+    }
+
+    // Name validation
+    const nameVal = document.querySelector('input[name="name"]').value.trim();
+    if (!nameVal) {
+        alert('Please enter Item Name.');
+        return;
+    }
+
+    packVariants();
+    document.getElementById('main-form').submit();
 }
 
 // ══════════════════════════════════════════════

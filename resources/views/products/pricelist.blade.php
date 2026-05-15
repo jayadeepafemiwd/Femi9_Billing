@@ -446,17 +446,20 @@ function renderItems() {
       const rr = document.createElement('tr');
       rr.className = 'range-hint-row';
       rr.dataset.parentId = item.id;
-      rr.innerHTML = `<td></td><td></td><td colspan="4">
-        <span class="add-range" onclick="addRange(this,${item.id})">+ Add New Range</span>
-      </td>`;
+     rr.innerHTML = `<td></td><td></td><td colspan="4">
+  <span class="add-range" onclick="addRange(this,'${item.id}')">+ Add New Range</span>
+</td>`;
       tbody.appendChild(rr);
     }
   });
 }
 
 function addRange(el, itemId) {
-  const i  = extraIdx++;
+  const i = extraIdx++;
+  const hintRow = el.closest('tr');
+
   const tr = document.createElement('tr');
+  tr.dataset.rangeFor = itemId;   // ✅ எந்த item என்று mark பண்ணு
   tr.innerHTML = `
     <td><input type="hidden" name="items[${i}][item_id]" value="${itemId}"></td>
     <td></td>
@@ -464,13 +467,23 @@ function addRange(el, itemId) {
     <td><input type="number" name="items[${i}][end_quantity]"   min="1" style="width:70px"></td>
     <td><input type="number" name="items[${i}][custom_rate]" placeholder="0" min="0" style="width:90px"></td>
     <td><button type="button" class="btn-del" onclick="this.closest('tr').remove()">&#10005;</button></td>`;
-  el.closest('tr').before(tr);
+
+  hintRow.parentNode.insertBefore(tr, hintRow);  // ✅ hint row முன்னால் போடு
 }
 
 function removeRow(btn) {
-  const tr   = btn.closest('tr');
-  const next = tr.nextElementSibling;
-  if (next?.classList.contains('range-hint-row')) next.remove();
+  const tr = btn.closest('tr');
+  const itemId = tr.querySelector('input[name*="[item_id]"]')?.value;
+  const tbody  = document.getElementById('items-tbody');
+
+tbody.querySelectorAll('.range-hint-row').forEach(r => {
+  if (r.dataset.parentId == itemId) r.remove();  // == string comparison okay
+});
+  // ✅ hint row delete பண்ணு
+  tbody.querySelectorAll('.range-hint-row').forEach(r => {
+    if (r.dataset.parentId == itemId) r.remove();
+  });
+
   tr.remove();
 }
 

@@ -359,20 +359,25 @@ $activities = \App\Models\History::where('module', 'invoice')
     $billingAddr  = $commonAddress['billing']  ?? null;
     $shippingAddr = $commonAddress['shipping'] ?? null;
 
-    return response()->json([
-        'outstanding'      => 0,
-        'credits'          => floatval($customer->unused_credits ?? 0),
-        'customer_type'    => ucfirst($customer->customer_type ?? ''),
-        'currency'         => $additionalDatas['currency']      ?? 'INR',
-        'payment_terms'    => $additionalDatas['payment_terms'] ?? '—',
-        'pan'              => $customer->pan                    ?? '—',
-        'gstin'            => $additionalDatas['gstin']         ?? '—',
-        'portal_status'    => '—',
-        'contacts'         => $contacts,
-        'billing_address'  => $hasData($billingAddr)  ? $billingAddr  : null,
-        'shipping_address' => $hasData($shippingAddr) ? $shippingAddr : null,
-        'activities'       => $activities,
-    ]);
+   return response()->json([
+    'outstanding'      => round(
+                            \App\Models\Invoice::where('customer_id', $id)
+                                ->whereIn('payment_status', ['unpaid', 'partial'])
+                                ->sum('balance_due'),
+                            2
+                          ),
+    'credits'          => floatval($customer->unused_credits ?? 0),
+    'customer_type'    => ucfirst($customer->customer_type ?? ''),
+    'currency'         => $additionalDatas['currency']      ?? 'INR',
+    'payment_terms'    => $additionalDatas['payment_terms'] ?? '—',
+    'pan'              => $customer->pan                    ?? '—',
+    'gstin'            => $additionalDatas['gstin']         ?? '—',
+    'portal_status'    => '—',
+    'contacts'         => $contacts,
+    'billing_address'  => $hasData($billingAddr)  ? $billingAddr  : null,
+    'shipping_address' => $hasData($shippingAddr) ? $shippingAddr : null,
+    'activities'       => $activities,
+]);
 }
 
 private static function buildUpdateDescription(?array $oldData, ?array $newData): string

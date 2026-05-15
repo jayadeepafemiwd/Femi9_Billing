@@ -1136,17 +1136,25 @@ public function getPriceListRates(Request $request): JsonResponse
                 $customRate = 0;
                 $ranges     = $productData['ranges'] ?? [];
 
-                if ($scheme === 'volume') {
-                    foreach ($ranges as $range) {
-                        $startQty = $range['start_qty'] ?? 1;
-                        if ($startQty !== null && 1 >= (int)$startQty) {
-                            $customRate = (float)($range['custom_rate'] ?? 0);
-                            break;
-                        }
-                    }
-                } else {
-                    $customRate = (float)($ranges[0]['custom_rate'] ?? 0);
-                }
+                // Individual Items type — volume scheme
+if ($scheme === 'volume') {
+    // Return ALL ranges so JS can pick the right one
+    $rates[$compositeKey] = [
+        'ranges'       => $ranges,   // ← return full ranges array
+        'scheme'       => 'volume',
+        'product_name' => $productData['product_name'] ?? '',
+        'variant_name' => $productData['variant_name'] ?? null,
+    ];
+} else {
+    // unit pricing — single rate
+    $customRate = (float)($ranges[0]['custom_rate'] ?? 0);
+    if ($customRate <= 0) continue;
+    $rates[$compositeKey] = [
+        'rate'         => $customRate,
+        'scheme'       => 'unit',
+        'product_name' => $productData['product_name'] ?? '',
+    ];
+}
 
                 if ($customRate <= 0) continue;
 
@@ -1622,4 +1630,5 @@ if ($isFullyPaid && $wasNotFullyPaid) {
     return back()->withInput()->with('error', 'Error: ' . $e->getMessage());
                }
 }
+
 }

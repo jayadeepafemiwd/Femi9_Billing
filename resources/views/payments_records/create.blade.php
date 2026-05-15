@@ -1092,10 +1092,16 @@ function renderCustomModesInSelect() {
 function resetAIPanel() {
   aiLastSuggestion = null;
   aiLastAction     = null;
+  
   const box = document.getElementById('aiSuggestionBox');
+  if (!box) return; 
+  
   box.className   = 'ai-suggestion-box empty';
   box.textContent = 'Select a customer and enter an amount to get AI-powered payment insights and suggestions.';
-  document.getElementById('aiApplyBtn').classList.remove('visible');
+  
+  const applyBtn = document.getElementById('aiApplyBtn');
+  if (applyBtn) applyBtn.classList.remove('visible');
+  
   document.querySelectorAll('.ai-chip').forEach(c => c.classList.remove('active'));
 }
 

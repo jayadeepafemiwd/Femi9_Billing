@@ -812,37 +812,36 @@ select {
             </div>
         </div>
 
-        {{-- ✅ Credit Banner — moved here, just above payment section --}}
+   {{-- ✅ Credit / Advance Banner --}}
 <div id="credit-banner" style="display:none; margin-bottom:16px;">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+    <div id="credit-banner-inner" style="display:flex;align-items:center;gap:12px;padding:12px 16px;
                 background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;">
-        <div style="font-size:18px;">💰</div>
+        <div style="font-size:18px;" id="credit-banner-icon">💰</div>
         <div>
-            <div style="font-size:13px;font-weight:600;color:#166534;">
+            <div style="font-size:13px;font-weight:600;" id="credit-banner-title">
                 Customer has ₹<span id="credit-amount-display">0.00</span> unused credit
             </div>
-            <div style="font-size:11px;color:#15803d;margin-top:2px;">
+            <div style="font-size:11px;margin-top:2px;" id="credit-banner-sub">
                 Click checkbox to auto-apply credit to this invoice
             </div>
         </div>
         <div style="margin-left:auto;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#166534;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;" id="credit-checkbox-label">
                 <input type="checkbox" id="apply-credit-checkbox" 
                        style="width:14px;height:14px;accent-color:#27ae60;">
-                Apply credit to this invoice
+                <span id="credit-checkbox-text">Apply credit to this invoice</span>
             </label>
         </div>
     </div>
     <div id="credit-apply-section" style="display:none;margin-top:8px;
-         padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
-        <div style="font-size:13px;color:#166534;display:flex;align-items:center;gap:8px;">
+         padding:10px 16px;border-radius:6px;">
+        <div style="font-size:13px;display:flex;align-items:center;gap:8px;">
             <span>✅</span>
-            <span>₹<span id="credit-will-apply-display">0.00</span> credit will be auto-applied from advance balance</span>
+            <span id="credit-apply-desc">₹<span id="credit-will-apply-display">0.00</span> credit will be auto-applied from advance balance</span>
         </div>
     </div>
     <input type="hidden" name="apply_credit_amount" id="apply-credit-amount-hidden" value="0">
 </div>
-
 
 
    {{-- Payment Received Section --}}
@@ -1243,6 +1242,7 @@ let rowCount = 1;
 let activePriceListRates = {};
 let _rplCurrentIdx = null;
 let extraChargeCount = 0;
+let rowPriceListData = {};
 
 // ══════════════════════════════════════════
 // ADDRESS FORMAT
@@ -1281,6 +1281,7 @@ function onCustomerChange(customerId) {
     // Reset credit banner
     document.getElementById('credit-banner').style.display = 'none';
     window._customerUnusedCredit = 0;
+    window._advanceRequired = false;
     document.getElementById('apply-credit-checkbox').checked = false;
     document.getElementById('credit-apply-section').style.display = 'none';
     document.getElementById('apply-credit-amount-hidden').value = '0';
@@ -1315,7 +1316,7 @@ function onCustomerChange(customerId) {
     })
     .then(r => r.json())
     .then(data => {
-        if (!data.category) { resetCategoryLabel(); return; }
+        if (!data.category) { resetCategoryLabel();  window._advanceRequired = false; return; }
 
         // ── Category label ──
         const labelBox = document.getElementById('cat-label-box');
@@ -1371,30 +1372,36 @@ function onCustomerChange(customerId) {
                 onLocationChange(firstLoc.id);
             }
         }
+        window._advanceRequired = data.advance_required || false;
+    updateAdvanceBanner();
     })
     .catch(() => resetCategoryLabel());
 
     // ── 2. Customer credit check ──
-    fetch(`/payments-records/customer-credit?customer_id=${customerId}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        const banner = document.getElementById('credit-banner');
-        if (data.success && data.unused_credits > 0) {
-            document.getElementById('credit-amount-display').textContent = parseFloat(data.unused_credits).toFixed(2);
-            banner.style.display = 'block';
-            window._customerUnusedCredit = data.unused_credits;
-            document.getElementById('cp-credits').textContent = '₹' + parseFloat(data.unused_credits).toFixed(2);
-        } else {
-            banner.style.display = 'none';
-            window._customerUnusedCredit = 0;
-            document.getElementById('cp-credits').textContent = '₹0.00';
-        }
-    })
-    .catch(() => { document.getElementById('credit-banner').style.display = 'none'; });
+  // ── 2. Customer credit + advance check ──
+fetch(`/payments-records/customer-credit?customer_id=${customerId}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+})
+.then(r => r.json())
+.then(data => {
+    const banner = document.getElementById('credit-banner');
+    if (data.success && data.unused_credits > 0) {
+        document.getElementById('credit-amount-display').textContent = 
+            parseFloat(data.unused_credits).toFixed(2);
+        banner.style.display = 'block';
+        window._customerUnusedCredit = data.unused_credits;
+        document.getElementById('cp-credits').textContent = 
+            '₹' + parseFloat(data.unused_credits).toFixed(2);
+    } else {
+        banner.style.display = 'none';
+        window._customerUnusedCredit = 0;
+        document.getElementById('cp-credits').textContent = '₹0.00';
+    }
+})
+.catch(() => { 
+    document.getElementById('credit-banner').style.display = 'none'; 
+});
 }
-
 // ══════════════════════════════════════════
 // FIXED: Build series dropdown from location's series array
 // ══════════════════════════════════════════
@@ -1787,9 +1794,67 @@ function validateQty(idx) {
 // ══════════════════════════════════════════
 function calcRow(idx) {
     const qty     = parseFloat(document.getElementById('iqty-'     + idx)?.value) || 0;
-    const rate    = parseFloat(document.getElementById('irate-'    + idx)?.value) || 0;
+    let   rate    = parseFloat(document.getElementById('irate-'    + idx)?.value) || 0;
     const gstVal  = parseFloat(document.getElementById('igstval-'  + idx)?.value) || 0;
     const gstType = document.getElementById('igsttype-' + idx)?.value || '%';
+
+    // ── Volume price list rate lookup ──
+    // Priority 1: row-level applied price list (via Apply button)
+    // Priority 2: page-level active price list
+    const sel = document.querySelector(`select[name="items[${idx}][product_id]"]`);
+    const opt = sel ? sel.options[sel.selectedIndex] : null;
+    const pid = sel ? parseInt(sel.value) : null;
+    const sku = opt ? (opt.dataset.sku || '') : '';
+
+    // Check row-level price list first
+    const rowPL = rowPriceListData[idx] || null;
+
+    if (rowPL && rowPL.rateData) {
+        const rateData = rowPL.rateData;
+
+        if (rateData.scheme === 'volume' && rateData.ranges) {
+            // Find matching range for current qty
+            const matchedRange = rateData.ranges
+                .filter(r => qty >= parseFloat(r.start_qty || 1))
+                .sort((a, b) => parseFloat(b.start_qty) - parseFloat(a.start_qty))[0];
+
+            if (matchedRange && parseFloat(matchedRange.custom_rate) > 0) {
+                rate = parseFloat(matchedRange.custom_rate);
+                document.getElementById('irate-' + idx).value = rate.toFixed(2);
+
+                const lbl = document.getElementById('pl-label-' + idx);
+                if (lbl) {
+                    lbl.textContent = `✓ ${rowPL.listName} (Qty ${matchedRange.start_qty}–${matchedRange.end_qty || '+'}: ₹${rate})`;
+                }
+            }
+        }
+        // Unit scheme — rate already set, no change needed on qty update
+
+    } else if (pid && Object.keys(activePriceListRates).length > 0) {
+        // Page-level price list fallback
+        const compositeKey = sku ? `${pid}__${sku}` : null;
+        const rateData = (compositeKey && activePriceListRates[compositeKey])
+            ? activePriceListRates[compositeKey]
+            : (activePriceListRates[pid] || activePriceListRates[String(pid)] || null);
+
+        if (rateData && rateData.scheme === 'volume' && rateData.ranges) {
+            const matchedRange = rateData.ranges
+                .filter(r => qty >= parseFloat(r.start_qty || 1))
+                .sort((a, b) => parseFloat(b.start_qty) - parseFloat(a.start_qty))[0];
+
+            if (matchedRange && parseFloat(matchedRange.custom_rate) > 0) {
+                rate = parseFloat(matchedRange.custom_rate);
+                document.getElementById('irate-' + idx).value = rate.toFixed(2);
+
+                const lbl = document.getElementById('pl-label-' + idx);
+                if (lbl) {
+                    const plSel = document.getElementById('price-list-select');
+                    const plName = plSel?.options[plSel?.selectedIndex]?.text || '';
+                    lbl.textContent = `✓ ${plName} (Qty ${matchedRange.start_qty}–${matchedRange.end_qty || '+'}: ₹${rate})`;
+                }
+            }
+        }
+    }
 
     const baseAmt = qty * rate;
     const gstAmt  = gstType === '%' ? (baseAmt * gstVal / 100) : (gstVal * qty);
@@ -1868,12 +1933,26 @@ function applyPriceListToRow(idx, productId, listName) {
     if (!rateData) return;
     
     const rateInput = document.getElementById('irate-' + idx);
-    if (rateInput) {
+    if (!rateInput) return;
+
+    if (rateData.scheme === 'volume' && rateData.ranges) {
+        // On initial apply, use qty=1 range
+        const qty = parseFloat(document.getElementById('iqty-' + idx)?.value) || 1;
+        const matchedRange = rateData.ranges
+            .filter(r => qty >= parseFloat(r.start_qty || 1))
+            .sort((a, b) => parseFloat(b.start_qty) - parseFloat(a.start_qty))[0];
+        
+        if (matchedRange && parseFloat(matchedRange.custom_rate) > 0) {
+            rateInput.value = parseFloat(matchedRange.custom_rate).toFixed(2);
+        }
+    } else {
         rateInput.value = parseFloat(rateData.rate).toFixed(2);
-        const lbl = document.getElementById('pl-label-' + idx);
-        if (lbl && listName) lbl.textContent = '✓ ' + listName;
-        calcRow(idx);
     }
+    
+    const lbl = document.getElementById('pl-label-' + idx);
+    if (lbl && listName) lbl.textContent = '✓ ' + listName;
+    calcRow(idx);
+
 }   
 
 // ══════════════════════════════════════════
@@ -1939,9 +2018,8 @@ function applyRowPriceListById(priceListId, listName, idx) {
     const pid = sel ? parseInt(sel.value) : null;
     if (!pid) { closeRowPriceList(); return; }
 
-    // ── Variant SKU எடு composite key build பண்ண ──
-    const opt = sel ? sel.options[sel.selectedIndex] : null;
-    const sku = opt ? (opt.dataset.sku || '') : '';
+    const opt          = sel ? sel.options[sel.selectedIndex] : null;
+    const sku          = opt ? (opt.dataset.sku || '') : '';
     const compositeKey = sku ? `${pid}__${sku}` : null;
 
     fetch(`/invoices/price-list-rates?price_list_id=${priceListId}`, {
@@ -1951,24 +2029,68 @@ function applyRowPriceListById(priceListId, listName, idx) {
     .then(data => {
         const rates = data.rates || {};
 
-        // ── Composite key முதல் try, இல்லன்னா direct pid ──
         const rateData = (compositeKey && rates[compositeKey])
             ? rates[compositeKey]
             : (rates[pid] || rates[String(pid)] || null);
 
-        if (rateData) {
-            document.getElementById('irate-' + idx).value = parseFloat(rateData.rate).toFixed(2);
+        if (!rateData) {
+            alert('No rate found for this product in the selected price list.');
+            closeRowPriceList();
+            return;
+        }
+
+        const rateInput = document.getElementById('irate-' + idx);
+        if (!rateInput) { closeRowPriceList(); return; }
+
+        if (rateData.scheme === 'volume' && rateData.ranges) {
+            const qty = parseFloat(document.getElementById('iqty-' + idx)?.value) || 1;
+
+            const matchedRange = rateData.ranges
+                .filter(r => qty >= parseFloat(r.start_qty || 1))
+                .sort((a, b) => parseFloat(b.start_qty) - parseFloat(a.start_qty))[0];
+
+            if (matchedRange && parseFloat(matchedRange.custom_rate) > 0) {
+                rateInput.value = parseFloat(matchedRange.custom_rate).toFixed(2);
+                const lbl = document.getElementById('pl-label-' + idx);
+                if (lbl) {
+                    lbl.textContent = `✓ ${listName} (Qty ${matchedRange.start_qty}–${matchedRange.end_qty || '+'}: ₹${matchedRange.custom_rate})`;
+                }
+            } else {
+                const firstRange = rateData.ranges[0];
+                if (firstRange && parseFloat(firstRange.custom_rate) > 0) {
+                    rateInput.value = parseFloat(firstRange.custom_rate).toFixed(2);
+                    const lbl = document.getElementById('pl-label-' + idx);
+                    if (lbl) lbl.textContent = `✓ ${listName}`;
+                } else {
+                    alert('No matching rate found for the current quantity.');
+                    closeRowPriceList();
+                    return;
+                }
+            }
+
+        } else if (rateData.rate && parseFloat(rateData.rate) > 0) {
+            rateInput.value = parseFloat(rateData.rate).toFixed(2);
             const lbl = document.getElementById('pl-label-' + idx);
             if (lbl) lbl.textContent = '✓ ' + listName;
-            calcRow(idx);
+
         } else {
-            alert('This price list has no rate configured for this product.');
+            alert('No valid rate configured for this product.');
+            closeRowPriceList();
+            return;
         }
+
+        // Save for qty-change auto-recalculation
+        rowPriceListData[idx] = { rateData, listName };
+
+        calcRow(idx);
         closeRowPriceList();
     })
-    .catch(() => { alert('Failed to load rates.'); closeRowPriceList(); });
+    .catch(err => {
+        console.error('Price list fetch error:', err);
+        alert('Failed to load rates. Please try again.');
+        closeRowPriceList();
+    });
 }
-
 // ══════════════════════════════════════════
 // EXTRA CHARGES
 // ══════════════════════════════════════════
@@ -2061,8 +2183,82 @@ function calcTotals() {
 
     document.getElementById('footer-amount').textContent = '₹ ' + grand.toFixed(2);
     document.getElementById('footer-qty').textContent    = totalQty.toFixed(2);
+    if (window._advanceRequired) updateAdvanceBanner();
 }
 
+
+// ══════════════════════════════════════════
+// ADVANCE PAYMENT BANNER
+// ══════════════════════════════════════════
+function updateAdvanceBanner() {
+    const banner = document.getElementById('credit-banner');
+    if (!banner) return;
+
+    const isAdvance = window._advanceRequired || false;
+
+    if (isAdvance) {
+        // Advance mode — subtotal மட்டும் (courier/extra charges இல்லை)
+        let subtotalOnly = 0;
+        document.querySelectorAll('#items-body tr').forEach(tr => {
+            const idx    = tr.dataset.index;
+            const qty    = parseFloat(document.getElementById('iqty-'    + idx)?.value) || 0;
+            const rate   = parseFloat(document.getElementById('irate-'   + idx)?.value) || 0;
+            const gstVal = parseFloat(document.getElementById('igstval-' + idx)?.value) || 0;
+            const gstType = document.getElementById('igsttype-' + idx)?.value || '%';
+            const baseAmt = qty * rate;
+            const gstAmt  = gstType === '%' ? (baseAmt * gstVal / 100) : (gstVal * qty);
+            subtotalOnly += baseAmt + gstAmt;
+        });
+
+        // Discount apply பண்ணு (courier/extra இல்லை)
+        const discVal  = parseFloat(document.getElementById('disc-pct').value) || 0;
+        const discType = document.getElementById('disc-type').value;
+        let discAmt = discType === '%' 
+            ? subtotalOnly * Math.min(discVal, 100) / 100 
+            : Math.min(discVal, subtotalOnly);
+        const subtotalAfterDisc = subtotalOnly - discAmt;
+
+        window._customerUnusedCredit = subtotalAfterDisc;
+
+        // Banner style — advance (blue theme)
+        const inner = document.getElementById('credit-banner-inner');
+        inner.style.background    = '#eff6ff';
+        inner.style.borderColor   = '#93c5fd';
+        document.getElementById('credit-banner-icon').textContent  = '⚡';
+        document.getElementById('credit-banner-title').style.color = '#1d4ed8';
+        document.getElementById('credit-banner-title').innerHTML   = 
+            'Advance Payment Required: ₹<span id="credit-amount-display">' + 
+            subtotalAfterDisc.toFixed(2) + '</span>';
+        document.getElementById('credit-banner-sub').style.color   = '#2563eb';
+        document.getElementById('credit-banner-sub').textContent   = 
+            'This customer category requires advance payment on item subtotal only';
+        document.getElementById('credit-checkbox-text').textContent = 
+            'Apply advance payment';
+        document.getElementById('credit-apply-section').style.background = '#eff6ff';
+        document.getElementById('credit-apply-section').style.borderColor = '#bfdbfe';
+        document.getElementById('credit-apply-desc').style.color  = '#1d4ed8';
+
+        banner.style.display = subtotalAfterDisc > 0 ? 'block' : 'none';
+
+    } else {
+        // Normal credit mode — restore original style
+        const inner = document.getElementById('credit-banner-inner');
+        inner.style.background    = '#ecfdf5';
+        inner.style.borderColor   = '#a7f3d0';
+        document.getElementById('credit-banner-icon').textContent  = '💰';
+        document.getElementById('credit-banner-title').style.color = '#166534';
+        document.getElementById('credit-banner-sub').style.color   = '#15803d';
+        document.getElementById('credit-banner-sub').textContent   = 
+            'Click checkbox to auto-apply credit to this invoice';
+        document.getElementById('credit-checkbox-text').textContent = 
+            'Apply credit to this invoice';
+
+        const credits = window._customerUnusedCredit || 0;
+        const amtEl = document.getElementById('credit-amount-display');
+        if (amtEl) amtEl.textContent = credits.toFixed(2);
+        banner.style.display = credits > 0 ? 'block' : 'none';
+    }
+}
 // ══════════════════════════════════════════
 // BUILD PRODUCT OPTIONS (helper for addRow / bulkAdd)
 // ══════════════════════════════════════════
@@ -2200,10 +2396,12 @@ function addRow() {
 
 function delRow(btn) {
     if (document.querySelectorAll('#items-body tr').length <= 1) return;
-    btn.closest('tr').remove();
+    const tr  = btn.closest('tr');
+    const idx = tr.dataset.index;
+    delete rowPriceListData[idx]; // cleanup
+    tr.remove();
     calcTotals();
 }
-
 // ══════════════════════════════════════════
 // DUE DATE CALC
 // ══════════════════════════════════════════

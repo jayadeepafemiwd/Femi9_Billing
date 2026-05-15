@@ -23,7 +23,8 @@ use App\Http\Controllers\PaymentsRecordController;
 use App\Http\Controllers\ItemStockLedgerController;
 use App\Http\Controllers\InvoiceSettingController;
 use App\Http\Controllers\CommentsController;
-
+use App\Http\Controllers\InventoryAdjustmentController;
+use App\Http\Controllers\TransferOrderController;  
 // ===== HOME REDIRECT =====
 Route::get('/', function () {
     return redirect()->route('products.index');
@@ -34,6 +35,10 @@ Route::prefix('setting_handle')->name('setting_handle.')->group(function () {
     Route::get('/', [SettingHandleController::class, 'create'])->name('create');
     Route::post('/', [SettingHandleController::class, 'store'])->name('store');
     Route::delete('/', [SettingHandleController::class, 'destroy'])->name('destroy');
+});
+
+Route::get('/csrf-token-refresh', function () {
+    return response()->json(['token' => csrf_token()]);
 });
 
 // ===== SIDEBAR SETTINGS ROUTES =====
@@ -141,7 +146,7 @@ Route::get('/admin/user-categories', function () {
 })->name('admin.user-categories.index');
 // routes/web.php
 Route::get('/customers/{customer}/panel-data', [CustomerController::class, 'panelData']);
-Route::get('/customers/{id}/panel-data', [CustomerController::class, 'panelData']);
+    
 
 Route::prefix('user-categories')->group(function () {
     Route::get('/',                     [UserCategoryController::class, 'index']);  // ← ADD THIS
@@ -290,6 +295,11 @@ Route::get('/api/products/{id}', [InvoiceController::class, 'getProduct'])->name
 Route::get('/invoices/{id}/edit',   [InvoiceController::class, 'edit'])  ->name('invoices.edit');
 Route::put('/invoices/{id}',        [InvoiceController::class, 'update'])->name('invoices.update');
 
+
+Route::get   ('invoices/{invoice}/payments/{payment}/edit',    [InvoiceController::class, 'editPayment'])  ->name('invoices.payment.edit');
+Route::put   ('invoices/{invoice}/payments/{payment}',         [InvoiceController::class, 'updatePayment'])->name('invoices.payment.update');
+Route::delete('invoices/{invoice}/payments/{payment}',         [InvoiceController::class, 'deletePayment'])->name('invoices.payment.delete');
+Route::post  ('invoices/{invoice}/payments/{payment}/refund',  [InvoiceController::class, 'refundPayment'])->name('invoices.payment.refund');
 //important one
 Route::get('/stock-ledger', [ItemStockLedgerController::class, 'create']);
 
@@ -309,13 +319,10 @@ Route::prefix('payments-records')->name('payments_records.')->group(function () 
     Route::post('/',                 [PaymentsRecordController::class, 'store'])               ->name('store');
     Route::get('/customers',         [PaymentsRecordController::class, 'getCustomers'])        ->name('get_customers');
     Route::get('/invoices',          [PaymentsRecordController::class, 'getInvoices'])         ->name('get_invoices');
-    Route::get('/customer-defaults', [PaymentsRecordController::class, 'getCustomerDefaults']) ->name('get_customer_defaults');
-    
-    // ✅ இங்கே prefix already 'payments-records' — மீண்டும் போடாதீங்க
-    Route::get('/customer-credit',   [PaymentsRecordController::class, 'getCustomerCredit'])   ->name('get_customer_credit');
-    Route::post('/apply-credit',     [PaymentsRecordController::class, 'applyCredit'])         ->name('apply_credit');
-    Route::post('/payments-records/apply-credit', [PaymentsRecordController::class, 'applyCredit']);
-    });
+    Route::get('/customer-defaults', [PaymentsRecordController::class, 'getCustomerDefaults'])->name('get_customer_defaults');
+    Route::get('/customer-credit',   [PaymentsRecordController::class, 'getCustomerCredit'])  ->name('get_customer_credit');
+    Route::post('/apply-credit',     [PaymentsRecordController::class, 'applyCredit'])        ->name('apply_credit');
+});
     
 
 Route::get('/settings/invoice',  [InvoiceSettingController::class, 'create'])->name('invoice_setting.create');
@@ -338,3 +345,51 @@ Route::delete('/{module}/{record_id}/comments/{id}', [CommentsController::class,
 
 Route::get('/comment-settings/{module}',  [CommentsController::class, 'getSettings']);
 Route::post('/comment-settings/{module}', [CommentsController::class, 'updateSettings']);
+// routes/web.php
+Route::prefix('inventory')->name('inventory.')->group(function () {
+
+    Route::get('adjustments/create',
+        [InventoryAdjustmentController::class, 'create'])->name('adjustments.create');
+
+    Route::get('adjustments/items',
+        [InventoryAdjustmentController::class, 'getItems'])->name('adjustments.items');
+
+    Route::get('adjustments/items-by-location',
+        [InventoryAdjustmentController::class, 'getItemsByLocation'])->name('adjustments.itemsByLocation');
+
+    Route::get('adjustments',
+        [InventoryAdjustmentController::class, 'index'])->name('adjustments.index');
+
+    Route::post('adjustments',
+        [InventoryAdjustmentController::class, 'store'])->name('adjustments.store');
+
+    Route::get('adjustments/{adjustment}/edit',
+        [InventoryAdjustmentController::class, 'edit'])->name('adjustments.edit');
+
+    Route::put('adjustments/{adjustment}',
+        [InventoryAdjustmentController::class, 'update'])->name('adjustments.update');
+
+    // ── ADD THIS ──────────────────────────────────────────────────────
+    Route::patch('adjustments/{adjustment}/convert',
+        [InventoryAdjustmentController::class, 'convert'])->name('adjustments.convert');
+
+    Route::delete('adjustments/{adjustment}',
+        [InventoryAdjustmentController::class, 'destroy'])->name('adjustments.destroy');
+    // ─────────────────────────────────────────────────────────────────
+
+    // ⚠️ Dynamic GET LAST
+    Route::get('adjustments/{adjustment}',
+        [InventoryAdjustmentController::class, 'show'])->name('adjustments.show');
+});
+// ✅ Custom route FIRST - resource க்கு முன்னாடி
+Route::get('transfer-orders/stock', [TransferOrderController::class, 'getStock'])
+     ->name('transfer-orders.stock');
+
+// ✅ Resource AFTER
+Route::resource('transfer-orders', TransferOrderController::class);
+Route::patch('transfer-orders/{id}/mark-transferred', [TransferOrderController::class, 'markTransferred'])
+     ->name('transfer-orders.mark-transferred');
+ 
+Route::get('transfer-orders/{id}/pdf', [TransferOrderController::class, 'downloadPdf'])
+     ->name('transfer-orders.pdf');
+

@@ -1132,7 +1132,9 @@ function osCopyAll(type) {
 function osSave() {
   const rows = [], used = [];
   let err = '';
-  const variantName = new URLSearchParams(window.location.search).get('variant') || '';
+
+   const variantName = '{{ addslashes($selectedVariantName ?? "") }}';
+     console.log('Variant name being sent:', variantName);
   
   document.querySelectorAll('.osLoc').forEach(inp => {
     const n = inp.dataset.n;
