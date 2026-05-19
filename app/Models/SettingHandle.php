@@ -95,4 +95,11 @@ class SettingHandle extends Model
 
         return $descriptions[$key] ?? "Setting for $key";
     }
+
+    // app/Models/SettingHandle.php
+public static function getConfig(): array
+{
+    $row = static::where('category_name', 'products')->first();
+    return $row?->config ?? [];
+}
 }

@@ -1,10 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<title>New Customer | Inventory</title>
+@extends('layouts.app')
+
+@section('title', 'New customers')
+
+@section('breadcrumb')
+    <a href="{{ route('customers.index') }}">Customers</a>
+    <span class="sep">›</span>
+    <span class="current">New Customers</span>
+@endsection
+@push('styles')
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #333; background: #f5f5f5; }
@@ -229,46 +232,10 @@
 .loc-select:focus { border-color: #3b6cf8; }
 .loc-loading { font-size: 11px; color: #aaa; }
 </style>
-</head>
-<body>
-<div class="app-shell">
+@endpush
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">📦</div>
-      <span>Inventory</span>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-item">🏠 Home</div>
-      <div class="nav-item">📦 Items <span class="arrow">›</span></div>
-      <div class="nav-item">🏪 Inventory <span class="arrow">›</span></div>
-      <div class="nav-item" style="color:#fff;background:#252b3d;">🛒 Sales <span class="arrow">›</span></div>
-      <div class="nav-sub active">Customers</div>
-      <div class="nav-sub">Sales Orders</div>
-      <div class="nav-sub">Invoices</div>
-      <div class="nav-sub">Payments Received</div>
-      <div class="nav-sub">Sales Returns</div>
-      <div class="nav-item">🛍️ Purchases <span class="arrow">›</span></div>
-      <div class="nav-item">📊 Reports</div>
-      <div class="nav-item">📄 Documents</div>
-    </div>
-    <div class="sidebar-bottom"><div class="collapse-btn">⟨ Collapse</div></div>
-  </div>
-
-  <div class="main">
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <div class="topbar-search">
-        <span>🔍</span>
-        <input placeholder="Search in Customers ( / )" />
-      </div>
-      <div class="topbar-right">
-        <div class="topbar-btn">🔔<span class="badge">1</span></div>
-        <div class="topbar-btn">⚙️</div>
-        <div class="avatar">V</div>
-      </div>
-    </div>
+@section('content')
+<div style="display:flex; height:calc(100vh - var(--topbar-h)); overflow:hidden;">
 
     <div class="content">
       <div class="page">
@@ -825,6 +792,7 @@
     </div>
   </div>
 </div>
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var defaultType = "{{ $config['default_customer_type'] ?? 'business' }}";
@@ -1522,5 +1490,6 @@ loadLcLayers().then(function() {
     addContactRow();
 });
 </script>
-</body>
-</html>
+@endpush
+</div>
+@endsection

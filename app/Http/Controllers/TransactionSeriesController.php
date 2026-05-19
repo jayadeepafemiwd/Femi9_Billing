@@ -220,6 +220,54 @@ if (!empty($locationRow->transaction_series_id)) {
     }
 }
 
+public function byLocationCategory(Request $request)
+{
+    $locationId = $request->query('location_id');
+    $category   = $request->query('category');
+
+    $series = \App\Models\TransactionSeries::whereNull('deleted_at')
+        ->where(function($q) use ($category) {
+            $q->whereNull('category_name')
+              ->orWhere('category_name', $category);
+        })
+        ->get()
+        ->filter(function($s) use ($locationId) {
+            if (!$locationId) return true;
+            
+            $locationIds = is_string($s->location_id)
+                ? json_decode($s->location_id, true)
+                : ($s->location_id ?? []);
+            
+            // Empty location = all locations-க்கும் valid
+            if (empty($locationIds)) return true;
+            
+            return in_array($locationId, $locationIds);
+        })
+        ->values()
+        ->map(function($s) {
+            $data = is_string($s->series_data)
+                ? json_decode($s->series_data, true)
+                : ($s->series_data ?? []);
+            
+            // Credit Note series மட்டும் filter
+            $cnSeries = collect($data)->filter(fn($d) => 
+                isset($d['module']) && strtolower($d['module']) === 'credit_note'
+            )->values();
+            
+            if ($cnSeries->isEmpty()) return null;
+            
+            return [
+                'id'         => $s->id,
+                'name'       => $s->name,
+                'is_default' => $s->is_default,
+                'series'     => $cnSeries,
+            ];
+        })
+        ->filter()
+        ->values();
+
+    return response()->json($series);
+}
     // ── DELETE /transaction-series/{id} ──────────────────────
     public function destroy(TransactionSeries $transactionSeries)
     {

@@ -11,6 +11,7 @@ use App\Models\PriceList;
 use App\Observers\PriceListObserver;
 use App\Models\Invoice;
 use App\Observers\InvoiceObserver;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,5 +21,6 @@ class AppServiceProvider extends ServiceProvider
         Product::observe(ProductObserver::class);
         PriceList::observe(PriceListObserver::class);
          Invoice::observe(InvoiceObserver::class);
+         Paginator::useBootstrapFive();
     }
 }

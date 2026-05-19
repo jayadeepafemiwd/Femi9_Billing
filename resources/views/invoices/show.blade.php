@@ -660,7 +660,90 @@ body {
 </button>
                     <button class="ab-caret">▾</button>
                 </div>
-                <button class="ab icon">···</button>
+                {{-- ··· 3-dot dropdown --}}
+<div style="position:relative;display:inline-block;" id="main-dots-wrap">
+    <button class="ab icon" onclick="toggleMainDots()" id="main-dots-btn">···</button>
+    <div id="main-dots-menu"
+         style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+                background:#fff;border:1px solid #e3e6ea;border-radius:8px;
+                box-shadow:0 8px 24px rgba(0,0,0,0.12);
+                z-index:500;min-width:200px;overflow:hidden;padding:4px 0;">
+
+        {{-- Create Credit Note --}}
+        <a href="{{ route('credit-notes.create', ['invoice_id' => $invoice->id]) }}"
+           style="display:flex;align-items:center;gap:10px;padding:10px 16px;
+                  color:#374151;text-decoration:none;font-size:13px;cursor:pointer;"
+           onmouseover="this.style.background='#f5f7ff'"
+           onmouseout="this.style.background='none'">
+            <span style="font-size:15px;">📝</span> Create Credit Note
+        </a>
+
+        {{-- Clone --}}
+        <a
+           style="display:flex;align-items:center;gap:10px;padding:10px 16px;
+                  color:#374151;text-decoration:none;font-size:13px;"
+           onmouseover="this.style.background='#f5f7ff'"
+           onmouseout="this.style.background='none'">
+            <span style="font-size:15px;">🔁</span> Clone
+        </a>
+
+        <div style="height:1px;background:#f0f2f4;margin:4px 0;"></div>
+
+        {{-- Void --}}
+        @if(!in_array($invoice->status, ['Void','Draft']))
+        <form method="POST" action=""
+              onsubmit="return confirm('Void this invoice?')">
+            @csrf
+            <button type="submit"
+                    style="display:flex;align-items:center;gap:10px;width:100%;
+                           padding:10px 16px;background:none;border:none;
+                           color:#374151;font-size:13px;cursor:pointer;text-align:left;"
+                    onmouseover="this.style.background='#f5f7ff'"
+                    onmouseout="this.style.background='none'">
+                <span style="font-size:15px;">🚫</span> Void
+            </button>
+        </form>
+        @endif
+
+        {{-- Delete --}}
+        @if($invoice->status === 'Draft')
+        <form method="POST" action="{{ route('invoices.destroy', $invoice->id) }}"
+              onsubmit="return confirm('Delete this invoice?')">
+            @csrf @method('DELETE')
+            <button type="submit"
+                    style="display:flex;align-items:center;gap:10px;width:100%;
+                           padding:10px 16px;background:none;border:none;
+                           color:#dc2626;font-size:13px;cursor:pointer;text-align:left;"
+                    onmouseover="this.style.background='#fef2f2'"
+                    onmouseout="this.style.background='none'">
+                <span style="font-size:15px;">🗑️</span> Delete
+            </button>
+        </form>
+        @endif
+
+        <div style="height:1px;background:#f0f2f4;margin:4px 0;"></div>
+
+        {{-- Undo Shipment --}}
+        <button onclick="toggleMainDots()"
+                style="display:flex;align-items:center;gap:10px;width:100%;
+                       padding:10px 16px;background:none;border:none;
+                       color:#374151;font-size:13px;cursor:pointer;text-align:left;"
+                onmouseover="this.style.background='#f5f7ff'"
+                onmouseout="this.style.background='none'">
+            <span style="font-size:15px;">↩️</span> Undo Shipment
+        </button>
+
+        {{-- Invoice Preferences --}}
+        <a href="#"
+           style="display:flex;align-items:center;gap:10px;padding:10px 16px;
+                  color:#374151;text-decoration:none;font-size:13px;"
+           onmouseover="this.style.background='#f5f7ff'"
+           onmouseout="this.style.background='none'">
+            <span style="font-size:15px;">⚙️</span> Invoice Preferences
+        </a>
+
+    </div>
+</div>
                 <button class="ab icon danger" onclick="history.back()">✕</button>
             </div>
         </div>
@@ -674,10 +757,21 @@ body {
                 {{ session('success') }}
             </div>
             @endif
+            
+            {{-- ✅ ADD THIS --}}
+            @if(session('error'))
+            <div style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;
+                        padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;
+                        display:flex;align-items:center;gap:8px;">
+                <span>⚠️</span>
+                <span>{{ session('error') }}</span>
+            </div>
+            @endif
 
             {{-- ✅ PHP variables — top-ல் ஒரே ஒரு முறை define --}}
             @php
-                $amountReceived = floatval($invoice->amount_received ?? 0);
+                // show.blade.php ல:
+$amountReceived = floatval($invoice->amount_received ?? 0);
                 $balanceDue     = floatval($invoice->balance_due ?? $invoice->grand_total);
                 $payStatus      = $invoice->payment_status ?? 'unpaid';
             @endphp
@@ -715,78 +809,6 @@ body {
                 <a href="#" style="margin:0 4px">display a UPI QR code</a>.
             </div>
 
-            {{-- ✅ Payments Received — invoice paper வெளியே, UPI-க்கு கீழே --}}
-           @if(isset($paymentRecords) && $paymentRecords->count() > 0)
-<div class="payments-received-section"
-     style="background:#fff;border:1px solid #e3e6ea;border-radius:8px;
-            margin-bottom:12px;overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:12px 16px;cursor:pointer;user-select:none;"
-         onclick="var p=this.nextElementSibling;
-                  p.style.display=p.style.display==='none'?'block':'none';
-                  this.querySelector('.pr-arrow').style.transform=
-                  p.style.display==='block'?'rotate(90deg)':'rotate(0deg)'">
-        <span style="font-size:13px;font-weight:600;color:#1a1a2e;">
-            Payments Received
-            <span style="display:inline-flex;align-items:center;justify-content:center;
-                         width:20px;height:20px;background:#e8f0fe;color:#4a90d9;
-                         border-radius:50%;font-size:11px;margin-left:6px;font-weight:700;">
-                {{ $paymentRecords->count() }}
-            </span>
-        </span>
-        <svg class="pr-arrow" width="12" height="12" fill="none" stroke="#888"
-             stroke-width="2" viewBox="0 0 24 24"
-             style="transition:transform 0.2s;flex-shrink:0;">
-            <path d="M9 18l6-6-6-6"/>
-        </svg>
-    </div>
-    <div style="display:none;border-top:1px solid #f0f2f4;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-                <tr style="background:#f8f9fa;">
-                    <th style="padding:9px 16px;text-align:left;color:#666;font-weight:600;
-                               font-size:11px;text-transform:uppercase;
-                               border-bottom:1px solid #e8eaed;">Date</th>
-                    <th style="padding:9px 12px;text-align:left;color:#666;font-weight:600;
-                               font-size:11px;text-transform:uppercase;
-                               border-bottom:1px solid #e8eaed;">Payment #</th>
-                    <th style="padding:9px 12px;text-align:left;color:#666;font-weight:600;
-                               font-size:11px;text-transform:uppercase;
-                               border-bottom:1px solid #e8eaed;">Mode</th>
-                    <th style="padding:9px 16px;text-align:right;color:#666;font-weight:600;
-                               font-size:11px;text-transform:uppercase;
-                               border-bottom:1px solid #e8eaed;">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($paymentRecords as $pmt)
-                <tr>
-                    <td style="padding:10px 16px;color:#333;">
-                        {{ \Carbon\Carbon::parse($pmt->payment_date)->format('d/m/Y') }}
-                    </td>
-                    <td style="padding:10px 12px;">
-                        <span style="color:#4a90d9;font-weight:500;">
-                            {{ $pmt->payment_no }}
-                        </span>
-                    </td>
-                    <td style="padding:10px 12px;color:#555;text-transform:capitalize;">
-                        {{ $pmt->payment_mode ?? 'Cash' }}
-                    </td>
-                    <td style="padding:10px 16px;text-align:right;font-weight:600;color:#166534;">
-                        ₹{{ number_format($pmt->amount_received, 2) }}
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-</div>
-@endif
-
-{{-- ═══════════════════════════════════════════════════════
-     இந்த ENTIRE BLOCK-ஐ உங்கள் show.blade.php-ல்
-     UPI row-க்கு கீழே, invoice-paper div-க்கு மேலே paste பண்ணுங்க
-     ═══════════════════════════════════════════════════════ --}}
 
 {{-- ── Payments Table (only when payments exist) ── --}}
 @if(isset($paymentRecords) && $paymentRecords->count() > 0)
@@ -838,18 +860,27 @@ body {
         </thead>
         <tbody>
             @foreach($paymentRecords as $pmt)
-            <tr id="pmt-row-{{ $pmt->id }}"
-                style="border-bottom:1px solid #f0f2f4;
-                       {{ $pmt->status === 'refunded' ? 'opacity:0.55;text-decoration:line-through;' : '' }}
-                       transition:opacity 0.3s;">
+           <tr id="pmt-row-{{ $pmt->id }}"
+    style="border-bottom:1px solid #f0f2f4;
+           {{ $pmt->payment_mode === 'credit_note' 
+               ? 'background:#f8f9fb;' 
+               : '' }}
+           {{ $pmt->status === 'refunded' ? 'opacity:0.55;text-decoration:line-through;' : '' }}
+           transition:opacity 0.3s;">
                 <td style="padding:10px 16px;color:#374151;">
                     {{ \Carbon\Carbon::parse($pmt->payment_date)->format('d/m/Y') }}
                 </td>
-                <td style="padding:10px 8px;">
-                    <span style="font-weight:600;color:{{ $pmt->status === 'refunded' ? '#9ca3af' : '#4a90d9' }}">
-                        {{ $pmt->payment_no }}
-                    </span>
-                </td>
+               <td style="padding:10px 8px;">
+    <span style="font-weight:600;color:{{ $pmt->status === 'refunded' ? '#9ca3af' : ($pmt->payment_mode === 'credit_note' ? '#7c3aed' : '#4a90d9') }}">
+        {{ $pmt->payment_no }}
+    </span>
+    @if($pmt->payment_mode === 'credit_note')
+    <span style="background:#f3e8ff;color:#7c3aed;font-size:9px;font-weight:700;
+                 padding:1px 6px;border-radius:8px;margin-left:4px;">
+        CREDIT
+    </span>
+    @endif
+</td>
                 <td style="padding:10px 8px;color:#9ca3af;">
                     {{ $pmt->reference_no ?? '—' }}
                 </td>
@@ -914,32 +945,131 @@ body {
         </tbody>
 
         {{-- Footer totals --}}
-        @php
-            $activeTotal   = $paymentRecords->where('status','!=','refunded')->sum('amount_received');
-            $refundedTotal = $paymentRecords->where('status','refunded')->sum('amount_received');
-        @endphp
+@php
+    $activeTotal   = $paymentRecords->where('status','!=','refunded')
+                                    ->where('payment_mode','!=','credit_note')  // ✅ credit exclude
+                                    ->sum('amount_received');
+    $creditTotal   = $paymentRecords->where('status','!=','refunded')
+                                    ->where('payment_mode','credit_note')
+                                    ->sum('amount_received');
+    $refundedTotal = $paymentRecords->where('status','refunded')->sum('amount_received');
+@endphp
         <tfoot>
-            @if($refundedTotal > 0)
-            <tr style="background:#fef2f2;">
-                <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;">Total Refunded</td>
-                <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:600;color:#dc2626;">
-                    − ₹{{ number_format($refundedTotal, 2) }}
-                </td>
-                <td></td>
+    @if($refundedTotal > 0)
+    <tr style="background:#fef2f2;">
+        <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;">Total Refunded</td>
+        <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:600;color:#dc2626;">
+            − ₹{{ number_format($refundedTotal, 2) }}
+        </td>
+        <td></td>
+    </tr>
+    @endif
+
+    @if($activeTotal > 0)
+    <tr style="background:#f8fffe;">
+        <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;font-weight:600;">Total Paid (Active)</td>
+        <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:700;color:#166534;">
+            ₹{{ number_format($activeTotal, 2) }}
+        </td>
+        <td></td>
+    </tr>
+    @endif
+
+    {{-- ✅ Credits Applied — தனியா காட்டு --}}
+    @if($creditTotal > 0)
+    <tr style="background:#f5f3ff;">
+        <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#7c3aed;font-weight:600;">
+            Credits Applied
+        </td>
+        <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:700;color:#7c3aed;">
+            ₹{{ number_format($creditTotal, 2) }}
+        </td>
+        <td></td>
+    </tr>
+    @endif
+
+    <tr style="background:#f8f9fb;border-top:2px solid #e3e6ea;">
+        <td colspan="5" style="padding:9px 16px;text-align:right;font-size:12px;color:#374151;font-weight:700;">Balance Due</td>
+        <td style="padding:9px 16px 9px 8px;text-align:right;font-size:13px;font-weight:800;
+                    color:{{ ($invoice->payment_status ?? '') === 'paid' ? '#166534' : '#dc2626' }}">
+            ₹{{ number_format($invoice->balance_due ?? 0, 2) }}
+        </td>
+        <td></td>
+    </tr>
+</tfoot>
+    </table>
+</div>
+@endif
+
+{{-- Credit Notes Applied --}}
+@php
+    $creditNotes = \App\Models\CreditNote::where('invoice_id', $invoice->id)
+        ->whereIn('status', ['open'])
+        ->get();
+    $totalCredited = $creditNotes->sum('applied_amount');
+@endphp
+
+@if($creditNotes->count() > 0)
+<div style="background:#fff;border:1px solid #e3e6ea;border-radius:8px;
+            margin-bottom:14px;overflow:hidden;">
+    <div style="padding:12px 16px;border-bottom:1px solid #e3e6ea;
+                display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;font-weight:700;color:#1a1a2e;">Credits Applied</span>
+        <span style="background:#7c3aed;color:#fff;border-radius:50%;
+                     width:18px;height:18px;font-size:10px;font-weight:700;
+                     display:inline-flex;align-items:center;justify-content:center;">
+            {{ $creditNotes->count() }}
+        </span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+            <tr style="background:#f8f9fb;">
+                <th style="padding:9px 16px;text-align:left;color:#6b7280;font-size:11px;
+                           text-transform:uppercase;border-bottom:1px solid #e3e6ea;">Credit Note #</th>
+                <th style="padding:9px 8px;text-align:left;color:#6b7280;font-size:11px;
+                           text-transform:uppercase;border-bottom:1px solid #e3e6ea;">Date</th>
+                <th style="padding:9px 8px;text-align:right;color:#6b7280;font-size:11px;
+                           text-transform:uppercase;border-bottom:1px solid #e3e6ea;">CN Total</th>
+                <th style="padding:9px 8px;text-align:right;color:#6b7280;font-size:11px;
+                           text-transform:uppercase;border-bottom:1px solid #e3e6ea;">Applied</th>
+                <th style="padding:9px 16px 9px 8px;text-align:right;color:#6b7280;font-size:11px;
+                           text-transform:uppercase;border-bottom:1px solid #e3e6ea;">Unused</th>
             </tr>
-            @endif
-            <tr style="background:#f8fffe;">
-                <td colspan="5" style="padding:7px 16px;text-align:right;font-size:12px;color:#6b7280;font-weight:600;">Total Paid (Active)</td>
-                <td style="padding:7px 16px 7px 8px;text-align:right;font-size:12px;font-weight:700;color:#166534;">
-                    ₹{{ number_format($activeTotal, 2) }}
+        </thead>
+        <tbody>
+            @foreach($creditNotes as $cn)
+            <tr style="border-bottom:1px solid #f0f2f4;">
+                <td style="padding:10px 16px;">
+                    <a href="{{ route('credit-notes.show', $cn->id) }}"
+                       style="color:#7c3aed;font-weight:600;text-decoration:none;">
+                        {{ $cn->credit_note_number }}
+                    </a>
                 </td>
-                <td></td>
+                <td style="padding:10px 8px;color:#374151;">
+                    {{ \Carbon\Carbon::parse($cn->credit_note_date)->format('d/m/Y') }}
+                </td>
+                <td style="padding:10px 8px;text-align:right;color:#374151;">
+                    ₹{{ number_format($cn->total, 2) }}
+                </td>
+                <td style="padding:10px 8px;text-align:right;font-weight:600;color:#166534;">
+                    ₹{{ number_format($cn->applied_amount, 2) }}
+                </td>
+                <td style="padding:10px 16px 10px 8px;text-align:right;
+                           color:{{ $cn->unused_amount > 0 ? '#92400e' : '#9ca3af' }};">
+                    ₹{{ number_format($cn->unused_amount, 2) }}
+                </td>
             </tr>
-            <tr style="background:#f8f9fb;border-top:2px solid #e3e6ea;">
-                <td colspan="5" style="padding:9px 16px;text-align:right;font-size:12px;color:#374151;font-weight:700;">Balance Due</td>
-                <td style="padding:9px 16px 9px 8px;text-align:right;font-size:13px;font-weight:800;
-                            color:{{ ($invoice->payment_status ?? '') === 'paid' ? '#166534' : '#dc2626' }}">
-                    ₹{{ number_format($invoice->balance_due ?? 0, 2) }}
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr style="background:#f5f3ff;border-top:2px solid #e3e6ea;">
+                <td colspan="3" style="padding:9px 16px;text-align:right;
+                                       font-size:12px;font-weight:700;color:#7c3aed;">
+                    Total Credits Applied
+                </td>
+                <td style="padding:9px 8px;text-align:right;font-size:13px;
+                           font-weight:800;color:#7c3aed;">
+                    ₹{{ number_format($totalCredited, 2) }}
                 </td>
                 <td></td>
             </tr>
@@ -1254,9 +1384,7 @@ body {
             display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
 
 
-{{-- ═══════════════════════════════════════════════
-     JAVASCRIPT for all 3 modals
-     ═══════════════════════════════════════════════ --}}
+
 <script>
 const INV_ID   = {{ $invoice->id }};
 const CSRF_TOK = document.querySelector('meta[name="csrf-token"]').content;
@@ -1267,16 +1395,14 @@ function togglePmtDropdown(id) {
     const btn  = drop.previousElementSibling;
     const rect = btn.getBoundingClientRect();
 
-    // Close others
     document.querySelectorAll('[id^="pmt-drop-"]').forEach(d => {
         if (d.id !== 'pmt-drop-' + id) d.style.display = 'none';
     });
 
     if (drop.style.display === 'none') {
         drop.style.display = 'block';
-        // Position below button
-        drop.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
-        drop.style.left = (rect.right - 130 + window.scrollX) + 'px';
+        drop.style.top  = (rect.bottom + 4) + 'px';
+        drop.style.left = (rect.right - 130) + 'px';
     } else {
         drop.style.display = 'none';
     }
@@ -1286,7 +1412,6 @@ function closePmtDropdowns() {
     document.querySelectorAll('[id^="pmt-drop-"]').forEach(d => d.style.display = 'none');
 }
 
-// Close on outside click
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.pmt-dropdown-wrap')) closePmtDropdowns();
 });
@@ -1307,7 +1432,22 @@ function pmtToast(msg, type = 'success') {
         <button onclick="this.parentElement.remove()"
                 style="margin-left:auto;background:none;border:none;cursor:pointer;color:${bg};font-size:16px;">✕</button>`;
     wrap.appendChild(el);
-    setTimeout(() => el.remove(), 5000);
+    setTimeout(() => el.remove(), 6000);
+}
+
+// ── API call helper (all POST, no method spoofing) ───────────────────────────
+function pmtFetch(url, data) {
+    return fetch(url, {
+        method:  'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': CSRF_TOK,
+        },
+        body: JSON.stringify(data),
+    }).then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    });
 }
 
 // ── Refresh balance UI ────────────────────────────────────────────────────────
@@ -1334,9 +1474,9 @@ function refreshPaymentUI(data) {
     }
 }
 
-// ═══════════════════════════════════════════════
-// EDIT
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// EDIT PAYMENT
+// ═══════════════════════════════════════════════════════
 function openEditModal(id, date, amount, mode, depositTo, refNo, notes) {
     document.getElementById('edit_payment_id').value      = id;
     document.getElementById('edit_payment_date').value    = date;
@@ -1363,20 +1503,15 @@ function saveEditPayment() {
 
     spin.style.display = 'inline'; btn.disabled = true;
 
-    fetch(`/invoices/${INV_ID}/payments/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
-        body: JSON.stringify({
-            _method:         'PUT',
-            amount_received: amount,
-            payment_date:    document.getElementById('edit_payment_date').value,
-            payment_mode:    document.getElementById('edit_payment_mode').value,
-            deposit_to:      document.getElementById('edit_deposit_to').value,
-            reference_no:    document.getElementById('edit_reference_no').value,
-            notes:           document.getElementById('edit_notes').value,
-        }),
+    // ✅ POST to /update route — no _method needed
+    pmtFetch(`/invoices/${INV_ID}/payments/${id}/update`, {
+        amount_received: amount,
+        payment_date:    document.getElementById('edit_payment_date').value,
+        payment_mode:    document.getElementById('edit_payment_mode').value,
+        deposit_to:      document.getElementById('edit_deposit_to').value,
+        reference_no:    document.getElementById('edit_reference_no').value,
+        notes:           document.getElementById('edit_notes').value,
     })
-    .then(r => r.json())
     .then(d => {
         spin.style.display = 'none'; btn.disabled = false;
         if (d.success) {
@@ -1388,12 +1523,19 @@ function saveEditPayment() {
             pmtToast(d.message || 'Update failed', 'error');
         }
     })
-    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+    .catch(err => {
+        spin.style.display = 'none'; btn.disabled = false;
+        pmtToast('Error: ' + err.message, 'error');
+    });
 }
 
-// ═══════════════════════════════════════════════
-// REFUND
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// REFUND PAYMENT
+// Refund = Cash back to customer
+// → payment_record.status = 'refunded'
+// → invoice.balance_due += refund_amount (goes back to unpaid/partial)
+// → Stock reversed (stock_on_hand += qty, committed += qty)
+// ═══════════════════════════════════════════════════════
 function openRefundModal(id, amount, mode) {
     document.getElementById('refund_payment_id').value     = id;
     document.getElementById('refund_amount_display').value = parseFloat(amount).toFixed(2);
@@ -1419,43 +1561,44 @@ function saveRefund() {
 
     spin.style.display = 'inline'; btn.disabled = true;
 
-    fetch(`/invoices/${INV_ID}/payments/${id}/refund`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
-        body: JSON.stringify({
-            refunded_on:  date,
-            payment_mode: document.getElementById('refund_payment_mode').value,
-            from_account: document.getElementById('refund_from_account').value,
-            reference_no: document.getElementById('refund_reference_no').value,
-            description:  document.getElementById('refund_description').value,
-        }),
+    // ✅ POST to /refund route
+pmtFetch(`/invoices/${INV_ID}/payments/${id}/refund`, {
+        refunded_on:  date,
+        payment_mode: document.getElementById('refund_payment_mode').value,
+        from_account: document.getElementById('refund_from_account').value,
+        reference_no: document.getElementById('refund_reference_no').value,
+        description:  document.getElementById('refund_description').value,
     })
-    .then(r => r.json())
     .then(d => {
         spin.style.display = 'none'; btn.disabled = false;
         if (d.success) {
             document.getElementById('refundPaymentOverlay').style.display = 'none';
             pmtToast(d.message);
             refreshPaymentUI(d);
-            // Visually mark row as refunded
+
+            // Visually mark row as refunded — strikethrough
             const row = document.getElementById('pmt-row-' + id);
             if (row) {
-                row.style.opacity = '0.55';
-                row.style.textDecoration = 'line-through';
-                const dropCell = row.querySelector('[id^="pmt-drop-"]');
-                if (dropCell) dropCell.parentElement.innerHTML = '';
+                row.style.opacity         = '0.5';
+                row.style.textDecoration  = 'line-through';
+                // Remove the 3-dot action button
+                const actionTd = row.querySelector('.pmt-dropdown-wrap');
+                if (actionTd) actionTd.closest('td').innerHTML = '';
             }
             setTimeout(() => location.reload(), 1800);
         } else {
             pmtToast(d.message || 'Refund failed', 'error');
         }
     })
-    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+    .catch(err => {
+        spin.style.display = 'none'; btn.disabled = false;
+        pmtToast('Error: ' + err.message, 'error');
+    });
 }
 
-// ═══════════════════════════════════════════════
-// DELETE (2-step)
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// DELETE PAYMENT (2-step)
+// ═══════════════════════════════════════════════════════
 let _delId = null;
 
 function openDeleteModal(id, amount) {
@@ -1471,15 +1614,15 @@ function closeDeleteModal() {
 }
 
 function showDelStep1() {
-    document.getElementById('del-step-1').style.display             = 'block';
-    document.getElementById('del-step-2-dissociate').style.display  = 'none';
-    document.getElementById('del-step-2-delete').style.display      = 'none';
+    document.getElementById('del-step-1').style.display            = 'block';
+    document.getElementById('del-step-2-dissociate').style.display = 'none';
+    document.getElementById('del-step-2-delete').style.display     = 'none';
 }
 
 function showDelStep2(type) {
-    document.getElementById('del-step-1').style.display             = 'none';
-    document.getElementById('del-step-2-dissociate').style.display  = type === 'dissociate' ? 'block' : 'none';
-    document.getElementById('del-step-2-delete').style.display      = type === 'delete'     ? 'block' : 'none';
+    document.getElementById('del-step-1').style.display            = 'none';
+    document.getElementById('del-step-2-dissociate').style.display = type === 'dissociate' ? 'block' : 'none';
+    document.getElementById('del-step-2-delete').style.display     = type === 'delete'     ? 'block' : 'none';
 }
 
 function confirmDelete(action) {
@@ -1490,18 +1633,16 @@ function confirmDelete(action) {
 
     spin.style.display = 'inline'; btn.disabled = true;
 
-    fetch(`/invoices/${INV_ID}/payments/${_delId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOK },
-        body: JSON.stringify({ _method: 'DELETE', action }),
-    })
-    .then(r => r.json())
+    // ✅ POST to /delete route — no _method needed
+    pmtFetch(`/invoices/${INV_ID}/payments/${_delId}/delete`, { action })
     .then(d => {
         spin.style.display = 'none'; btn.disabled = false;
         if (d.success) {
             closeDeleteModal();
             pmtToast(d.message);
             refreshPaymentUI(d);
+
+            // Fade & remove the row
             const row = document.getElementById('pmt-row-' + _delId);
             if (row) {
                 row.style.transition = 'opacity 0.4s';
@@ -1517,38 +1658,48 @@ function confirmDelete(action) {
             pmtToast(d.message || 'Action failed', 'error');
         }
     })
-    .catch(() => { spin.style.display = 'none'; btn.disabled = false; pmtToast('Network error', 'error'); });
+    .catch(err => {
+        spin.style.display = 'none'; btn.disabled = false;
+        pmtToast('Error: ' + err.message, 'error');
+    });
 }
 
 // Close modals on overlay click
-['editPaymentOverlay','refundPaymentOverlay','deletePaymentOverlay'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            if (id === 'deletePaymentOverlay') closeDeleteModal();
-            else this.style.display = 'none';
-        }
-    });
+['editPaymentOverlay','refundPaymentOverlay','deletePaymentOverlay'].forEach(overlayId => {
+    const el = document.getElementById(overlayId);
+    if (el) {
+        el.addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (overlayId === 'deletePaymentOverlay') closeDeleteModal();
+                else this.style.display = 'none';
+            }
+        });
+    }
 });
 </script>
 
             {{-- ── INVOICE PAPER ── --}}
             <div class="invoice-paper">
 
-                {{-- ✅ Corner Ribbon — paid / partially paid / overdue --}}
-                @php
-                    $ribbonText  = null;
-                    $ribbonColor = null;
-                    if ($payStatus === 'paid') {
-                        $ribbonText  = 'Paid';
-                        $ribbonColor = '#22c55e';
-                    } elseif ($payStatus === 'partial') {
-                        $ribbonText  = 'Partially Paid';
-                        $ribbonColor = '#14b8a6';
-                    } elseif ($invoice->status === 'Overdue') {
-                        $ribbonText  = 'Overdue';
-                        $ribbonColor = '#f59e0b';
-                    }
-                @endphp
+               @php
+    $ribbonText  = null;
+    $ribbonColor = null;
+    if ($payStatus === 'paid') {
+        // ✅ Check if paid via credit note
+        $paidByCreditNote = \DB::table('payments_record')
+            ->where('invoice_id', $invoice->id)
+            ->where('payment_mode', 'credit_note')
+            ->exists();
+        $ribbonText  = $paidByCreditNote ? 'Credit Applied' : 'Paid';
+        $ribbonColor = '#22c55e';
+    } elseif ($payStatus === 'partial') {
+        $ribbonText  = 'Partially Paid';
+        $ribbonColor = '#14b8a6';
+    } elseif ($invoice->status === 'Overdue') {
+        $ribbonText  = 'Overdue';
+        $ribbonColor = '#f59e0b';
+    }
+@endphp
 
                 @if($ribbonText)
                 <div style="position:absolute;top:0;left:0;
@@ -1570,7 +1721,38 @@ function confirmDelete(action) {
                     </div>
                 </div>
                 @endif
+            {{-- ✅ Payment Made row — credit_note தவிர --}}
+                @php
+                    $cashPaymentTotal = $paymentRecords
+                        ->where('status','!=','refunded')
+                        ->where('payment_mode','!=','credit_note')
+                        ->sum('amount_received');
+                    $creditPaymentTotal = $paymentRecords
+                        ->where('status','!=','refunded')
+                        ->where('payment_mode','credit_note')
+                        ->sum('amount_received');
+                @endphp
 
+                @if($cashPaymentTotal > 0)
+                <div style="display:flex;justify-content:space-between;
+                            padding:5px 0;font-size:12px;
+                            border-top:1px solid #dde2e8;margin-top:4px;">
+                    <span style="color:#555;font-weight:500;">Payment Made</span>
+                    <span style="color:#e05050;font-weight:600;">
+                        (-) {{ number_format($cashPaymentTotal, 2) }}
+                    </span>
+                </div>
+                @endif
+
+                @if($creditPaymentTotal > 0)
+                <div style="display:flex;justify-content:space-between;
+                            padding:5px 0;font-size:12px;">
+                    <span style="color:#7c3aed;font-weight:500;">Credits Applied</span>
+                    <span style="color:#7c3aed;font-weight:600;">
+                        (-) {{ number_format($creditPaymentTotal, 2) }}
+                    </span>
+                </div>
+                @endif
                 {{-- ① Company + TAX INVOICE --}}
                 <div class="paper-header">
                     <div>
@@ -2324,6 +2506,20 @@ function showModalSuccess(msg) {
     document.getElementById('modal-error').style.display = 'none';
 }
 
+
+// Main 3-dot dropdown
+function toggleMainDots() {
+    const menu = document.getElementById('main-dots-menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// Outside click-ல் close ஆகணும்
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#main-dots-wrap')) {
+        const menu = document.getElementById('main-dots-menu');
+        if (menu) menu.style.display = 'none';
+    }
+});
 </script>
 </body>
 </html>

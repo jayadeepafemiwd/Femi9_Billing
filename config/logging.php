@@ -57,7 +57,14 @@ return [
             'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
-
+         
+         'product' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/product.log'),
+        'level' => env('LOG_LEVEL', 'debug'),
+        'replace_placeholders' => true,
+    ],
+    
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

@@ -25,6 +25,10 @@ use App\Http\Controllers\InvoiceSettingController;
 use App\Http\Controllers\CommentsController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\TransferOrderController;  
+use App\Http\Controllers\CreditNoteController;
+use App\Http\Controllers\UserCategoryPermissionController;
+use App\Http\Controllers\LoginController;;
+
 // ===== HOME REDIRECT =====
 Route::get('/', function () {
     return redirect()->route('products.index');
@@ -146,7 +150,18 @@ Route::get('/admin/user-categories', function () {
 })->name('admin.user-categories.index');
 // routes/web.php
 Route::get('/customers/{customer}/panel-data', [CustomerController::class, 'panelData']);
-    
+ // routes/web.php
+// Customer details AJAX
+Route::get('/customers/{customer}/details', [CustomerController::class, 'getDetails'])
+     ->name('customers.details');
+
+// Locations by category AJAX
+Route::get('/locations/by-category', [LocationController::class, 'byCategory'])
+     ->name('locations.by-category');
+
+// Transaction series by location+category AJAX  
+Route::get('/transaction-series/by-location-category', [TransactionSeriesController::class, 'byLocationCategory'])
+     ->name('transaction-series.by-location-category');
 
 Route::prefix('user-categories')->group(function () {
     Route::get('/',                     [UserCategoryController::class, 'index']);  // ← ADD THIS
@@ -267,39 +282,38 @@ Route::get('price-lists/{id}/history', [PriceListController::class, 'history'])
     Route::delete('/{id}',              [UserSubCategoryController::class, 'destroy'])    ->name('destroy');
     Route::get('/by-category/{id}',     [UserSubCategoryController::class, 'byCategory'])->name('byCategory');
 });
-// ── Invoice Routes ── (specific routes FIRST, dynamic {id} LAST)
-// ── Static routes FIRST (specific before dynamic) ──
+// ── Invoice Routes ──────────────────────────────────────────────────────────
+
+// ── 1. Static/specific routes FIRST ──
 Route::get('/invoices/location-stock',     [InvoiceController::class, 'getLocationStock']);
 Route::get('/invoices/invoice-number',     [InvoiceController::class, 'getInvoiceNumber']);
 Route::get('/invoices/price-list-rates',   [InvoiceController::class, 'getPriceListRates']);
 Route::get('/invoices/category-locations', [InvoiceController::class, 'categoryLocations'])->name('invoices.category-locations');
 Route::get('/invoices/customer-defaults',  [InvoiceController::class, 'getCustomerDefaults']);
 
-// ── CRUD routes ──
+// ── 2. CRUD (index, create, store) ──
 Route::get('/invoices',        [InvoiceController::class, 'index'])->name('invoices.index');
 Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
 Route::post('/invoices',       [InvoiceController::class, 'store'])->name('invoices.store');
 
-// ── Dynamic route LAST ──
-Route::get('/invoices/{id}',           [InvoiceController::class, 'show'])->name('invoices.show');
-Route::post('/invoices/{id}/comment',  [InvoiceController::class, 'addComment'])->name('invoices.comment');
+// ── 3. Nested payment routes (BEFORE {id} wildcard) ──
+Route::get('/invoices/{id}/payment',  [InvoiceController::class, 'showPaymentForm'])->name('invoices.payment.form');
+Route::post('/invoices/{id}/payment', [InvoiceController::class, 'storePayment'])->name('invoices.payment.store');
 
-Route::get('/invoices/{id}/payment', [InvoiceController::class, 'showPaymentForm'])
-    ->name('invoices.payment.form');
+Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
+Route::put('/invoices/{id}',      [InvoiceController::class, 'update'])->name('invoices.update');
 
-Route::post('/invoices/{id}/payment', [InvoiceController::class, 'storePayment'])
-    ->name('invoices.payment.store');
+Route::get ('invoices/{invoice}/payments/{payment}/edit',   [InvoiceController::class, 'editPayment'])->name('invoices.payment.edit');
+Route::post('invoices/{invoice}/payments/{payment}/update', [InvoiceController::class, 'updatePayment'])->name('invoices.payment.update');
+Route::post('invoices/{invoice}/payments/{payment}/delete', [InvoiceController::class, 'deletePayment'])->name('invoices.payment.delete');
+Route::post('invoices/{invoice}/payments/{payment}/refund', [InvoiceController::class, 'refundPayment'])->name('invoices.payment.refund');
+
+// ── 4. Dynamic {id} wildcard routes LAST ──
+Route::get('/invoices/{id}',          [InvoiceController::class, 'show'])->name('invoices.show');
+Route::post('/invoices/{id}/comment', [InvoiceController::class, 'addComment'])->name('invoices.comment');
+
 // ── Other ──
 Route::get('/api/products/{id}', [InvoiceController::class, 'getProduct'])->name('products.get');
-
-Route::get('/invoices/{id}/edit',   [InvoiceController::class, 'edit'])  ->name('invoices.edit');
-Route::put('/invoices/{id}',        [InvoiceController::class, 'update'])->name('invoices.update');
-
-
-Route::get   ('invoices/{invoice}/payments/{payment}/edit',    [InvoiceController::class, 'editPayment'])  ->name('invoices.payment.edit');
-Route::put   ('invoices/{invoice}/payments/{payment}',         [InvoiceController::class, 'updatePayment'])->name('invoices.payment.update');
-Route::delete('invoices/{invoice}/payments/{payment}',         [InvoiceController::class, 'deletePayment'])->name('invoices.payment.delete');
-Route::post  ('invoices/{invoice}/payments/{payment}/refund',  [InvoiceController::class, 'refundPayment'])->name('invoices.payment.refund');
 //important one
 Route::get('/stock-ledger', [ItemStockLedgerController::class, 'create']);
 
@@ -393,3 +407,65 @@ Route::patch('transfer-orders/{id}/mark-transferred', [TransferOrderController::
 Route::get('transfer-orders/{id}/pdf', [TransferOrderController::class, 'downloadPdf'])
      ->name('transfer-orders.pdf');
 
+
+Route::get('/credit-notes/customer-defaults',
+    [CreditNoteController::class, 'getCustomerDefaults'])
+    ->name('credit-notes.customer-defaults');
+    
+Route::get('/credit-notes/next-number',
+    [CreditNoteController::class, 'nextNumber'])
+    ->name('credit-notes.next-number');
+
+Route::get('/credit-notes/products/{product}/details',
+    [CreditNoteController::class, 'getProductDetails'])
+    ->name('credit-notes.product-details');
+
+Route::get('/credit-notes/customers/search',
+    [CreditNoteController::class, 'searchCustomers'])
+    ->name('credit-notes.customers.search');
+
+// ── Void (POST, wildcard-க்கு முன்னாடி) ─────────────────────────────────────
+Route::post('/credit-notes/{creditNote}/void',
+    [CreditNoteController::class, 'void'])
+    ->name('credit-notes.void');
+
+// ── CRUD resource ─────────────────────────────────────────────────────────────
+Route::get('/credit-notes',
+    [CreditNoteController::class, 'index'])->name('credit-notes.index');
+
+Route::get('/credit-notes/create',
+    [CreditNoteController::class, 'create'])->name('credit-notes.create');
+
+Route::post('/credit-notes',
+    [CreditNoteController::class, 'store'])->name('credit-notes.store');
+
+Route::get('/credit-notes/{creditNote}',
+    [CreditNoteController::class, 'show'])->name('credit-notes.show');
+
+Route::get('/credit-notes/{creditNote}/edit',
+    [CreditNoteController::class, 'edit'])->name('credit-notes.edit');
+
+Route::put('/credit-notes/{creditNote}',
+    [CreditNoteController::class, 'update'])->name('credit-notes.update');
+
+Route::delete('/credit-notes/{creditNote}',
+    [CreditNoteController::class, 'destroy'])->name('credit-notes.destroy');
+    
+Route::prefix('admin/user-category-permissions')->name('admin.ucp.')->group(function () {
+    Route::get('/',                         [UserCategoryPermissionController::class, 'index'])      ->name('index');
+    Route::get('/create',                   [UserCategoryPermissionController::class, 'create'])     ->name('create');
+    Route::post('/store',                   [UserCategoryPermissionController::class, 'store'])      ->name('store');
+    Route::get('/edit/{id}',                [UserCategoryPermissionController::class, 'edit'])       ->name('edit');
+    Route::post('/update/{id}',             [UserCategoryPermissionController::class, 'updateRole']) ->name('update-role');
+    Route::delete('/{id}',                  [UserCategoryPermissionController::class, 'destroy'])    ->name('destroy');
+    Route::get('/by-category/{categoryId}', [UserCategoryPermissionController::class, 'byCategory'])->name('by-category');
+    Route::post('/update',                  [UserCategoryPermissionController::class, 'update'])     ->name('update');
+});
+
+Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
+Route::post('/login', [LoginController::class, 'login']);
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware('auth')->name('dashboard');

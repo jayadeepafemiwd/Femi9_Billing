@@ -1,13 +1,18 @@
-{{-- resources/views/products/show.blade.php --}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{{ $displayProductName ?? $product->name }} | Inventory</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+@extends('layouts.app')
+
+@section('title', ($displayProductName ?? $product->name))
+
+@section('breadcrumb')
+    <a href="{{ route('products.index') }}">Items</a>
+    <span class="sep">›</span>
+    <span class="current">{{ $displayProductName ?? $product->name }}</span>
+@endsection
+@push('styles')
+<style>
+  /* show page styles */
+  .content { display: flex; }
+  .product-list-panel { width: 280px; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+       * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: #333; background: #f5f6fa; display: flex; height: 100vh; overflow: hidden; }
 
     .sidebar { width: 220px; background: #1a2340; color: #b0b8cc; display: flex; flex-direction: column; flex-shrink: 0; }
@@ -177,9 +182,7 @@
 .cp-img-panel a { color:#1a73e8; font-size:12px; text-decoration:underline; cursor:pointer; }
 .cp-alert { display:none; margin:0 24px 0; padding:10px 14px; border-radius:4px; font-size:13px; }
   </style>
-</head>
-<body>
-
+@endpush
 @php
     $decRate = (int)($settings['decimal_rate'] ?? 2);
     $wStep   = $decRate > 0 ? '0.' . str_repeat('0', $decRate - 1) . '1' : '1';
@@ -234,48 +237,8 @@ if ($selectedVariantName && $product->variants_data) {
             : asset($imgPath);
     }
 @endphp
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="sidebar-logo">
-    <div class="sidebar-logo-icon">I</div>
-    <span>Inventory</span>
-  </div>
-  <div class="sidebar-menu">
-    <div class="sidebar-item"><span>🏠</span><span>Home</span></div>
-    <div class="sidebar-item active"><span>📦</span><span>Items</span><span class="arrow">▼</span></div>
-    <div class="sidebar-sub">
-      <div class="sidebar-sub-active">Items +</div>
-      <div class="sidebar-sub-item">Price Lists</div>
-    </div>
-    <div class="sidebar-item"><span>🏪</span><span>Inventory</span><span class="arrow">▶</span></div>
-    <div class="sidebar-item"><span>💼</span><span>Sales</span><span class="arrow">▶</span></div>
-    <div class="sidebar-item"><span>🛒</span><span>Purchases</span><span class="arrow">▶</span></div>
-    <div class="sidebar-item"><span>📊</span><span>Reports</span></div>
-    <div class="sidebar-item"><span>📄</span><span>Documents</span></div>
-    <div class="sidebar-item"><span>⚙️</span><span>Custom Modules</span><span class="arrow">▶</span></div>
-    <div class="sidebar-apps-label">APPS</div>
-    <div class="sidebar-item"><span>💳</span><span>Zoho Payments</span></div>
-  </div>
-  <div class="sidebar-collapse">◀ Collapse</div>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-  <div class="topbar">
-    <div class="search-box">🔍 <span>Search in Items ( / )</span></div>
-    <div class="topbar-right">
-      <span style="color:#e67e00;font-size:12px;">Your premi...</span>
-      <button class="btn-subscribe">Subscribe</button>
-      <span style="font-weight:600;">Jayadeepa ▼</span>
-      <div class="topbar-avatar" style="background:#2d5be3;">+</div>
-      <span style="cursor:pointer;">👥</span>
-      <div class="notif-wrap">🔔<span class="notif-badge">1</span></div>
-      <span style="cursor:pointer;">⚙️</span>
-      <div class="topbar-avatar" style="background:#e74c3c;">J</div>
-    </div>
-  </div>
-
+@section('content')
+<div style="display:flex; height:calc(100vh - var(--topbar-h)); overflow:hidden;">
   <div class="content">
 
    <!-- LEFT: Product List -->
@@ -1004,8 +967,7 @@ if ($selectedVariantName && $product->variants_data) {
     </div>
   </div>
 </div>
-
-
+@push('scripts')
 <script>
 const _locs    = @json($stockLocations ?? []);
 const _pid     = {{ $product->id }};
@@ -1296,5 +1258,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-</body>
-</html>
+@endpush
+</div>
+@endsection

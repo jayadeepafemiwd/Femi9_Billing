@@ -4,61 +4,70 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected $table = 'customers';
+    use SoftDeletes;
 
     protected $fillable = [
+        'user_id',
+        'parent_id',
         'customer_type',
         'customer_category',
-        'customer_sub_category_id',
         'user_code',
-         'assign_location',
+        'assign_location',
         'name',
         'company_name',
         'display_name',
         'email',
+        'unused_credits',
         'phone_number',
         'pan',
         'additional_datas',
         'common_address',
-        'remarks',
         'comments',
+        'remarks',
     ];
 
     protected $casts = [
-        'additional_datas' => 'array',
         'assign_location'  => 'array',
+        'additional_datas' => 'array',
         'common_address'   => 'array',
-        'comments'        =>'array',
+        'comments'         => 'array',
+        'unused_credits'   => 'decimal:2',
     ];
 
-    // ── Accessors ────────────────────────────────────────────
-    public function getFirstNameAttribute(): ?string
+    // ── Relationships ──────────────────────────────────────────────────────────
+
+    public function creditNotes(): HasMany
     {
-        return $this->additional_datas['first_name'] ?? null;
+        return $this->hasMany(CreditNote::class);
     }
 
-    public function getLastNameAttribute(): ?string
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns the label shown in dropdowns — prefer display_name, fallback to name.
+     */
+    public function getDropdownLabelAttribute(): string
     {
-        return $this->additional_datas['last_name'] ?? null;
+        return $this->display_name ?: ($this->name ?? '');
     }
 
+    /**
+     * Billing address from common_address JSON.
+     */
     public function getBillingAddressAttribute(): ?array
     {
         return $this->common_address['billing'] ?? null;
     }
 
+    /**
+     * Shipping address from common_address JSON.
+     */
     public function getShippingAddressAttribute(): ?array
     {
         return $this->common_address['shipping'] ?? null;
     }
-    public function subCategory()
-{
-    return $this->belongsTo(\App\Models\UserSubCategory::class, 'customer_sub_category_id');
-}
 }

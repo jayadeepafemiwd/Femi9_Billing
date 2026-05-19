@@ -744,6 +744,23 @@ private static function buildUpdateDescription(?array $oldData, ?array $newData)
         return response()->json(['success' => true]);
     }
    
+public function getDetails(Customer $customer)
+{
+    $address = is_string($customer->common_address) 
+        ? json_decode($customer->common_address, true) 
+        : ($customer->common_address ?? []);
+
+    $additionalDatas = is_string($customer->additional_datas)
+        ? json_decode($customer->additional_datas, true)
+        : ($customer->additional_datas ?? []);
+
+    return response()->json([
+        'billing'   => $address['billing']  ?? [],
+        'shipping'  => $address['shipping'] ?? [],
+        'category'  => $customer->customer_category ?? null,
+        'phone'     => $customer->phone_number ?? null,
+    ]);
+}
 
  private function generateUserCode(string $categoryName): string
 {

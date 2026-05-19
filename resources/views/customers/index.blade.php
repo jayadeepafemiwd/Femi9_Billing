@@ -1,10 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<title>Customers | Inventory</title>
+@extends('layouts.app')
+
+@section('title', 'Customers List')
+
+@section('breadcrumb')
+    <span class="current">Customers</span>
+@endsection
+
+@push('styles')
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #333; background: #f5f5f5; }
@@ -107,47 +109,11 @@
   .right-icon:hover { background: #f0f0f0; }
   .right-icon.orange { background: #f97316; color: #fff; }
 </style>
-</head>
-<body>
+@endpush
+
+@section('content')
+<div style="padding: 24px;">
 <div class="app-shell">
-
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">📦</div>
-      <span>Inventory</span>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-item">🏠 Home</div>
-      <div class="nav-item">📦 Items <span class="arrow">›</span></div>
-      <div class="nav-item">🏪 Inventory <span class="arrow">›</span></div>
-      <div class="nav-item" style="color:#fff;background:#252b3d;">🛒 Sales <span class="arrow">›</span></div>
-      <div class="nav-sub active">Customers</div>
-      <div class="nav-sub">Sales Orders</div>
-      <div class="nav-sub">Invoices</div>
-      <div class="nav-sub">Payments Received</div>
-      <div class="nav-sub">Sales Returns</div>
-      <div class="nav-item">🛍️ Purchases <span class="arrow">›</span></div>
-      <div class="nav-item">📊 Reports</div>
-      <div class="nav-item">📄 Documents</div>
-    </div>
-    <div class="sidebar-bottom"><div class="collapse-btn">⟨ Collapse</div></div>
-  </div>
-
-  <!-- Main -->
-  <div class="main">
-    <div class="topbar">
-      <div class="topbar-search">
-        <span>🔍</span>
-        <input placeholder="Search in Customers ( / )" />
-      </div>
-      <div class="topbar-right">
-        <div class="topbar-btn">🔔<span style="position:absolute;top:2px;right:2px;background:#e53935;color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;">1</span></div>
-        <div class="topbar-btn">⚙️</div>
-        <div class="avatar">V</div>
-      </div>
-    </div>
-
     <div class="content">
 
       @if(session('success'))
@@ -303,13 +269,6 @@
 
     </div>
   </div>
-
-  <div class="right-icons">
-    <div class="right-icon orange">?</div>
-    <div class="right-icon">📝</div>
-    <div class="right-icon">📺</div>
-    <div class="right-icon">💬</div>
-  </div>
 </div>
 
 <!-- Delete Modal -->
@@ -333,7 +292,9 @@
     </div>
   </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
 function confirmDelete(id, name) {
     document.getElementById('deleteCustomerName').textContent = name;
@@ -360,5 +321,4 @@ function filterTable() {
     document.getElementById('filterCount').textContent = visible + ' customer' + (visible !== 1 ? 's' : '');
 }
 </script>
-</body>
-</html>
+@endpush

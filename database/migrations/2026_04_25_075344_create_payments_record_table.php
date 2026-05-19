@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('deposit_to', 100)->nullable();
             $table->string('reference_no', 100)->nullable();
             $table->text('notes')->nullable();
-            $table->enum('status', ['draft', 'paid'])->default('paid');
+            $table->enum('status', ['draft', 'paid','refunded'])->default('paid');
             
             $table->boolean('is_advance_payment')->default(false);
             $table->timestamps();

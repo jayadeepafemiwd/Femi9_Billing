@@ -1631,4 +1631,417 @@ if ($isFullyPaid && $wasNotFullyPaid) {
                }
 }
 
+// ── EDIT PAYMENT ──────────────────────────────────────────────────────────────
+public function editPayment(Request $request, $invoiceId, $paymentId): JsonResponse
+{
+    $payment = DB::table('payments_record')
+        ->where('id', $paymentId)
+        ->where('invoice_id', $invoiceId)
+        ->first();
+
+    if (!$payment) {
+        return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+    }
+
+    return response()->json(['success' => true, 'payment' => $payment]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// InvoiceController.php — இந்த 3 methods replace பண்ணுங்க
+// updatePayment, deletePayment, refundPayment
+// Route change: PUT→POST /update, DELETE→POST /delete
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── UPDATE PAYMENT ────────────────────────────────────────────────────────────
+// Route: POST /invoices/{invoice}/payments/{payment}/update
+public function updatePayment(Request $request, $invoiceId, $paymentId): JsonResponse
+{
+    $request->validate([
+        'amount_received' => 'required|numeric|min:0.01',
+        'payment_date'    => 'required|date',
+        'payment_mode'    => 'required|string',
+        'deposit_to'      => 'required|string',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        $payment = DB::table('payments_record')
+            ->where('id', $paymentId)
+            ->where('invoice_id', $invoiceId)
+            ->first();
+
+        if (!$payment) {
+            return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+        }
+
+        DB::table('payments_record')->where('id', $paymentId)->update([
+            'amount_received' => floatval($request->amount_received),
+            'payment_date'    => $request->payment_date,
+            'payment_mode'    => $request->payment_mode,
+            'deposit_to'      => $request->deposit_to,
+            'reference_no'    => $request->reference_no,
+            'notes'           => $request->notes,
+            'updated_at'      => now(),
+        ]);
+
+        // Recalculate from all active (non-refunded) payments
+        $totalPaid = DB::table('payments_record')
+            ->where('invoice_id', $invoiceId)
+            ->whereNotIn('status', ['draft', 'refunded'])
+            ->sum('amount_received');
+
+        $grandTotal = floatval($invoice->grand_total);
+        $balanceDue = max(0, round($grandTotal - $totalPaid, 2));
+        $payStatus  = $balanceDue < 0.01 ? 'paid' : ($totalPaid > 0 ? 'partial' : 'unpaid');
+
+        $invoice->update([
+            'amount_received' => $totalPaid,
+            'balance_due'     => $balanceDue,
+            'payment_status'  => $payStatus,
+            'payment_mode'    => $request->payment_mode,
+            'deposit_to'      => $request->deposit_to,
+        ]);
+
+        \App\Models\History::create([
+            'module'    => 'invoice',
+            'action'    => 'update',
+            'record_id' => $invoiceId,
+            'user_id'   => auth()->id(),
+            'old_data'  => ['payment_id' => $paymentId, 'old_amount' => $payment->amount_received],
+            'new_data'  => ['payment_id' => $paymentId, 'new_amount' => $request->amount_received],
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success'        => true,
+            'message'        => 'Payment updated successfully!',
+            'new_balance'    => $balanceDue,
+            'payment_status' => $payStatus,
+            'total_paid'     => $totalPaid,
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
+// ── DELETE PAYMENT ─────────────────────────────────────────────────────────────
+// Route: POST /invoices/{invoice}/payments/{payment}/delete
+// $request->action = 'delete' | 'dissociate_credit'
+public function deletePayment(Request $request, $invoiceId, $paymentId): JsonResponse
+{
+    $action = $request->input('action', 'delete');
+
+    DB::beginTransaction();
+    try {
+        $invoice = Invoice::with('items')->findOrFail($invoiceId);
+
+        $payment = DB::table('payments_record')
+            ->where('id', $paymentId)
+            ->where('invoice_id', $invoiceId)
+            ->first();
+
+        if (!$payment) {
+            return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+        }
+
+        $amount              = floatval($payment->amount_received);
+        $wasFullyPaid        = $invoice->payment_status === 'paid';
+        $warehouseLocationId = $invoice->warehouse_location ?? $invoice->location ?? null;
+
+        // ── STEP 1: Stock reversal (only if invoice was fully paid) ──────────
+        if ($wasFullyPaid && $warehouseLocationId) {
+            foreach ($invoice->items as $item) {
+                if (!$item->product_id) continue;
+                $qty = floatval($item->quantity);
+
+                $stock = \App\Models\ItemStock::where('item_id', $item->product_id)
+                    ->where('location_id', (int)$warehouseLocationId)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if (!$stock) continue;
+
+                // Restore stock_on_hand, move back to committed
+                // (Invoice still exists but now unpaid)
+                $newStockOnHand = $stock->stock_on_hand + $qty;
+                $newCommitted   = $stock->committed_stock + $qty;
+
+                $stock->update([
+                    'stock_on_hand'   => $newStockOnHand,
+                    'committed_stock' => $newCommitted,
+                ]);
+
+                \App\Models\ItemStockLedger::create([
+                    'item_id'             => $item->product_id,
+                    'location_id'         => (int)$warehouseLocationId,
+                    'variant_id'          => null,
+                    'transaction_type'    => 'reversal',
+                    'transaction_date'    => now()->toDateString(),
+                    'reference_type'      => 'payment_delete',
+                    'reference_id'        => $paymentId,
+                    'qty_change'          => +$qty,
+                    'committed_change'    => +$qty,
+                    'unit_value'          => $stock->value_per_unit,
+                    'stock_on_hand_after' => $newStockOnHand,
+                    'committed_after'     => $newCommitted,
+                    'available_after'     => $stock->available_for_sale,
+                    'notes'               => 'Payment deleted — stock reversed: ' . $invoice->invoice_number,
+                    'created_by'          => auth()->id(),
+                ]);
+
+                $totalStock = \App\Models\ItemStock::where('item_id', $item->product_id)
+                    ->whereNull('deleted_at')->sum('stock_on_hand');
+                \App\Models\Product::withoutEvents(function () use ($item, $totalStock) {
+                    \App\Models\Product::where('id', $item->product_id)
+                        ->update(['opening_stock' => $totalStock]);
+                });
+            }
+        }
+
+        // ── STEP 2: Delete or Dissociate ──────────────────────────────────────
+        if ($action === 'dissociate_credit') {
+            // Remove from this invoice, mark as advance, add to customer credit
+            DB::table('payments_record')->where('id', $paymentId)->update([
+                'invoice_id'         => null,
+                'is_advance_payment' => 1,
+                'notes'              => 'Dissociated from ' . $invoice->invoice_number . ' — added as customer credit',
+                'updated_at'         => now(),
+            ]);
+
+            DB::table('customers')
+                ->where('id', $invoice->customer_id)
+                ->increment('unused_credits', $amount);
+
+        } else {
+            // Hard delete — permanently remove
+            DB::table('payments_record')->where('id', $paymentId)->delete();
+        }
+
+        // ── STEP 3: Recalculate invoice balance ────────────────────────────────
+        $totalPaid = DB::table('payments_record')
+            ->where('invoice_id', $invoiceId)
+            ->whereNotIn('status', ['draft', 'refunded'])
+            ->sum('amount_received');
+
+        $grandTotal = floatval($invoice->grand_total);
+        $balanceDue = max(0, round($grandTotal - $totalPaid, 2));
+        $payStatus  = $balanceDue < 0.01 ? 'paid' : ($totalPaid > 0 ? 'partial' : 'unpaid');
+
+        $invoice->update([
+            'amount_received' => $totalPaid,
+            'balance_due'     => $balanceDue,
+            'payment_status'  => $payStatus,
+        ]);
+
+        \App\Models\History::create([
+            'module'    => 'invoice',
+            'action'    => 'update',
+            'record_id' => $invoiceId,
+            'user_id'   => auth()->id(),
+            'old_data'  => null,
+            'new_data'  => [
+                'action'         => $action,
+                'payment_id'     => $paymentId,
+                'amount'         => $amount,
+                'new_balance'    => $balanceDue,
+                'payment_status' => $payStatus,
+            ],
+        ]);
+
+        DB::commit();
+
+        $msg = $action === 'dissociate_credit'
+            ? '₹' . number_format($amount, 2) . ' dissociated and added to customer credit.'
+            : 'Payment of ₹' . number_format($amount, 2) . ' deleted permanently.';
+
+        return response()->json([
+            'success'        => true,
+            'message'        => $msg,
+            'new_balance'    => $balanceDue,
+            'payment_status' => $payStatus,
+            'total_paid'     => $totalPaid,
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
+// ── REFUND PAYMENT ─────────────────────────────────────────────────────────────
+// Route: POST /invoices/{invoice}/payments/{payment}/refund
+//
+// WHAT REFUND DOES:
+// 1. payments_record.status = 'refunded'
+// 2. invoice.balance_due += refund_amount  (goes back to unpaid/partial)
+// 3. invoice.payment_status = 'unpaid' or 'partial'
+// 4. Stock reversed — stock_on_hand += qty, committed += qty
+//    (invoice still exists → stays committed, not available)
+// 5. History logged
+//
+// NOT done here: credit add (that's a separate feature)
+public function refundPayment(Request $request, $invoiceId, $paymentId): JsonResponse
+{
+    \Log::info('Refund called', [
+        'invoiceId'  => $invoiceId,
+        'paymentId'  => $paymentId,
+        'url'        => $request->fullUrl(),
+    ]);
+
+    $request->validate([
+        'refunded_on'  => 'required|date',
+        'payment_mode' => 'required|string',
+        'from_account' => 'required|string',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $invoice = Invoice::with('items')->findOrFail($invoiceId);
+
+        $payment = DB::table('payments_record')
+            ->where('id', $paymentId)
+            ->where('invoice_id', $invoiceId)
+           ->whereNotIn('status', ['refunded'])
+            ->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found or already refunded'
+            ], 404);
+        }
+
+        $refundAmount        = floatval($payment->amount_received);
+        $warehouseLocationId = $invoice->warehouse_location ?? $invoice->location ?? null;
+        $wasFullyPaid        = $invoice->payment_status === 'paid';
+
+        // ── STEP 1: Mark payment as refunded ──────────────────────────────────
+        $refundNote = 'Refunded on ' . $request->refunded_on
+            . ' via ' . $request->payment_mode
+            . ($request->from_account ? ' from ' . $request->from_account : '')
+            . ($request->reference_no ? ' | Ref: ' . $request->reference_no : '')
+            . ($request->description  ? ' | Note: ' . $request->description : '');
+
+        DB::table('payments_record')->where('id', $paymentId)->update([
+            'status'     => 'refunded',
+            'notes'      => trim(($payment->notes ? $payment->notes . "\n" : '') . $refundNote),
+            'updated_at' => now(),
+        ]);
+
+        // ── STEP 2: Stock reversal ─────────────────────────────────────────────
+        // Only if invoice was fully paid (stock_on_hand was deducted at that time)
+        if ($wasFullyPaid && $warehouseLocationId) {
+            foreach ($invoice->items as $item) {
+                if (!$item->product_id) continue;
+                $qty = floatval($item->quantity);
+
+                $stock = \App\Models\ItemStock::where('item_id', $item->product_id)
+                    ->where('location_id', (int)$warehouseLocationId)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if (!$stock) continue;
+
+                // Return stock_on_hand, move to committed
+                // (invoice still exists → goods not yet delivered back → committed)
+                $newStockOnHand = $stock->stock_on_hand + $qty;
+                $newCommitted   = $stock->committed_stock + $qty;
+
+                $stock->update([
+                    'stock_on_hand'   => $newStockOnHand,
+                    'committed_stock' => $newCommitted,
+                ]);
+
+                \App\Models\ItemStockLedger::create([
+                    'item_id'             => $item->product_id,
+                    'location_id'         => (int)$warehouseLocationId,
+                    'variant_id'          => null,
+                    'transaction_type'    => 'reversal',
+                    'transaction_date'    => $request->refunded_on,
+                    'reference_type'      => 'refund',
+                    'reference_id'        => $invoiceId,
+                    'qty_change'          => +$qty,
+                    'committed_change'    => +$qty,
+                    'unit_value'          => $stock->value_per_unit,
+                    'stock_on_hand_after' => $newStockOnHand,
+                    'committed_after'     => $newCommitted,
+                    'available_after'     => $stock->available_for_sale,
+                    'notes'               => 'Refund — stock reversed for ' . $invoice->invoice_number,
+                    'created_by'          => auth()->id(),
+                ]);
+
+                // Sync product total stock
+                $totalStock = \App\Models\ItemStock::where('item_id', $item->product_id)
+                    ->whereNull('deleted_at')->sum('stock_on_hand');
+                \App\Models\Product::withoutEvents(function () use ($item, $totalStock) {
+                    \App\Models\Product::where('id', $item->product_id)
+                        ->update(['opening_stock' => $totalStock]);
+                });
+            }
+        }
+
+        // ── STEP 3: Recalculate invoice balance ────────────────────────────────
+        // Exclude refunded payments from total
+        $totalPaid = DB::table('payments_record')
+            ->where('invoice_id', $invoiceId)
+            ->whereNotIn('status', ['draft', 'refunded'])
+            ->sum('amount_received');
+
+        $grandTotal = floatval($invoice->grand_total);
+        $balanceDue = max(0, round($grandTotal - $totalPaid, 2));
+        $payStatus  = $balanceDue < 0.01 ? 'paid' : ($totalPaid > 0 ? 'partial' : 'unpaid');
+
+        $invoice->update([
+            'amount_received' => $totalPaid,
+            'balance_due'     => $balanceDue,
+            'payment_status'  => $payStatus,
+        ]);
+
+        // ── STEP 4: History ────────────────────────────────────────────────────
+        \App\Models\History::create([
+            'module'    => 'invoice',
+            'action'    => 'payment',
+            'record_id' => $invoiceId,
+            'user_id'   => auth()->id(),
+            'old_data'  => null,
+            'new_data'  => [
+                'action'         => 'refund',
+                'payment_id'     => $paymentId,
+                'refund_amount'  => $refundAmount,
+                'refunded_on'    => $request->refunded_on,
+                'payment_mode'   => $request->payment_mode,
+                'from_account'   => $request->from_account,
+                'payment_status' => $payStatus,
+                'new_balance'    => $balanceDue,
+            ],
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success'        => true,
+            'message'        => 'Refund of ₹' . number_format($refundAmount, 2)
+                              . ' processed. Invoice balance updated to ₹'
+                              . number_format($balanceDue, 2) . '. Status: ' . ucfirst($payStatus),
+            'refund_amount'  => $refundAmount,
+            'new_balance'    => $balanceDue,
+            'payment_status' => $payStatus,
+            'total_paid'     => $totalPaid,
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('[refundPayment] Error: ' . $e->getMessage(), [
+            'invoice_id' => $invoiceId,
+            'payment_id' => $paymentId,
+            'trace'      => $e->getTraceAsString(),
+        ]);
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
 }

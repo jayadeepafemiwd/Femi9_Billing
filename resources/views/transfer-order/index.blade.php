@@ -202,12 +202,12 @@ tbody tr:hover { background: #fafcff; }
                 @endforelse
             </tbody>
         </table>
-
+<!-- 
         @if($transferOrders->hasPages())
         <div class="pagination-wrap">
             {{ $transferOrders->links() }}
         </div>
-        @endif
+        @endif -->
     </div>
 
 </div>

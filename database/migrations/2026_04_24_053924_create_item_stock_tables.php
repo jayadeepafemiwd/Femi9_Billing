@@ -39,7 +39,8 @@ return new class extends Migration
 
             $table->enum('transaction_type', [
                 'opening','purchase','sale','sale_return','purchase_return',
-                'transfer_in','transfer_out','adjustment','commit','uncommit'
+                'transfer_in','transfer_out','adjustment','commit','uncommit',
+                'reversal'
             ]);
             $table->date('transaction_date');
             $table->string('reference_type')->nullable();

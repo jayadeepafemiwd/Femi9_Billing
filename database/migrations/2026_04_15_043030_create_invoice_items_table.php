@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('invoice_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('invoice_id');
-            $table->foreignId('product_id');
+            $table->foreignId('product_id')->nullable();
             $table->string('item_name');
             $table->decimal('quantity', 10, 2)->default(1);
             $table->decimal('rate', 10, 2)->default(0);

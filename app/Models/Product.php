@@ -276,4 +276,47 @@ public function stockAtLocation(int $locationId)
             }
         });
     }
+        // ── Relationships ──────────────────────────────────────────────────────────
+ 
+    public function creditNoteItems(): HasMany
+    {
+        return $this->hasMany(CreditNoteItem::class, 'product_id');
+    }
+ 
+    // ── Helpers ────────────────────────────────────────────────────────────────
+ 
+    /**
+     * Get the account from additional_data JSON.
+     * Adjust the key to match your actual JSON structure.
+     */
+    public function getAccountAttribute(): ?string
+    {
+        return $this->additional_data['account'] ?? null;
+    }
+ 
+    /**
+     * Get sales description from additional_data JSON.
+     */
+    public function getSalesDescriptionAttribute(): ?string
+    {
+        return $this->additional_data['description']['sales'] ?? null;
+    }
+ 
+    /**
+     * Snapshot data to copy into a credit note line item.
+     */
+    public function toCreditNoteLineSnapshot(): array
+    {
+        return [
+            'product_id' => $this->id,
+            'item_name'  => $this->name,
+            'item_sku'   => $this->sku,
+            'item_type'  => $this->type,
+            'unit'       => $this->unit,
+            'rate'       => $this->selling_price ?? 0,
+            'account'    => $this->account,
+            'description'=> $this->sales_description,
+        ];
+    }
+
 }

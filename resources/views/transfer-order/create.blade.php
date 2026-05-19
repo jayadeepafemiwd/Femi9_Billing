@@ -188,6 +188,18 @@ table.items-table tbody tr:hover { background: #fafcff; }
 .alert-success { background: #eafaf1; border: 1px solid #b7e4c7; border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; color: #155724; font-size: 13px; }
 .error-msg { color: #e74c3c; font-size: 11px; margin-top: 3px; }
 .btn-primary-group { position: relative; }
+/* Pagination fix */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+}
+
+
 </style>
 @endpush
 
